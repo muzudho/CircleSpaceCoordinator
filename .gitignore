@@ -328,6 +328,7 @@ data/exchange/
 
 # Private inputs and local application state (already tracked files need separate review).
 *.xlsx
+!/examples/きふわらべオンリー即売会_参加サークル一覧.xlsx
 *.xls
 *.zip
 *.7z
