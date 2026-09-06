@@ -7,9 +7,19 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--version"])
+        {
+            var version = System.Reflection.CustomAttributeExtensions
+                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(Program).Assembly)!
+                .InformationalVersion.Split('+')[0];
+            Console.WriteLine(version);
+            return 0;
+        }
+
         if (args.Length is < 2 or > 3 || args[0] != "evaluate")
         {
             Console.Error.WriteLine("Usage: CircleSpaceCoordinator.ProjectCli evaluate <input.json> [output.json]");
+            Console.Error.WriteLine("       CircleSpaceCoordinator.ProjectCli --version");
             return 2;
         }
 

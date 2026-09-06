@@ -22,7 +22,7 @@
 ## 2. ソースコードをダウンロードして展開する
 
 1. [CircleSpaceCoordinator の GitHub ページ](https://github.com/muzudho/CircleSpaceCoordinator) を開きます。
-2. **Code → Download ZIP** を選びます。これは実行ファイルの配布 ZIP ではなく、ソースコードを取得するための ZIP です。
+2. リリース番号（例：`v1.0.0`）を案内されている場合は、ブランチ・タグの選択欄からそのタグを選びます。その後 **Code → Download ZIP** を選びます。これは実行ファイルの配布 ZIP ではなく、ソースコードを取得するための ZIP です。タグがまだない場合は現在のブランチを取得しますが、開発途中の変更が含まれることがあります。
 3. ダウンロードした ZIP を右クリックし、**すべて展開**で、書き込み可能な作業フォルダーへ展開します。
 4. 展開したフォルダーを開き、`CircleSpaceCoordinator.slnx` と `CircleSpaceCoordinator.Desktop` フォルダーがある階層まで進みます。
 
@@ -69,6 +69,8 @@ dotnet run --project .\CircleSpaceCoordinator.Desktop\CircleSpaceCoordinator.Des
 ```
 
 イベントプロジェクト選択画面が表示されたら起動成功です。アプリが終了するまで PowerShell は開いたままにしてください。
+
+タイトルバーの `Circle Space Coordinator v1.0.0` のような表示で、使用中のバージョン番号を確認できます。不具合を知らせるときは、この番号も添えてください。
 
 次回以降は、同じソースのルートで PowerShell を開き、この起動コマンドを実行します。ソースを変更・更新していなければ、手順4のビルドを繰り返す必要はありません。
 

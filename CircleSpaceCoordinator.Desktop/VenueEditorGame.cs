@@ -120,7 +120,7 @@ public sealed class VenueEditorGame : Game
         };
         // SDL creates the native window after this constructor. Keep the initial title ASCII-only;
         // UpdateWindowPresentation sets the Unicode event name through SDL's UTF-8 update path.
-        Window.Title = "Circle Space Coordinator";
+        Window.Title = ApplicationIdentity.Title;
         Window.AllowUserResizing = true;
         IsMouseVisible = true;
         Exiting += (_, _) => PersistWorkingState();
@@ -3141,8 +3141,8 @@ public sealed class VenueEditorGame : Game
     }
 
     private string GetWindowTitle() => workspace is null
-        ? "Circle Space Coordinator"
-        : $"Circle Space Coordinator - {(workspace.Project.IsConfidential ? "（秘）" : "")}{workspace.Project.Name}";
+        ? ApplicationIdentity.Title
+        : $"{ApplicationIdentity.Title} - {(workspace.Project.IsConfidential ? "（秘）" : "")}{workspace.Project.Name}";
 
     private void DrawConfidentialBadge()
     {

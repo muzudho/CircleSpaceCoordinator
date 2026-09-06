@@ -18,7 +18,7 @@ internal sealed class EventProjectSelectorForm : System.Windows.Forms.Form
     {
         this.settings = settings;
         catalog = new EventProjectCatalogService(settings);
-        Text = "Circle Space Coordinator - イベントを選択";
+        Text = $"{ApplicationIdentity.Title} - イベントを選択";
         Width = 760;
         Height = 470;
         MinimumSize = new System.Drawing.Size(640, 380);

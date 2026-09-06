@@ -58,11 +58,17 @@ if ($invalidSignatures.Count -gt 0) {
 	throw "Some files do not have a Valid signature:`n$detailsText"
 }
 
+$desktopExe = Join-Path $desktopDirectory 'CircleSpaceCoordinator.Desktop.exe'
+$releaseVersion = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo($desktopExe).ProductVersion -split '\+', 2)[0]
+if ($releaseVersion -notmatch '^\d+\.\d+\.\d+$') {
+	throw "Unexpected release version in published executable: $releaseVersion"
+}
+
 if ([string]::IsNullOrWhiteSpace($ZipPath)) {
 	$releaseDirectory = Join-Path $repositoryRoot 'artifacts\release'
 	New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
 	$timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-	$ZipPath = Join-Path $releaseDirectory "CircleSpaceCoordinator.Desktop-$RuntimeIdentifier-$timestamp.zip"
+	$ZipPath = Join-Path $releaseDirectory "CircleSpaceCoordinator.Desktop-v$releaseVersion-$RuntimeIdentifier-$timestamp.zip"
 }
 else {
 	$ZipPath = [System.IO.Path]::GetFullPath($ZipPath)
@@ -92,6 +98,7 @@ $signedFileCount = @(
 ).Count
 
 [pscustomobject]@{
+	Version = $releaseVersion
 	ZipPath = $ZipPath
 	CertificateThumbprint = $CertificateThumbprint
 	RuntimeIdentifier = $RuntimeIdentifier
