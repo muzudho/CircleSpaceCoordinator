@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
 	[Parameter(Mandatory)]
 	[ValidatePattern('^[A-Fa-f0-9]{40}$')]
@@ -20,7 +20,7 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
 	$OutputRoot = Join-Path $repositoryRoot 'artifacts\signed'
 }
 $projects = @(
-	@{ Name = 'CircleSpaceCoordinator.Desktop'; Path = 'CircleSpaceCoordinator.Desktop\CircleSpaceCoordinator.Desktop.csproj' },
+	@{ Name = 'CircleSpaceCoordinator.Desktop.Windows'; Path = 'CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordinator.Desktop.Windows.csproj' },
 	@{ Name = 'CircleSpaceCoordinator.ProjectCli'; Path = 'tools\CircleSpaceCoordinator.ProjectCli\CircleSpaceCoordinator.ProjectCli.csproj' }
 )
 
@@ -40,7 +40,7 @@ foreach ($project in $projects) {
 	if ($RuntimeIdentifier) {
 		$publishArguments += @('--runtime', $RuntimeIdentifier)
 	}
-	if ($project.Name -eq 'CircleSpaceCoordinator.Desktop' -and $RuntimeIdentifier) {
+	if ($project.Name -eq 'CircleSpaceCoordinator.Desktop.Windows' -and $RuntimeIdentifier) {
 		$publishArguments += @(
 			'--self-contained', 'true',
 			'-p:DebugType=None',

@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [string]$Path
@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $releaseRoot = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\', '/')
 $repositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $rejected = @()
-$allowedJson = @('CircleSpaceCoordinator.Desktop.deps.json', 'CircleSpaceCoordinator.Desktop.runtimeconfig.json')
+$allowedJson = @('CircleSpaceCoordinator.Desktop.Windows.deps.json', 'CircleSpaceCoordinator.Desktop.Windows.runtimeconfig.json')
 if (Get-ChildItem -LiteralPath $releaseRoot -Recurse -Force -Directory |
     Where-Object { $_.Attributes -band [System.IO.FileAttributes]::ReparsePoint }) {
     throw 'Public release folders must not contain filesystem links.'
@@ -35,7 +35,7 @@ if ($rejected.Count -gt 0) {
     # Do not print filenames: they may themselves contain private event names.
     throw "Public release content check rejected $($rejected.Count) unexpected file(s). Inspect the publish folder locally; do not distribute it."
 }
-if (-not (Test-Path -LiteralPath (Join-Path $releaseRoot 'CircleSpaceCoordinator.Desktop.exe') -PathType Leaf)) {
+if (-not (Test-Path -LiteralPath (Join-Path $releaseRoot 'CircleSpaceCoordinator.Desktop.Windows.exe') -PathType Leaf)) {
     throw 'Public release content check: the application executable is missing.'
 }
 Write-Output 'Public release file inventory check passed. Binary metadata and source/history review are separate checks.'

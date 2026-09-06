@@ -56,7 +56,9 @@ Windows固有のIMEフックはここへ入れず、DesktopのWindows実装か�
 
 `CircleSpaceCoordinator.StationeryUI.csproj` も独立したクラスライブラリーとしてDLLを生成し、CoreやApplicationには依存しません。
 
-### Desktop
+### Desktop.Windows
+
+現在の `CircleSpaceCoordinator.Desktop.Windows` は `net10.0-windows` を対象とする Windows 専用の実行プロジェクトです。将来、Windows に依存しないデスクトップ処理を新しい `CircleSpaceCoordinator.Desktop` プロジェクトへ分離し、Windows 固有の実装をこちらに残す予定です。現段階では名前の整理のみで、他の OS への対応はまだ行っていません。
 
 - MonoGameの起動とゲームループ
 - 会場キャンバスとカメラ
@@ -64,7 +66,7 @@ Windows固有のIMEフックはここへ入れず、DesktopのWindows実装か�
 - ヒートマップ、評価内訳、案の比較画面
 - Windows版IME、クリップボード、ファイルダイアログの組み立て
 
-`CircleSpaceCoordinator.Desktop.csproj` はGUI実行プロジェクトです。参照方向はDesktopからApplication、Infrastructure、StationeryUIへの一方向とし、Core側からGUIを参照しません。
+`CircleSpaceCoordinator.Desktop.Windows.csproj` はGUI実行プロジェクトです。参照方向はDesktopからApplication、Infrastructure、StationeryUIへの一方向とし、Core側からGUIを参照しません。
 
 ### Excel bridge
 

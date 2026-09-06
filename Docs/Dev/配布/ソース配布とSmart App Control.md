@@ -28,7 +28,7 @@ Windows と .NET 10 SDK を用意し、取得したソースのルート（`Circ
 
 ```powershell
 dotnet build CircleSpaceCoordinator.slnx -c Release -p:SmartAppControlSigningEnabled=false
-dotnet run --project CircleSpaceCoordinator.Desktop -c Release -p:SmartAppControlSigningEnabled=false
+dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartAppControlSigningEnabled=false
 ```
 
 `SmartAppControlSigningEnabled=false` は、このプロジェクト独自のビルド後署名処理を無効にします。**Windows の SAC を無効にする指定ではありません。**

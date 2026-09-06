@@ -1,14 +1,16 @@
 namespace CircleSpaceCoordinator.Desktop.Tests;
 
+using CircleSpaceCoordinator.Desktop.Windows;
+
 using CircleSpaceCoordinator.Application.Workspace;
 using CircleSpaceCoordinator.Application.Editing;
 using CircleSpaceCoordinator.Application.Layouts;
 using CircleSpaceCoordinator.Core.Evaluation;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Model;
-using CircleSpaceCoordinator.Desktop.Interaction;
-using CircleSpaceCoordinator.Desktop.Logging;
-using CircleSpaceCoordinator.Desktop.Persistence;
+using CircleSpaceCoordinator.Desktop.Windows.Interaction;
+using CircleSpaceCoordinator.Desktop.Windows.Logging;
+using CircleSpaceCoordinator.Desktop.Windows.Persistence;
 using CircleSpaceCoordinator.Infrastructure.Json;
 using CircleSpaceCoordinator.StationeryUI.Canvas;
 using CircleSpaceCoordinator.OptimizationEngine;

@@ -1,6 +1,8 @@
 # ZIP 版が起動しないとき
 
-通常は **[最新リリース](https://github.com/muzudho/CircleSpaceCoordinator/releases/latest)からアプリ用 ZIP をダウンロード → 全体を展開 → `CircleSpaceCoordinator.Desktop.exe` を起動**する方法で利用してください。.NET ランタイムと必要な DLL を同梱しているため、SDK のインストールやビルドは不要です。
+通常は **[最新リリース](https://github.com/muzudho/CircleSpaceCoordinator/releases/latest)からアプリ用 ZIP をダウンロード → 全体を展開 → リリースページに記載された EXE を起動**する方法で利用してください。.NET ランタイムと必要な DLL を同梱しているため、SDK のインストールやビルドは不要です。
+
+v1.0.0 の ZIP・展開フォルダー・EXE は `CircleSpaceCoordinator.Desktop` という名前です。改名後に作成する版では `CircleSpaceCoordinator.Desktop.Windows` になります。以下の ZIP 確認表は v1.0.0 の名前で記載しています。
 
 このページは、その ZIP 版でウィンドウが開かなかった方のための案内です。
 
@@ -39,12 +41,14 @@ SAC の仕組みと今回の起動報告は [v1.0.0 の ZIP 起動と Smart App 
 
 この手順では Visual Studio と Git のインストールは不要です。
 
+この手順のプロジェクト名は現在のソースに合わせています。改名前のタグ（v1.0.0 など）を取得した場合は、以下のフォルダー名とコマンド中の `CircleSpaceCoordinator.Desktop.Windows` を `CircleSpaceCoordinator.Desktop` に読み替えてください。
+
 ## 2. ソースコードをダウンロードして展開する
 
 1. [CircleSpaceCoordinator の GitHub ページ](https://github.com/muzudho/CircleSpaceCoordinator) を開きます。
 2. リリース番号（例：`v1.0.0`）を案内されている場合は、ブランチ・タグの選択欄からそのタグを選びます。その後 **Code → Download ZIP** を選びます。これは実行ファイルの配布 ZIP ではなく、ソースコードを取得するための ZIP です。タグがまだない場合は現在のブランチを取得しますが、開発途中の変更が含まれることがあります。
 3. ダウンロードした ZIP を右クリックし、**すべて展開**で、書き込み可能な作業フォルダーへ展開します。
-4. 展開したフォルダーを開き、`CircleSpaceCoordinator.slnx` と `CircleSpaceCoordinator.Desktop` フォルダーがある階層まで進みます。
+4. 展開したフォルダーを開き、`CircleSpaceCoordinator.slnx` と `CircleSpaceCoordinator.Desktop.Windows` フォルダーがある階層まで進みます。
 
 以降、この階層を「ソースのルート」と呼びます。ZIP の中を直接開いた状態では作業しないでください。作成されるアプリと利用設定を引き続き使うため、展開先は後で削除しない場所にしてください。
 
@@ -73,7 +77,7 @@ Test-Path .\CircleSpaceCoordinator.slnx
 次のコマンドを実行します。
 
 ```powershell
-dotnet build .\CircleSpaceCoordinator.Desktop\CircleSpaceCoordinator.Desktop.csproj -c Release -p:SmartAppControlSigningEnabled=false
+dotnet build .\CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordinator.Desktop.Windows.csproj -c Release -p:SmartAppControlSigningEnabled=false
 ```
 
 初回は必要なライブラリー（NuGet パッケージ）が自動的にダウンロードされます。完了まで待ち、ビルド成功と表示されたことを確認してください。失敗した場合は、下の「うまくいかないとき」を確認します。
@@ -85,7 +89,7 @@ dotnet build .\CircleSpaceCoordinator.Desktop\CircleSpaceCoordinator.Desktop.csp
 同じ PowerShell で、次を実行します。
 
 ```powershell
-dotnet run --project .\CircleSpaceCoordinator.Desktop\CircleSpaceCoordinator.Desktop.csproj -c Release --no-build
+dotnet run --project .\CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordinator.Desktop.Windows.csproj -c Release --no-build
 ```
 
 イベントプロジェクト選択画面が表示されたら起動成功です。アプリが終了するまで PowerShell は開いたままにしてください。

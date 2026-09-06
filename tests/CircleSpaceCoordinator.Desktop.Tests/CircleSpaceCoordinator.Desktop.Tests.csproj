@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="../../CircleSpaceCoordinator.Desktop/CircleSpaceCoordinator.Desktop.csproj" />
+    <ProjectReference Include="../../CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <OutputType>Exe</OutputType>

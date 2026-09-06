@@ -61,6 +61,6 @@
 
 出力した Excel を開き、サークル ID と席の対応、対象件数、書き込み漏れを確認してから提出します。最終的なイベント JSON、採用案名、提出用 Excel を一緒に管理してください。
 
-詳しいドラッグ操作やショートカットは [アプリの操作説明](../../../CircleSpaceCoordinator.Desktop/README.md) を参照してください。本書は既存の操作資料と実装に基づく案内で、一連の操作を実機で通して検証したものではありません。
+詳しいドラッグ操作やショートカットは [アプリの操作説明](../../../CircleSpaceCoordinator.Desktop.Windows/README.md) を参照してください。本書は既存の操作資料と実装に基づく案内で、一連の操作を実機で通して検証したものではありません。
 
 [最新版をダウンロードする](https://github.com/muzudho/CircleSpaceCoordinator/releases/latest) ／ [ZIP 版が起動しないとき](Installation.md) ／ [制作物の説明](../Products/README.md) ／ [トップへ戻る](../../../README.md)

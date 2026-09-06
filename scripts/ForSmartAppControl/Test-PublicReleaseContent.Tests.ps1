@@ -1,8 +1,8 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $fixture = Join-Path $repositoryRoot ('artifacts\privacy-tests\' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
-[System.IO.File]::WriteAllText((Join-Path $fixture 'CircleSpaceCoordinator.Desktop.exe'), 'inventory-test-only')
+[System.IO.File]::WriteAllText((Join-Path $fixture 'CircleSpaceCoordinator.Desktop.Windows.exe'), 'inventory-test-only')
 $gate = Join-Path $PSScriptRoot 'Test-PublicReleaseContent.ps1'
 & $gate -Path $fixture | Out-Null
 $passed = 1

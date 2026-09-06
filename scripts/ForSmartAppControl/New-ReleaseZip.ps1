@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
 	[string]$Configuration = 'Release',
 
@@ -41,7 +41,7 @@ if ($LASTEXITCODE -ne 0) {
 	throw 'Failed to create the signed release artifacts.'
 }
 
-$desktopDirectory = Join-Path $repositoryRoot 'artifacts\signed\CircleSpaceCoordinator.Desktop'
+$desktopDirectory = Join-Path $repositoryRoot 'artifacts\signed\CircleSpaceCoordinator.Desktop.Windows'
 if (-not (Test-Path -LiteralPath $desktopDirectory -PathType Container)) {
 	throw "Desktop publish folder was not found: $desktopDirectory"
 }
@@ -58,7 +58,7 @@ if ($invalidSignatures.Count -gt 0) {
 	throw "Some files do not have a Valid signature:`n$detailsText"
 }
 
-$desktopExe = Join-Path $desktopDirectory 'CircleSpaceCoordinator.Desktop.exe'
+$desktopExe = Join-Path $desktopDirectory 'CircleSpaceCoordinator.Desktop.Windows.exe'
 $releaseVersion = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo($desktopExe).ProductVersion -split '\+', 2)[0]
 if ($releaseVersion -notmatch '^\d+\.\d+\.\d+$') {
 	throw "Unexpected release version in published executable: $releaseVersion"
@@ -68,7 +68,7 @@ if ([string]::IsNullOrWhiteSpace($ZipPath)) {
 	$releaseDirectory = Join-Path $repositoryRoot 'artifacts\release'
 	New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
 	$timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-	$ZipPath = Join-Path $releaseDirectory "CircleSpaceCoordinator.Desktop-v$releaseVersion-$RuntimeIdentifier-$timestamp.zip"
+	$ZipPath = Join-Path $releaseDirectory "CircleSpaceCoordinator.Desktop.Windows-v$releaseVersion-$RuntimeIdentifier-$timestamp.zip"
 }
 else {
 	$ZipPath = [System.IO.Path]::GetFullPath($ZipPath)
@@ -82,7 +82,7 @@ Compress-Archive -LiteralPath $desktopDirectory -DestinationPath $ZipPath -Compr
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
 try {
-	$expectedExe = 'CircleSpaceCoordinator.Desktop/CircleSpaceCoordinator.Desktop.exe'
+	$expectedExe = 'CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.exe'
 	$zipEntryNames = $archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') }
 	if ($zipEntryNames -notcontains $expectedExe) {
 		throw "The created ZIP does not contain the application executable: $expectedExe"

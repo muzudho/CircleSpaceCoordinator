@@ -8,7 +8,7 @@ Windows と .NET 10 SDK が必要です。リポジトリーのルートで Powe
 
 ```powershell
 dotnet build CircleSpaceCoordinator.slnx -c Release -p:SmartAppControlSigningEnabled=false
-dotnet run --project CircleSpaceCoordinator.Desktop -c Release -p:SmartAppControlSigningEnabled=false
+dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartAppControlSigningEnabled=false
 ```
 
 `SmartAppControlSigningEnabled=false` はプロジェクト独自のビルド後署名処理を止める指定です。Windows の Smart App Control を無効にする指定ではありません。利用環境での制限は [ソース配布と Smart App Control](配布/ソース配布とSmart%20App%20Control.md) を参照してください。
@@ -26,7 +26,7 @@ dotnet run --project CircleSpaceCoordinator.Desktop -c Release -p:SmartAppContro
 | `CircleSpaceCoordinator.Infrastructure/` | JSON、参加者表の読み込み、Excel 出力 |
 | `CircleSpaceCoordinator.OptimizationEngine/` | 自動配置 |
 | `CircleSpaceCoordinator.StationeryUI/` | UI 部品 |
-| `CircleSpaceCoordinator.Desktop/` | デスクトップアプリ |
+| `CircleSpaceCoordinator.Desktop.Windows/` | デスクトップアプリ |
 | `tests/` | C# のテスト |
 | `tools/CircleSpaceCoordinator.ProjectCli/` | コマンドラインツール |
 | `examples/`, `schemas/` | 架空サンプルと JSON スキーマ |

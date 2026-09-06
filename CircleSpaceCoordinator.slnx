@@ -1,7 +1,7 @@
 <Solution>
   <Project Path="CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
   <Project Path="CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
-  <Project Path="CircleSpaceCoordinator.Desktop/CircleSpaceCoordinator.Desktop.csproj" />
+  <Project Path="CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.csproj" />
   <Project Path="CircleSpaceCoordinator.Infrastructure/CircleSpaceCoordinator.Infrastructure.csproj" />
   <Project Path="CircleSpaceCoordinator.OptimizationEngine/CircleSpaceCoordinator.OptimizationEngine.csproj" />
   <Project Path="CircleSpaceCoordinator.StationeryUI/CircleSpaceCoordinator.StationeryUI.csproj" />
