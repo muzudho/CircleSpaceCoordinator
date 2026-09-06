@@ -6,7 +6,7 @@
 
 - 無料で配布するオープンソースとして、継続的な有料署名契約や将来の値上げに依存する方式は採用しません。
 - 短時間の修正・再配布を妨げる、外部担当者のリリース審査待ちを前提にしません。
-- v1.0.0 はソースコードと、必要な DLL・ランタイムを含む Windows x64 用 ZIP を配布しています。
+- ソースコードと、必要な DLL・ランタイムを含む Windows x64 用 ZIP を配布します。v1.0.1 の実行ファイル名は `CircleSpaceCoordinator.Desktop.Windows.exe` です（v1.0.0 は `CircleSpaceCoordinator.Desktop.exe`）。
 - 未署名ファイルを含む ZIP の起動成功報告があります。ただし、ZIP 配布・利用者自身によるビルドのどちらも Smart App Control の許可は保証しません。利用者の Windows 保護設定の変更を必須にはしません。
 
 ## 文書一覧
