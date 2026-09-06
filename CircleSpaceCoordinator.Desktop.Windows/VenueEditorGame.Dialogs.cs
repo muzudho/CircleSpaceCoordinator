@@ -104,10 +104,11 @@ public sealed partial class VenueEditorGame
 
     private ScreenRectangle ModalBounds()
     {
+        var availableHeight = GraphicsDevice.Viewport.Height - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
         var width = Math.Min(720d, GraphicsDevice.Viewport.Width - 16d);
-        var height = Math.Min(350d, GraphicsDevice.Viewport.Height - 16d);
+        var height = Math.Min(350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
-            (GraphicsDevice.Viewport.Height - height) / 2d, width, height);
+            (availableHeight - height) / 2d, width, height);
     }
 
     private void EnsureModalButtons()
@@ -175,6 +176,7 @@ public sealed partial class VenueEditorGame
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 5), ToButtonColor(color), 17, true));
         }
+        DrawTextInputHelp();
     }
 
     private void OpenOptimizationSettings()

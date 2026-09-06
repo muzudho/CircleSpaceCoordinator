@@ -19,7 +19,7 @@ public sealed partial class VenueEditorGame
     {
         var editor = new UnderlineTextEditor(initial);
         OpenModal(new ModalDialogModel(ModalDialogKind.Text, title,
-            "下線のある名前を編集できます（100 文字まで）。\nCtrl+A：全選択　Ctrl+C/V/X：コピー・貼付け・切取り\nCtrl+Z/Y：元に戻す・やり直し　Tab：ボタンへ移動"), action =>
+            "選択した配置の名前を変更します。\n新しい名前を入力し、［確定］を選んでください（100 文字まで）。\n［キャンセル］を選ぶと、元の名前を残します。"), action =>
         {
             if (action != ModalDialogAction.Accept) return;
             try { accepted(editor.Text.Trim()); }
@@ -36,6 +36,27 @@ public sealed partial class VenueEditorGame
     {
         var bounds = ModalBounds();
         return new ScreenRectangle(bounds.X + 20, bounds.Y + bounds.Height - 136, bounds.Width - 40, 46);
+    }
+
+    private const int TextInputHelpHeight = 88;
+
+    private void DrawTextInputHelp()
+    {
+        if (modalDialog?.Kind != ModalDialogKind.Text) return;
+        var width = GraphicsDevice.Viewport.Width;
+        var top = Math.Max(0, GraphicsDevice.Viewport.Height - TextInputHelpHeight);
+        // A modal overlay, independent of the ordinary status message underneath.
+        DrawRectangle(new ScreenRectangle(0, top, width, TextInputHelpHeight), new Color(20, 32, 42));
+        DrawLine(new ScreenPoint(0, top), new ScreenPoint(width, top), 2, new Color(99, 223, 185));
+        string[] lines =
+        [
+            "キーボード操作　Ctrl+A：全選択　Ctrl+C：コピー　Ctrl+V：貼り付け　Ctrl+X：切り取り",
+            "Ctrl+Z：元に戻す　Ctrl+Y：やり直し　←／→・Home／End：移動　Shift 併用：範囲選択",
+            "Tab：入力欄・ボタンを移動　Enter：確定／選択中のボタンを実行　Esc：キャンセル（IME 変換中を除く）",
+        ];
+        for (var index = 0; index < lines.Length; index++)
+            textRenderer?.Draw(lines[index], new Rectangle(16, top + 8 + index * 25, Math.Max(1, width - 32), 23),
+                new Color(220, 233, 239), 16);
     }
 
     private bool UpdateUnderlineInput(KeyboardState keyboard, MouseState mouse)
