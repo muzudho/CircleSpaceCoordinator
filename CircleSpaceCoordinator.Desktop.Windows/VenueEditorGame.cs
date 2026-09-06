@@ -24,7 +24,7 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-public sealed class VenueEditorGame : Game
+public sealed partial class VenueEditorGame : Game
 {
     private const int StatusBarHeight = 58;
     private const int ToolbarHeight = 112;
@@ -160,6 +160,16 @@ public sealed class VenueEditorGame : Game
             CancelInProgressPointerInteraction();
             // Keep the current physical input state.  Otherwise a button held while
             // this window was inactive would look like a fresh click on activation.
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
+
+        PollOptimization();
+        if (UpdateModalDialog(keyboard, mouse))
+        {
             previousMouse = mouse;
             previousKeyboard = keyboard;
             UpdateWindowPresentation();
@@ -494,6 +504,8 @@ public sealed class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedModalButton?.CancelPress();
+        pressedModalButton = null;
         pressedToolbarButton?.Model.CancelPress();
         pressedToolbarButton = null;
         leftPanActive = false;
@@ -552,6 +564,7 @@ public sealed class VenueEditorGame : Game
         DrawToolbar();
         DrawConfidentialBadge();
         DrawStatusBar();
+        DrawModalDialog();
         spriteBatch.End();
 
         if (screenshotRequested)
@@ -2392,28 +2405,8 @@ public sealed class VenueEditorGame : Game
         }
         if (action == ToolbarAction.OptimizeCirclePlacement)
         {
-            var timeLimit = OptimizationSettingsDialog.Show();
-            if (timeLimit is null)
-                return (false, "cancelled");
-            var result = OptimizationProgressDialog.Show(workspace.Project, workspace.SelectedPlanId, timeLimit.Value);
-            if (result is null)
-                return (false, "cancelled");
-            if (result.BestScore.CompareTo(result.InitialScore) <= 0)
-            {
-                System.Windows.Forms.MessageBox.Show("今回の試行では、開始時より評価を改善できませんでした。", "自動最適化",
-                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
-                return (false, "not_improved");
-            }
-            var applied = commandController.AddOptimizedPlan(result);
-            if (applied.Applied)
-            {
-                System.Windows.Forms.MessageBox.Show(
-                    $"自動最適化した配置案を新しく追加しました。\n開始時　一般: {result.InitialScore.GeneralAttendeeScore:F2}　サークル: {result.InitialScore.CircleParticipantScore:F2}\n最高　　一般: {result.BestScore.GeneralAttendeeScore:F2}　サークル: {result.BestScore.CircleParticipantScore:F2}\n試行回数: {result.IterationCount:N0}",
-                    "自動最適化", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
-            }
-            return applied.Applied
-                ? (true, $"initialGeneral={result.InitialScore.GeneralAttendeeScore:F2};bestGeneral={result.BestScore.GeneralAttendeeScore:F2};initialCircle={result.InitialScore.CircleParticipantScore:F2};bestCircle={result.BestScore.CircleParticipantScore:F2};iterations={result.IterationCount}")
-                : (false, $"issues={FormatIssues(applied.Issues)}");
+            OpenOptimizationSettings();
+            return (true, "dialog_opened");
         }
         if (action == ToolbarAction.EditGenreStyles)
             return (GenreStyleDialog.ShowEditor(workspace), "genre_styles");
@@ -3251,41 +3244,36 @@ public sealed class VenueEditorGame : Game
     {
         if (workspace is null) return (false, "workspace_unavailable");
         var isDesk = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
-        try
+        var id = isDesk ? SelectedDeskLayoutId() : workspace.SelectedPlanId;
+        if (isDesk && workspace.Project.CircleLayouts.Any(item => item.DeskLayoutId == id))
         {
-            if (isDesk)
-            {
-                var deskLayoutId = SelectedDeskLayoutId();
-                var childCount = workspace.Project.CircleLayouts.Count(item => item.DeskLayoutId == deskLayoutId);
-                if (childCount != 0)
-                {
-                    System.Windows.Forms.MessageBox.Show($"この机配置は {childCount} 件のサークル配置で使用中です。先にサークル配置を削除または紐付け変更してください。", "机配置を削除", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-                    return (false, "desk_layout_referenced");
-                }
-                if (System.Windows.Forms.MessageBox.Show($"机配置「{CurrentDeskLayoutName()}」を削除しますか？", "机配置を削除", System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Warning) != System.Windows.Forms.DialogResult.Yes)
-                    return (false, "cancelled");
-                workspace.ApplyProjectEdit(project => LayoutCatalogService.RemoveDeskLayout(project, deskLayoutId));
-                return (true, $"deskLayoutId={deskLayoutId}");
-            }
-
-            if (workspace.Project.CircleLayouts.Count <= 1)
-            {
-                System.Windows.Forms.MessageBox.Show("最後のサークル配置は削除できません。", "サークル配置を削除", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-                return (false, "last_circle_layout");
-            }
-            var circleLayoutId = workspace.SelectedPlanId;
-            if (System.Windows.Forms.MessageBox.Show("このサークル配置を削除しますか？", "サークル配置を削除", System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Warning) != System.Windows.Forms.DialogResult.Yes)
-                return (false, "cancelled");
-            workspace.ApplyProjectEdit(project => LayoutCatalogService.RemoveCircleLayout(project, circleLayoutId));
-            return (true, $"circleLayoutId={circleLayoutId}");
+            ShowInAppMessage("机配置を削除", "この机配置はサークル配置で使用中です。\n先にサークル配置を削除または紐付け変更してください。");
+            return (false, "desk_layout_referenced");
         }
-        catch (Exception exception)
+        if (!isDesk && workspace.Project.CircleLayouts.Count <= 1)
         {
-            System.Windows.Forms.MessageBox.Show(exception.Message, "配置案を削除", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-            return (false, $"error={exception.GetType().Name}");
+            ShowInAppMessage("サークル配置を削除", "最後のサークル配置は削除できません。");
+            return (false, "last_circle_layout");
         }
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "配置を削除",
+            isDesk ? $"机配置「{CurrentDeskLayoutName()}」を削除しますか？" : "このサークル配置を削除しますか？"), action =>
+        {
+            if (action != ModalDialogAction.Accept) return;
+            try
+            {
+                workspace.ApplyProjectEdit(project => isDesk
+                    ? LayoutCatalogService.RemoveDeskLayout(project, id)
+                    : LayoutCatalogService.RemoveCircleLayout(project, id));
+                Log("layout_delete", success: true);
+            }
+            catch (Exception exception)
+            {
+                ShowInAppMessage("配置を削除", exception.Message);
+                Log("layout_delete", success: false);
+            }
+        });
+        return (true, "dialog_opened");
     }
-
     private (bool Success, string Detail) PromptRebindCircleLayout()
     {
         if (workspace is null) return (false, "workspace_unavailable");
@@ -3502,6 +3490,7 @@ public sealed class VenueEditorGame : Game
     {
         if (disposing)
         {
+            DisposeOptimization();
             screenshotShutterSoundInstance?.Dispose();
             screenshotShutterSound?.Dispose();
             textRenderer?.Dispose();

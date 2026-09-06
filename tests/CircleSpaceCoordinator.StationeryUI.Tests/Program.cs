@@ -16,6 +16,9 @@ internal static class Program
             ("Invalid viewport values are rejected", InvalidValuesAreRejected),
             ("Icon buttons track hover press and click", IconButtonTracksPointer),
             ("Disabled icon buttons cannot be clicked", DisabledIconButtonCannotClick),
+            ("Dialog cancellation cannot later confirm", DialogCancellationIsFinal),
+            ("Optimization minutes stay in the allowed range", DialogMinutesAreBounded),
+            ("Stopping progress keeps the modal open until completion", ProgressStopKeepsModalOpen),
         };
         var failures = 0;
         foreach (var test in tests)
@@ -102,6 +105,36 @@ internal static class Program
         AssertEqual(false, button.Release(new ScreenPoint(10d, 10d)));
         AssertEqual(false, button.IsPointerOver);
         AssertEqual(true, button.Contains(new ScreenPoint(10d, 10d)));
+    }
+
+    private static void DialogCancellationIsFinal()
+    {
+        var dialog = new ModalDialogModel(ModalDialogKind.Confirmation, "Delete", "Confirm?");
+        AssertEqual(ModalDialogAction.Cancel, dialog.Apply(ModalDialogAction.Cancel));
+        AssertEqual(true, dialog.IsClosed);
+        AssertEqual(ModalDialogAction.None, dialog.Apply(ModalDialogAction.Accept));
+    }
+
+    private static void DialogMinutesAreBounded()
+    {
+        var dialog = new ModalDialogModel(ModalDialogKind.Minutes, "Optimize", "Minutes");
+        AssertEqual(10, dialog.Minutes);
+        for (var index = 0; index < 150; index++) dialog.Apply(ModalDialogAction.Decrease);
+        AssertEqual(1, dialog.Minutes);
+        for (var index = 0; index < 150; index++) dialog.Apply(ModalDialogAction.Increase);
+        AssertEqual(120, dialog.Minutes);
+        AssertEqual(false, dialog.IsClosed);
+        AssertEqual(ModalDialogAction.Accept, dialog.Apply(ModalDialogAction.Accept));
+    }
+
+    private static void ProgressStopKeepsModalOpen()
+    {
+        var dialog = new ModalDialogModel(ModalDialogKind.Progress, "Optimize", "Running");
+        AssertEqual(ModalDialogAction.None, dialog.Apply(ModalDialogAction.Accept));
+        AssertEqual(ModalDialogAction.Stop, dialog.Apply(ModalDialogAction.Cancel));
+        AssertEqual(true, dialog.StopRequested);
+        AssertEqual(false, dialog.IsClosed);
+        AssertEqual(ModalDialogAction.None, dialog.Apply(ModalDialogAction.Stop));
     }
 
     private static void AssertThrows<TException>(Action action)
