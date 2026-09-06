@@ -7,7 +7,8 @@
 - **利用したい**
 	- **[制作物を知りたい](Docs/User/Products/README.md)**：このアプリでできることはこちら。
 	- **使いたい**
-		- **[入手してウィンドウを開くまで](Docs/User/GetStarted/Installation.md)**：準備、ビルド、起動、更新の案内はこちら。
+		- **[最新版をダウンロードする](https://github.com/muzudho/CircleSpaceCoordinator/releases/latest)**：リリースページのアプリ用 ZIP を展開し、`CircleSpaceCoordinator.Desktop.exe` を起動してください。
+		- [ZIP 版が起動しないとき](Docs/User/GetStarted/Installation.md)：確認事項と、ソースからビルドする方法はこちら。
 		- **[ウィンドウを開いてから配置の決定稿を作るまで](Docs/User/GetStarted/Start.md)**：ウィンドウを開いた後の配置・比較・保存はこちら。
 - **開発したい**
 	- **[開発者向けガイド](Docs/Dev/README.md)**：ビルド、テスト、構成・設計、署名・リリースはこちら。

@@ -9,4 +9,4 @@
 - 配置案を複製・編集・比較する。
 - プロジェクトを保存し、配置結果を Excel に書き出す。
 
-[使い始める](../GetStarted/Installation.md) ／ [トップへ戻る](../../../README.md)
+[最新版をダウンロードする](https://github.com/muzudho/CircleSpaceCoordinator/releases/latest) ／ [ZIP 版が起動しないとき](../GetStarted/Installation.md) ／ [トップへ戻る](../../../README.md)

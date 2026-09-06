@@ -1,6 +1,6 @@
 # ［ウィンドウを開いて］から～［配置の決定稿を作る］まで
 
-イベントプロジェクト選択画面が開いたところから、会場と参加サークルを配置し、採用する案を保存するまでを説明します。まだ起動できていない場合は [入手・起動の手順](Installation.md) を先に進めてください。
+イベントプロジェクト選択画面が開いたところから、会場と参加サークルを配置し、採用する案を保存するまでを説明します。アプリは [最新リリース](https://github.com/muzudho/CircleSpaceCoordinator/releases/latest) の ZIP を展開して起動してください。起動できない場合は [ZIP 版が起動しないとき](Installation.md) を参照してください。
 
 ここでいう「決定稿」は、内容を確認して採用すると決めた配置案です。本書では案の名前と保存したファイルで管理します。
 
@@ -63,4 +63,4 @@
 
 詳しいドラッグ操作やショートカットは [アプリの操作説明](../../../CircleSpaceCoordinator.Desktop/README.md) を参照してください。本書は既存の操作資料と実装に基づく案内で、一連の操作を実機で通して検証したものではありません。
 
-[入手・起動の手順](Installation.md) ／ [制作物の説明](../Products/README.md) ／ [トップへ戻る](../../../README.md)
+[最新版をダウンロードする](https://github.com/muzudho/CircleSpaceCoordinator/releases/latest) ／ [ZIP 版が起動しないとき](Installation.md) ／ [制作物の説明](../Products/README.md) ／ [トップへ戻る](../../../README.md)
