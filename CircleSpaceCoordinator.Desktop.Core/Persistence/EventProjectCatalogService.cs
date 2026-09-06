@@ -1,4 +1,4 @@
-namespace CircleSpaceCoordinator.Desktop.Windows.Persistence;
+namespace CircleSpaceCoordinator.Desktop.Core.Persistence;
 
 using CircleSpaceCoordinator.Core.Evaluation;
 using CircleSpaceCoordinator.Core.Geometry;

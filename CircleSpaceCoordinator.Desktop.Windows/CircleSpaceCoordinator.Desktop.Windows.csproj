@@ -7,6 +7,7 @@
     <SmartAppControlSigningEnabled Condition="'$(SmartAppControlSigningEnabled)' == '' and '$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT'">true</SmartAppControlSigningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../CircleSpaceCoordinator.Desktop.Core/CircleSpaceCoordinator.Desktop.Core.csproj" />
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5.1" />
     <ProjectReference Include="../CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
     <ProjectReference Include="../CircleSpaceCoordinator.Infrastructure/CircleSpaceCoordinator.Infrastructure.csproj" />

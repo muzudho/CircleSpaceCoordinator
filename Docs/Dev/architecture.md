@@ -58,7 +58,7 @@ Windows固有のIMEフックはここへ入れず、DesktopのWindows実装か�
 
 ### Desktop.Windows
 
-現在の `CircleSpaceCoordinator.Desktop.Windows` は `net10.0-windows` を対象とする Windows 専用の実行プロジェクトです。将来、Windows に依存しないデスクトップ処理を新しい `CircleSpaceCoordinator.Desktop` プロジェクトへ分離し、Windows 固有の実装をこちらに残す予定です。現段階では名前の整理のみで、他の OS への対応はまだ行っていません。
+`CircleSpaceCoordinator.Desktop.Windows` は `net10.0-windows` を対象とする Windows 専用の実行プロジェクトです。Windows API に依存しない操作・保存・ログなどは、`net10.0` の [Desktop.Core](../../CircleSpaceCoordinator.Desktop.Core/README.md) に分離しています。参照方向は `Desktop.Windows` → `Desktop.Core` で、逆向きの参照はありません。Windows 固有の画面処理と、それに結びついたゲームループ・描画処理は Windows 側に残っています。他の OS 用の実行プロジェクトはまだありません。
 
 - MonoGameの起動とゲームループ
 - 会場キャンバスとカメラ

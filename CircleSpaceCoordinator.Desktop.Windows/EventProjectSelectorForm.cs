@@ -1,5 +1,6 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
+using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.Desktop.Windows.Persistence;
 
 internal sealed class EventProjectSelectorForm : System.Windows.Forms.Form

@@ -2,7 +2,7 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.Application.Participants;
 using CircleSpaceCoordinator.Application.Workspace;
-using CircleSpaceCoordinator.Desktop.Windows.Persistence;
+using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.Infrastructure.Tabular;
 
 internal sealed class ParticipantImportForm : System.Windows.Forms.Form

@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="CircleSpaceCoordinator.Desktop.Core/CircleSpaceCoordinator.Desktop.Core.csproj" />
   <Project Path="CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
   <Project Path="CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
   <Project Path="CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.csproj" />

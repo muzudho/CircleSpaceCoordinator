@@ -1,7 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.Infrastructure.Tabular;
-using CircleSpaceCoordinator.Desktop.Windows.Persistence;
+using CircleSpaceCoordinator.Desktop.Core.Persistence;
 
 internal sealed class CircleSeatExportForm : System.Windows.Forms.Form
 {

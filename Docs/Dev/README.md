@@ -26,7 +26,8 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartA
 | `CircleSpaceCoordinator.Infrastructure/` | JSON、参加者表の読み込み、Excel 出力 |
 | `CircleSpaceCoordinator.OptimizationEngine/` | 自動配置 |
 | `CircleSpaceCoordinator.StationeryUI/` | UI 部品 |
-| `CircleSpaceCoordinator.Desktop.Windows/` | デスクトップアプリ |
+| [`CircleSpaceCoordinator.Desktop.Core/`](../../CircleSpaceCoordinator.Desktop.Core/README.md) | Windows API に依存しないデスクトップ共通処理 |
+| `CircleSpaceCoordinator.Desktop.Windows/` | Windows 用の実行・画面処理 |
 | `tests/` | C# のテスト |
 | `tools/CircleSpaceCoordinator.ProjectCli/` | コマンドラインツール |
 | `examples/`, `schemas/` | 架空サンプルと JSON スキーマ |

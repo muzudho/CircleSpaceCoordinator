@@ -1,4 +1,4 @@
-namespace CircleSpaceCoordinator.Desktop.Windows.Interaction;
+namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 using CircleSpaceCoordinator.Application.Editing;
 using CircleSpaceCoordinator.Application.Plans;

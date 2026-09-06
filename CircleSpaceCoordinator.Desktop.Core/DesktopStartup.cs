@@ -1,4 +1,4 @@
-namespace CircleSpaceCoordinator.Desktop.Windows;
+namespace CircleSpaceCoordinator.Desktop.Core;
 
 public static class DesktopStartup
 {

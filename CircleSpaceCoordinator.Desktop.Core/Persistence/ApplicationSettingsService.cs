@@ -1,4 +1,4 @@
-namespace CircleSpaceCoordinator.Desktop.Windows.Persistence;
+namespace CircleSpaceCoordinator.Desktop.Core.Persistence;
 
 using System.Text.Json;
 using System.Text.Json.Serialization;

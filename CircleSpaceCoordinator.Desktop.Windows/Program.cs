@@ -1,7 +1,8 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
-using CircleSpaceCoordinator.Desktop.Windows.Logging;
-using CircleSpaceCoordinator.Desktop.Windows.Persistence;
+using CircleSpaceCoordinator.Desktop.Core;
+using CircleSpaceCoordinator.Desktop.Core.Logging;
+using CircleSpaceCoordinator.Desktop.Core.Persistence;
 
 internal static class Program
 {

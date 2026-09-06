@@ -1,4 +1,4 @@
-namespace CircleSpaceCoordinator.Desktop.Windows.Interaction;
+namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 using CircleSpaceCoordinator.Core.Model;
 using CircleSpaceCoordinator.Infrastructure.Tabular;

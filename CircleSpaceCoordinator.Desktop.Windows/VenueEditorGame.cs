@@ -1,5 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
+using CircleSpaceCoordinator.Desktop.Core;
+using CircleSpaceCoordinator.Desktop.Core.Screenshots;
 using System.Text.RegularExpressions;
 using CircleSpaceCoordinator.Application.Workspace;
 using CircleSpaceCoordinator.Application.Layouts;
@@ -8,8 +10,9 @@ using CircleSpaceCoordinator.Application.Plans;
 using CircleSpaceCoordinator.Core.Evaluation;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Model;
-using CircleSpaceCoordinator.Desktop.Windows.Interaction;
-using CircleSpaceCoordinator.Desktop.Windows.Logging;
+using CircleSpaceCoordinator.Desktop.Core.Interaction;
+using CircleSpaceCoordinator.Desktop.Core.Logging;
+using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.Desktop.Windows.Persistence;
 using CircleSpaceCoordinator.Desktop.Windows.Screenshots;
 using CircleSpaceCoordinator.Desktop.Windows.Text;

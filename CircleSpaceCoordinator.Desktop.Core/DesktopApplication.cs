@@ -1,4 +1,4 @@
-namespace CircleSpaceCoordinator.Desktop.Windows;
+namespace CircleSpaceCoordinator.Desktop.Core;
 
 using CircleSpaceCoordinator.Application.Workspace;
 using CircleSpaceCoordinator.Infrastructure.Json;

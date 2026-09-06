@@ -1,7 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using System.Text.RegularExpressions;
-using CircleSpaceCoordinator.Desktop.Windows.Persistence;
+using CircleSpaceCoordinator.Desktop.Core.Persistence;
 
 internal static class CircleLabelDisplayDialog
 {

@@ -1,4 +1,4 @@
-namespace CircleSpaceCoordinator.Desktop.Windows.Logging;
+namespace CircleSpaceCoordinator.Desktop.Core.Logging;
 
 using System.Text.Json;
 

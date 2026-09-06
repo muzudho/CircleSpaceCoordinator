@@ -1,6 +1,6 @@
-namespace CircleSpaceCoordinator.Desktop.Windows.Screenshots;
+namespace CircleSpaceCoordinator.Desktop.Core.Screenshots;
 
-internal static class ScreenshotPath
+public static class ScreenshotPath
 {
     public static string DefaultDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
