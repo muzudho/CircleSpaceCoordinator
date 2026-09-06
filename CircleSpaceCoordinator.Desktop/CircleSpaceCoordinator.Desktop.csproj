@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\long-table-app-icon.ico</ApplicationIcon>
+    <SmartAppControlSigningEnabled Condition="'$(SmartAppControlSigningEnabled)' == '' and '$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT'">true</SmartAppControlSigningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5.1" />
+    <ProjectReference Include="../CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.Infrastructure/CircleSpaceCoordinator.Infrastructure.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.OptimizationEngine/CircleSpaceCoordinator.OptimizationEngine.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.StationeryUI/CircleSpaceCoordinator.StationeryUI.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\long-table-app-icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../examples/circle-space-project-v1.example.json" Link="examples/circle-space-project-v1.example.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="application-settings.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+  <Target Name="SignBuildOutputForSmartAppControl"
+          AfterTargets="Build"
+          Condition="'$(SmartAppControlSigningEnabled)' == 'true'">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\ForSmartAppControl\Sign-BuildOutput.ps1&quot; -Path &quot;$(TargetDir).&quot;" />
+  </Target>
+</Project>

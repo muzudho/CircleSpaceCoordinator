@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
+    <ProjectReference Include="../../CircleSpaceCoordinator.Infrastructure/CircleSpaceCoordinator.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

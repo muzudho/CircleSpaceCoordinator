@@ -1,0 +1,175 @@
+{
+  "schemaVersion": "1.0",
+  "project": {
+    "id": "sample-event",
+    "name": "架空イベント配置例",
+    "description": "公開用の架空データ",
+    "isConfidential": false
+  },
+  "venue": {
+    "id": "sample-hall",
+    "name": "サンプルホール",
+    "width": 6,
+    "height": 4,
+    "blockedCells": [
+      { "x": 0, "y": 0 }
+    ],
+    "zones": [
+      {
+        "id": "entrance-side",
+        "name": "入口側",
+        "cells": [
+          { "x": 0, "y": 3 },
+          { "x": 1, "y": 3 },
+          { "x": 2, "y": 3 }
+        ]
+      }
+    ]
+  },
+  "deskTypes": [
+    {
+      "id": "standard-desk",
+      "name": "標準机",
+      "footprint": [
+        { "x": 0, "y": 0 },
+        { "x": 1, "y": 0 }
+      ]
+    }
+  ],
+  "participants": [
+    {
+      "id": "participant-001",
+      "displayName": "架空サークル青空",
+      "genreId": "action",
+      "requiredCellCount": 2,
+      "features": {
+        "shop-items": 12,
+        "paper-book": 1
+      },
+      "tags": ["sample"]
+    },
+    {
+      "id": "participant-002",
+      "displayName": "架空サークル木漏れ日",
+      "genreId": "adventure",
+      "requiredCellCount": 1,
+      "features": {
+        "shop-items": 3,
+        "paper-book": 0
+      },
+      "tags": ["sample"]
+    }
+  ],
+  "evaluation": {
+    "features": [
+      {
+        "id": "shop-items",
+        "name": "有償頒布物数",
+        "description": "頒布物が多い参加者を通路側へ置くための評価",
+        "scale": 1.0,
+        "offset": 0.0,
+        "overallWeight": 1.0
+      },
+      {
+        "id": "paper-book",
+        "name": "紙の書籍",
+        "description": "紙の本を扱う参加者の位置評価",
+        "scale": 1.0,
+        "offset": 0.0,
+        "overallWeight": 0.5
+      }
+    ],
+    "weightMaps": [
+      {
+        "featureId": "shop-items",
+        "defaultWeight": 0.0,
+        "cells": [
+          { "position": { "x": 1, "y": 2 }, "weight": 0.25 },
+          { "position": { "x": 4, "y": 2 }, "weight": 1.0 }
+        ]
+      },
+      {
+        "featureId": "paper-book",
+        "defaultWeight": 0.0,
+        "cells": [
+          { "position": { "x": 1, "y": 2 }, "weight": 1.0 },
+          { "position": { "x": 4, "y": 2 }, "weight": 0.5 }
+        ]
+      }
+    ]
+  },
+  "plans": [
+    {
+      "id": "plan-0",
+      "name": "配置案0",
+      "description": "架空の比較案",
+      "deskPlacements": [
+        {
+          "id": "plan-0-desk-01",
+          "deskTypeId": "standard-desk",
+          "anchor": { "x": 1, "y": 2 },
+          "orientation": "north"
+        },
+        {
+          "id": "plan-0-desk-02",
+          "deskTypeId": "standard-desk",
+          "anchor": { "x": 4, "y": 2 },
+          "orientation": "south"
+        }
+      ],
+      "assignments": [
+        {
+          "participantId": "participant-001",
+          "occupiedCells": [
+            { "x": 4, "y": 2 },
+            { "x": 3, "y": 2 }
+          ],
+          "scoringPosition": { "x": 4, "y": 2 }
+        },
+        {
+          "participantId": "participant-002",
+          "occupiedCells": [
+            { "x": 1, "y": 2 }
+          ],
+          "scoringPosition": { "x": 1, "y": 2 }
+        }
+      ]
+    },
+    {
+      "id": "plan-1",
+      "name": "配置案1",
+      "description": "参加者を入れ替えた比較案",
+      "deskPlacements": [
+        {
+          "id": "plan-1-desk-01",
+          "deskTypeId": "standard-desk",
+          "anchor": { "x": 1, "y": 2 },
+          "orientation": "north"
+        },
+        {
+          "id": "plan-1-desk-02",
+          "deskTypeId": "standard-desk",
+          "anchor": { "x": 4, "y": 2 },
+          "orientation": "south"
+        }
+      ],
+      "assignments": [
+        {
+          "participantId": "participant-001",
+          "occupiedCells": [
+            { "x": 1, "y": 2 },
+            { "x": 2, "y": 2 }
+          ],
+          "scoringPosition": { "x": 1, "y": 2 }
+        },
+        {
+          "participantId": "participant-002",
+          "occupiedCells": [
+            { "x": 4, "y": 2 }
+          ],
+          "scoringPosition": { "x": 4, "y": 2 }
+        }
+      ]
+    }
+  ]
+}

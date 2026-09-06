@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0",
+  "project": {
+    "id": "x-circle-id-fictional-test",
+    "name": "xCircleId 動作確認用架空データ",
+    "description": "実在する業務情報を含まない動作確認専用データ"
+  },
+  "venue": {
+    "id": "fictional-venue",
+    "name": "架空会場",
+    "width": 2,
+    "height": 1,
+    "blockedCells": [],
+    "zones": []
+  },
+  "deskTypes": [
+    {
+      "id": "standard-desk",
+      "name": "架空の標準机",
+      "footprint": [
+        { "x": 0, "y": 0 },
+        { "x": 1, "y": 0 }
+      ]
+    }
+  ],
+  "participants": [
+    {
+      "id": "fictional-circle-001",
+      "displayName": "架空サークル１",
+      "requiredCellCount": 1,
+      "features": {},
+      "tags": ["fictional", "test"]
+    },
+    {
+      "id": "fictional-circle-002",
+      "displayName": "架空サークル２",
+      "requiredCellCount": 1,
+      "features": {},
+      "tags": ["fictional", "test"]
+    }
+  ],
+  "evaluation": {
+    "features": [],
+    "weightMaps": []
+  },
+  "plans": [
+    {
+      "id": "fictional-plan-001",
+      "name": "架空配置案１",
+      "description": "1台の2セル机に架空サークルIDを1件ずつ割り当てた確認用配置",
+      "deskPlacements": [
+        {
+          "id": "fictional-desk-001",
+          "deskTypeId": "standard-desk",
+          "anchor": { "x": 0, "y": 0 },
+          "orientation": "north"
+        }
+      ],
+      "assignments": [
+        {
+          "participantId": "fictional-circle-001",
+          "occupiedCells": [
+            { "x": 0, "y": 0 }
+          ],
+          "scoringPosition": { "x": 0, "y": 0 }
+        },
+        {
+          "participantId": "fictional-circle-002",
+          "occupiedCells": [
+            { "x": 1, "y": 0 }
+          ],
+          "scoringPosition": { "x": 1, "y": 0 }
+        }
+      ]
+    }
+  ]
+}

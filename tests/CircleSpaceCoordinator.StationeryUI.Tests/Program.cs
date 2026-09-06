@@ -1,0 +1,126 @@
+namespace CircleSpaceCoordinator.StationeryUI.Tests;
+
+using CircleSpaceCoordinator.StationeryUI.Canvas;
+using CircleSpaceCoordinator.StationeryUI.Controls;
+
+internal static class Program
+{
+    private static int Main()
+    {
+        var tests = new (string Name, Action Run)[]
+        {
+            ("Screen positions map to grid cells", ScreenPositionsMapToCells),
+            ("Panning moves cell bounds", PanningMovesCellBounds),
+            ("Zooming preserves the anchored world position", ZoomPreservesAnchor),
+            ("A saved viewport can be restored", SavedViewportCanBeRestored),
+            ("Invalid viewport values are rejected", InvalidValuesAreRejected),
+            ("Icon buttons track hover press and click", IconButtonTracksPointer),
+            ("Disabled icon buttons cannot be clicked", DisabledIconButtonCannotClick),
+        };
+        var failures = 0;
+        foreach (var test in tests)
+        {
+            try
+            {
+                test.Run();
+                Console.WriteLine($"PASS: {test.Name}");
+            }
+            catch (Exception exception)
+            {
+                failures++;
+                Console.Error.WriteLine($"FAIL: {test.Name}");
+                Console.Error.WriteLine(exception.Message);
+            }
+        }
+
+        Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
+        return failures == 0 ? 0 : 1;
+    }
+
+    private static void ScreenPositionsMapToCells()
+    {
+        var viewport = new GridViewport(20d);
+        AssertEqual(new GridCellAddress(0, 0), viewport.ScreenToCell(new ScreenPoint(0d, 0d)));
+        AssertEqual(new GridCellAddress(1, 2), viewport.ScreenToCell(new ScreenPoint(39.9d, 40d)));
+        AssertEqual(new GridCellAddress(-1, -1), viewport.ScreenToCell(new ScreenPoint(-0.1d, -0.1d)));
+    }
+
+    private static void PanningMovesCellBounds()
+    {
+        var viewport = new GridViewport(20d);
+        viewport.PanBy(5d, 7d);
+        AssertEqual(new ScreenRectangle(25d, 27d, 20d, 20d), viewport.GetCellBounds(new GridCellAddress(1, 1)));
+    }
+
+    private static void ZoomPreservesAnchor()
+    {
+        var viewport = new GridViewport(20d);
+        var anchor = new ScreenPoint(30d, 50d);
+        var cellBefore = viewport.ScreenToCell(anchor);
+        viewport.ZoomAt(anchor, 2d);
+
+        AssertEqual(cellBefore, viewport.ScreenToCell(anchor));
+        AssertEqual(40d, viewport.CellSize);
+        AssertEqual(new ScreenPoint(-30d, -50d), viewport.Origin);
+    }
+
+    private static void InvalidValuesAreRejected()
+    {
+        AssertThrows<ArgumentOutOfRangeException>(() => new GridViewport(0d));
+        var viewport = new GridViewport(20d);
+        AssertThrows<ArgumentOutOfRangeException>(() => viewport.ZoomAt(new ScreenPoint(), 5d));
+        AssertThrows<ArgumentOutOfRangeException>(() => viewport.PanBy(double.NaN, 0d));
+    }
+
+    private static void SavedViewportCanBeRestored()
+    {
+        var viewport = new GridViewport(20d);
+        viewport.SetView(1.75d, new ScreenPoint(-123d, 456d));
+
+        AssertEqual(1.75d, viewport.Zoom);
+        AssertEqual(new ScreenPoint(-123d, 456d), viewport.Origin);
+    }
+
+    private static void IconButtonTracksPointer()
+    {
+        var button = new IconButtonModel(new ScreenRectangle(10d, 20d, 40d, 40d), "Undo");
+        button.UpdatePointer(new ScreenPoint(15d, 25d));
+        AssertEqual(true, button.IsPointerOver);
+        AssertEqual(true, button.Press(new ScreenPoint(15d, 25d)));
+        AssertEqual(true, button.IsPressed);
+        AssertEqual(true, button.Release(new ScreenPoint(15d, 25d)));
+        AssertEqual(false, button.IsPressed);
+    }
+
+    private static void DisabledIconButtonCannotClick()
+    {
+        var button = new IconButtonModel(new ScreenRectangle(0d, 0d, 40d, 40d), "Redo")
+        {
+            IsEnabled = false,
+        };
+        AssertEqual(false, button.Press(new ScreenPoint(10d, 10d)));
+        AssertEqual(false, button.Release(new ScreenPoint(10d, 10d)));
+        AssertEqual(false, button.IsPointerOver);
+        AssertEqual(true, button.Contains(new ScreenPoint(10d, 10d)));
+    }
+
+    private static void AssertThrows<TException>(Action action)
+        where TException : Exception
+    {
+        try
+        {
+            action();
+            throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
+        }
+        catch (TException)
+        {
+        }
+    }
+
+    private static void AssertEqual<T>(T expected, T actual)
+        where T : notnull
+    {
+        if (!EqualityComparer<T>.Default.Equals(expected, actual))
+            throw new InvalidOperationException($"Expected '{expected}', actual '{actual}'.");
+    }
+}

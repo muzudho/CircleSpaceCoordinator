@@ -1,0 +1,568 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/circle-space-project-v1.schema.json",
+  "title": "Circle Space Coordinator project exchange format",
+  "description": "C# application and Python Excel bridge exchange format, version 1.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "project",
+    "venue",
+    "deskTypes",
+    "participants",
+    "evaluation"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "project": {
+      "$ref": "#/$defs/projectMetadata"
+    },
+    "editorView": {
+      "$ref": "#/$defs/editorView",
+      "description": "Optional project-wide editor zoom and position shared by all plans."
+    },
+    "genreStyles": {
+      "type": "array",
+      "description": "Optional project-specific genre color and shading-pattern mappings.",
+      "items": { "$ref": "#/$defs/genreStyle" }
+    },
+    "venue": {
+      "$ref": "#/$defs/venue"
+    },
+    "deskTypes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/deskType"
+      }
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/participant"
+      }
+    },
+    "evaluation": {
+      "$ref": "#/$defs/evaluationConfiguration"
+    },
+    "plans": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/plan"
+      }
+    },
+    "deskLayouts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/deskLayout" }
+    },
+    "circleLayouts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/circleLayout" }
+    },
+    "evaluationResults": {
+      "type": "array",
+      "description": "Optional derived data. Importers may discard and recalculate it.",
+      "items": {
+        "$ref": "#/$defs/evaluationResult"
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["plans"] },
+    { "required": ["deskLayouts", "circleLayouts"] }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "displayText": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "finiteNumber": {
+      "type": "number"
+    },
+    "editorView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["zoom", "originX", "originY"],
+      "properties": {
+        "zoom": { "type": "number", "minimum": 0.25, "maximum": 4 },
+        "originX": { "$ref": "#/$defs/finiteNumber" },
+        "originY": { "$ref": "#/$defs/finiteNumber" }
+      }
+    },
+    "genreStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["genreId", "primaryColor", "secondaryColor", "pattern"],
+      "properties": {
+        "genreId": { "type": "string", "minLength": 1 },
+        "primaryColor": { "type": "string", "minLength": 1 },
+        "secondaryColor": { "type": "string", "minLength": 1 },
+        "pattern": { "type": "string", "minLength": 1 }
+      }
+    },
+    "gridPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "relativeGridPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        }
+      }
+    },
+    "projectMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "$ref": "#/$defs/displayText"
+        },
+        "description": {
+          "$ref": "#/$defs/displayText"
+        },
+        "isConfidential": {
+          "type": "boolean",
+          "default": false,
+          "description": "Visual warning that this project must not be published. This is not an access-control feature."
+        }
+      }
+    },
+    "venue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "width", "height"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "$ref": "#/$defs/displayText"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "blockedCells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gridPosition"
+          }
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/zone"
+          }
+        }
+      }
+    },
+    "zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "cells"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "$ref": "#/$defs/displayText"
+        },
+        "cells": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/gridPosition"
+          }
+        }
+      }
+    },
+    "deskType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "footprint"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "$ref": "#/$defs/displayText"
+        },
+        "footprint": {
+          "type": "array",
+          "description": "Cells occupied relative to the placement anchor before rotation.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/relativeGridPosition"
+          }
+        }
+      }
+    },
+    "participant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "requiredCellCount", "features"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "circleId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Event-provided arbitrary circle identifier. Older documents may omit it; readers then use id."
+        },
+        "combinedWithCircleId": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "description": "Optional event-provided circle ID of the combined-space partner."
+        },
+        "genreId": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "description": "Event-provided genre identifier used for genre coloring and general-attendee evaluation."
+        },
+        "displayName": {
+          "$ref": "#/$defs/displayText"
+        },
+        "requiredCellCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "features": {
+          "type": "object",
+          "description": "Numeric values keyed by evaluation feature id.",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/finiteNumber"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "evaluationConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["features", "weightMaps"],
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evaluationFeature"
+          }
+        },
+        "weightMaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/weightMap"
+          }
+        }
+      }
+    },
+    "evaluationFeature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "scale", "offset", "overallWeight"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "$ref": "#/$defs/displayText"
+        },
+        "description": {
+          "$ref": "#/$defs/displayText"
+        },
+        "scale": {
+          "$ref": "#/$defs/finiteNumber"
+        },
+        "offset": {
+          "$ref": "#/$defs/finiteNumber"
+        },
+        "overallWeight": {
+          "$ref": "#/$defs/finiteNumber"
+        }
+      }
+    },
+    "weightMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["featureId", "defaultWeight", "cells"],
+      "properties": {
+        "featureId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "defaultWeight": {
+          "$ref": "#/$defs/finiteNumber"
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/weightedCell"
+          }
+        }
+      }
+    },
+    "weightedCell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position", "weight"],
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/gridPosition"
+        },
+        "weight": {
+          "$ref": "#/$defs/finiteNumber"
+        }
+      }
+    },
+    "deskLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "deskPlacements"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "name": { "$ref": "#/$defs/displayText" },
+        "description": { "$ref": "#/$defs/displayText" },
+        "deskPlacements": { "type": "array", "items": { "$ref": "#/$defs/deskPlacement" } },
+        "islandConnectors": { "type": "array", "items": { "$ref": "#/$defs/islandConnector" } },
+        "disabledIslandConnections": { "type": "array", "items": { "$ref": "#/$defs/disabledIslandConnection" } },
+        "facingRegions": { "type": "array", "items": { "$ref": "#/$defs/facingRegion" } },
+        "seatLabels": { "type": "array", "items": { "$ref": "#/$defs/deskSeatLabel" } }
+      }
+    },
+    "circleLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "deskLayoutId", "assignments"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "name": { "$ref": "#/$defs/displayText" },
+        "description": { "$ref": "#/$defs/displayText" },
+        "deskLayoutId": { "$ref": "#/$defs/identifier" },
+        "assignments": { "type": "array", "items": { "$ref": "#/$defs/participantAssignment" } },
+        "temporaryPlacements": { "type": "array", "items": { "$ref": "#/$defs/temporaryPlacement" } }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "deskPlacements", "assignments"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "name": {
+          "$ref": "#/$defs/displayText"
+        },
+        "description": {
+          "$ref": "#/$defs/displayText"
+        },
+        "deskPlacements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/deskPlacement"
+          }
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/participantAssignment"
+          }
+        },
+        "islandConnectors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/islandConnector" }
+        },
+        "disabledIslandConnections": {
+          "description": "Physical cell-to-cell links excluded from logical island connectivity.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/disabledIslandConnection" }
+        },
+        "facingRegions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/facingRegion" }
+        }
+      }
+    },
+    "islandConnector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "firstDeskId", "secondDeskId"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "firstDeskId": { "$ref": "#/$defs/identifier" },
+        "secondDeskId": { "$ref": "#/$defs/identifier" },
+        "firstCell": { "$ref": "#/$defs/gridPosition" },
+        "secondCell": { "$ref": "#/$defs/gridPosition" }
+      }
+    },
+    "disabledIslandConnection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["firstCell", "secondCell"],
+      "properties": {
+        "firstCell": { "$ref": "#/$defs/gridPosition" },
+        "secondCell": { "$ref": "#/$defs/gridPosition" }
+      }
+    },
+    "facingRegion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "firstCorner", "secondCorner"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "firstCorner": { "$ref": "#/$defs/gridPosition" },
+        "secondCorner": { "$ref": "#/$defs/gridPosition" }
+      }
+    },
+    "deskPlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "deskTypeId", "anchor", "orientation"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "deskTypeId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "anchor": {
+          "$ref": "#/$defs/gridPosition"
+        },
+        "orientation": {
+          "enum": ["north", "east", "south", "west"]
+        }
+      }
+    },
+    "temporaryPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": { "x": { "type": "integer" }, "y": { "type": "integer" } }
+    },
+    "temporaryPlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participantId", "occupiedCells", "scoringPosition"],
+      "properties": {
+        "participantId": { "$ref": "#/$defs/identifier" },
+        "occupiedCells": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/temporaryPosition" }
+        },
+        "scoringPosition": { "$ref": "#/$defs/temporaryPosition" },
+        "combinedSpaceId": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "participantAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participantId", "occupiedCells", "scoringPosition"],
+      "properties": {
+        "participantId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "occupiedCells": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/gridPosition"
+          }
+        },
+        "scoringPosition": {
+          "$ref": "#/$defs/gridPosition"
+        },
+        "combinedSpaceId": {
+          "description": "Shared by exactly two participants that jointly use cells on the same physical desk.",
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    },
+    "evaluationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planId", "totalScore", "features"],
+      "properties": {
+        "planId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "totalScore": {
+          "$ref": "#/$defs/finiteNumber"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/featureEvaluationResult"
+          }
+        }
+      }
+    },
+    "featureEvaluationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["featureId", "rawSum", "adjustedScore", "weightedScore"],
+      "properties": {
+        "featureId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "rawSum": {
+          "$ref": "#/$defs/finiteNumber"
+        },
+        "adjustedScore": {
+          "$ref": "#/$defs/finiteNumber"
+        },
+        "weightedScore": {
+          "$ref": "#/$defs/finiteNumber"
+        }
+      }
+    }
+  }
+}

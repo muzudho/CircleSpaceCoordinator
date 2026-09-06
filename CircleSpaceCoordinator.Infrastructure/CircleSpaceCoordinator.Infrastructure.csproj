@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <ProjectReference Include="../CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
+  </ItemGroup>
+</Project>

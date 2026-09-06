@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
+  </ItemGroup>
+</Project>
