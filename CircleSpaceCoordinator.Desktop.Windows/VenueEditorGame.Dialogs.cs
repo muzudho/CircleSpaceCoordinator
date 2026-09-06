@@ -20,6 +20,9 @@ public sealed partial class VenueEditorGame
     private CancellationTokenSource? optimizationCancellation;
     private readonly LatestOptimizationProgress optimizationProgress = new();
 
+    // Draw-time pointer queries must respect the same modal boundary as Update.
+    private bool CanShowEditorHover => IsActive && modalDialog is null && !modalInputDrain;
+
     private void OpenModal(ModalDialogModel dialog, Action<ModalDialogAction>? completed = null)
     {
         textInputService?.Stop();

@@ -505,6 +505,11 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        foreach (var button in toolbarButtons) button.Model.ClearPointerState();
+        hoveredPlanId = null;
+        hoveredPlanCopy = hoveredPlanRename = false;
+        hoveredLayoutAdd = hoveredLayoutDelete = hoveredLayoutBind = hoveredLayoutRename = false;
+        lastDeskGhostPointer = null;
         pressedModalButton?.CancelPress();
         pressedModalButton = null;
         pressedToolbarButton?.Model.CancelPress();
@@ -1094,7 +1099,7 @@ public sealed partial class VenueEditorGame : Game
             DrawCircle(GetCellCenter(connection.FirstCell), 4d, color);
             DrawCircle(GetCellCenter(connection.SecondCell), 4d, color);
         }
-        if (activeCanvasTool == ToolbarAction.ToggleAutomaticIslandConnection &&
+        if (CanShowEditorHover && activeCanvasTool == ToolbarAction.ToggleAutomaticIslandConnection &&
             TryFindAutomaticIslandConnection(pointer, out var hoveredAutomaticConnection))
         {
             var firstPoint = GetCellCenter(hoveredAutomaticConnection.FirstCell);
@@ -1107,7 +1112,7 @@ public sealed partial class VenueEditorGame : Game
         foreach (var region in workspace.SelectedPlan.FacingRegions)
         {
             var rectangle = InsetFacingRegion(GetCellRegionBounds(region.FirstCorner, region.SecondCorner));
-            var highlighted = activeCanvasTool == ToolbarAction.RemoveTopology && Contains(rectangle, pointer);
+            var highlighted = CanShowEditorHover && activeCanvasTool == ToolbarAction.RemoveTopology && Contains(rectangle, pointer);
             DrawRectangle(rectangle, highlighted ? new Color(230, 84, 84, 82) : new Color(142, 82, 210, 48));
             DrawOutline(rectangle, highlighted ? 6d : 3d, highlighted ? new Color(255, 116, 116) : new Color(190, 126, 255));
         }
@@ -1120,7 +1125,7 @@ public sealed partial class VenueEditorGame : Game
                 ? GetCellCenter(firstCell) : GetDeskCenter(first.OccupiedCells);
             var secondPoint = connector.SecondCell is { } secondCell && second.OccupiedCells.Contains(secondCell)
                 ? GetCellCenter(secondCell) : GetDeskCenter(second.OccupiedCells);
-            var highlighted = activeCanvasTool == ToolbarAction.RemoveTopology &&
+            var highlighted = CanShowEditorHover && activeCanvasTool == ToolbarAction.RemoveTopology &&
                 DistanceSquaredToSegment(pointer, firstPoint, secondPoint) <= 81d;
             DrawLine(firstPoint, secondPoint, highlighted ? 9d : 5d, highlighted ? new Color(255, 92, 92) : new Color(255, 166, 64));
             DrawCircle(firstPoint, highlighted ? 6d : 4d, highlighted ? Color.White : new Color(255, 190, 92));
@@ -1379,7 +1384,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void DrawDeskEditTarget()
     {
-        if (workspace is null || editorMode != EditorMode.DeskPlacement || !IsActive)
+        if (workspace is null || editorMode != EditorMode.DeskPlacement || !CanShowEditorHover)
             return;
 
         var desks = workspace.GetSelectedPlanSnapshot().Desks;
@@ -1482,6 +1487,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void DrawDeskPlacementGhost()
     {
+        if (!CanShowEditorHover) return;
         if (workspace is null || activeCanvasTool != ToolbarAction.AddDesk)
             return;
 
@@ -1576,7 +1582,7 @@ public sealed partial class VenueEditorGame : Game
             return;
         foreach (var cell in workspace.Project.Venue.BlockedCells)
         {
-            var hovered = activeCanvasTool == ToolbarAction.RemovePillar &&
+            var hovered = CanShowEditorHover && activeCanvasTool == ToolbarAction.RemovePillar &&
                 VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(new ScreenPoint(Mouse.GetState().X, Mouse.GetState().Y))) == cell;
             DrawPillar(cell, hovered ? new Color(160, 76, 76) : new Color(54, 60, 68),
                 hovered ? new Color(255, 128, 128) : new Color(126, 136, 146));
@@ -1585,6 +1591,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void DrawPillarGhost()
     {
+        if (!CanShowEditorHover) return;
         if (workspace is null || activeCanvasTool != ToolbarAction.AddPillar)
             return;
         var pointer = new ScreenPoint(Mouse.GetState().X, Mouse.GetState().Y);

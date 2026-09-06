@@ -47,4 +47,10 @@ public sealed class IconButtonModel(ScreenRectangle bounds, string accessibleNam
     }
 
     public void CancelPress() => IsPressed = false;
+
+    public void ClearPointerState()
+    {
+        IsPointerOver = false;
+        IsPressed = false;
+    }
 }
