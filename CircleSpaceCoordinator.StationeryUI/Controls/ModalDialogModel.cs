@@ -1,6 +1,6 @@
 namespace CircleSpaceCoordinator.StationeryUI.Controls;
 
-public enum ModalDialogKind { Message, Confirmation, Minutes, Progress }
+public enum ModalDialogKind { Message, Confirmation, Minutes, Progress, Text }
 public enum ModalDialogAction { None, Accept, Cancel, Stop, Decrease, Increase }
 
 /// <summary>画面内ダイアログの状態。描画や OS の入力 API は利用側が接続します。</summary>

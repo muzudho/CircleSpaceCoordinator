@@ -22,6 +22,8 @@ public sealed partial class VenueEditorGame
 
     private void OpenModal(ModalDialogModel dialog, Action<ModalDialogAction>? completed = null)
     {
+        textInputService?.Stop();
+        underlineEditor = null;
         CancelInProgressPointerInteraction();
         modalDialog = dialog;
         modalCompleted = completed;
@@ -45,6 +47,7 @@ public sealed partial class VenueEditorGame
         }
         if (modalDialog is null) return false;
         EnsureModalButtons();
+        if (modalDialog.Kind == ModalDialogKind.Text) return UpdateUnderlineInput(keyboard, mouse);
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         foreach (var (button, _) in modalButtons) button.UpdatePointer(pointer);
         if (IsPressed(keyboard, Keys.Escape))
@@ -89,6 +92,7 @@ public sealed partial class VenueEditorGame
             return;
         }
         if (!modalDialog.IsClosed) return;
+        textInputService?.Stop();
         var completed = modalCompleted;
         modalDialog = null;
         modalCompleted = null;
@@ -125,18 +129,20 @@ public sealed partial class VenueEditorGame
             Add("−", ModalDialogAction.Decrease, bounds.X + 20, bottom - 62, 44);
             Add("＋", ModalDialogAction.Increase, bounds.X + bounds.Width - 64, bottom - 62, 44);
         }
-        if (modalDialog.Kind is ModalDialogKind.Confirmation or ModalDialogKind.Minutes)
+        if (modalDialog.Kind is ModalDialogKind.Confirmation or ModalDialogKind.Minutes or ModalDialogKind.Text)
             Add("キャンセル", ModalDialogAction.Cancel, right - buttonWidth - 12, bottom, buttonWidth);
         Add(modalDialog.Kind switch
         {
             ModalDialogKind.Confirmation => "削除する",
             ModalDialogKind.Minutes => "開始",
             ModalDialogKind.Progress => "ストップ",
+            ModalDialogKind.Text => "確定",
             _ => "閉じる",
         }, modalDialog.Kind == ModalDialogKind.Progress ? ModalDialogAction.Stop : ModalDialogAction.Accept,
             right, bottom, buttonWidth);
         // Destructive confirmation defaults to Cancel.
         modalFocus = modalDialog.Kind == ModalDialogKind.Minutes ? 2 : 0;
+        if (modalDialog.Kind == ModalDialogKind.Text) modalFocus = -1;
     }
 
     private void DrawModalDialog()
@@ -158,6 +164,7 @@ public sealed partial class VenueEditorGame
         if (modalDialog.Kind == ModalDialogKind.Minutes)
             textRenderer?.Draw($"{modalDialog.Minutes} 分（1～120）", ToRectangle(new ScreenRectangle(bounds.X + 78, bounds.Y + bounds.Height - 120,
                 bounds.Width - 156, 38)), Color.White, 22, true);
+        if (modalDialog.Kind == ModalDialogKind.Text) DrawUnderlineInput();
         for (var index = 0; index < modalButtons.Count; index++)
         {
             var button = modalButtons[index].Button;

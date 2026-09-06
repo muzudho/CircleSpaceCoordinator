@@ -2,6 +2,7 @@ namespace CircleSpaceCoordinator.StationeryUI.Tests;
 
 using CircleSpaceCoordinator.StationeryUI.Canvas;
 using CircleSpaceCoordinator.StationeryUI.Controls;
+using CircleSpaceCoordinator.StationeryUI.Text;
 
 internal static class Program
 {
@@ -19,6 +20,9 @@ internal static class Program
             ("Dialog cancellation cannot later confirm", DialogCancellationIsFinal),
             ("Optimization minutes stay in the allowed range", DialogMinutesAreBounded),
             ("Stopping progress keeps the modal open until completion", ProgressStopKeepsModalOpen),
+            ("Underline editing replaces selection and supports undo", UnderlineSelectionAndUndo),
+            ("Underline editing keeps Unicode text elements intact", UnderlineUnicode),
+            ("Underline input is single line and length limited", UnderlineLengthLimit),
         };
         var failures = 0;
         foreach (var test in tests)
@@ -135,6 +139,46 @@ internal static class Program
         AssertEqual(true, dialog.StopRequested);
         AssertEqual(false, dialog.IsClosed);
         AssertEqual(ModalDialogAction.None, dialog.Apply(ModalDialogAction.Stop));
+    }
+
+    private static void UnderlineSelectionAndUndo()
+    {
+        var editor = new UnderlineTextEditor("以前の配置");
+        editor.Insert("新しい配置");
+        AssertEqual("新しい配置", editor.Text);
+        editor.Undo();
+        AssertEqual("以前の配置", editor.Text);
+        editor.Redo();
+        AssertEqual("新しい配置", editor.Text);
+        editor.Move(-1, true);
+        AssertEqual("置", editor.SelectedText);
+        editor.Delete(false);
+        AssertEqual("新しい配", editor.Text);
+    }
+
+    private static void UnderlineUnicode()
+    {
+        var editor = new UnderlineTextEditor("A😀か\u3099");
+        editor.MoveTo(editor.Text.Length);
+        editor.Delete(true);
+        AssertEqual("A😀", editor.Text);
+        editor.Delete(true);
+        AssertEqual("A", editor.Text);
+        editor.Undo();
+        AssertEqual("A😀", editor.Text);
+    }
+
+    private static void UnderlineLengthLimit()
+    {
+        var editor = new UnderlineTextEditor("", 3);
+        editor.Insert("A😀B");
+        AssertEqual("A😀", editor.Text);
+        editor.SelectAll();
+        editor.Insert("B\r\nC\tD");
+        AssertEqual("BCD", editor.Text);
+        var small = new UnderlineTextEditor("", 1);
+        small.Insert("😀");
+        AssertEqual("", small.Text);
     }
 
     private static void AssertThrows<TException>(Action action)

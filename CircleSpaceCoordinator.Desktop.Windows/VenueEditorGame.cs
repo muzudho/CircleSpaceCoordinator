@@ -3304,22 +3304,14 @@ public sealed partial class VenueEditorGame : Game
         var currentName = isDesk
             ? workspace.Project.DeskLayouts.Single(item => item.Id == id).Name
             : workspace.Project.CircleLayouts.Single(item => item.Id == id).Name;
-        var name = PlanNameDialog.Show(isDesk ? "机配置の名前を変更" : "サークル配置の名前を変更", currentName);
-        if (name is null) return (false, "cancelled");
-        try
+        OpenUnderlineInput(isDesk ? "机配置の名前を変更" : "サークル配置の名前を変更", currentName, name =>
         {
             workspace.ApplyProjectEdit(project => isDesk
                 ? LayoutCatalogService.RenameDeskLayout(project, id, name)
                 : LayoutCatalogService.RenameCircleLayout(project, id, name));
-            return (true, $"id={id}");
-        }
-        catch (Exception exception)
-        {
-            System.Windows.Forms.MessageBox.Show(exception.Message, "名前を変更", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-            return (false, $"error={exception.GetType().Name}");
-        }
+        });
+        return (true, "dialog_opened");
     }
-
     private (bool Success, string Detail) PromptDuplicateSelectedPlan()
     {
         if (workspace is null || commandController is null)
@@ -3370,12 +3362,13 @@ public sealed partial class VenueEditorGame : Game
     {
         if (workspace is null || commandController is null)
             return (false, "workspace_unavailable");
-        var name = PlanNameDialog.Show("配置案名を変更", workspace.SelectedPlan.Name);
-        return name is null
-            ? (false, "cancelled")
-            : FormatOutcome(commandController.RenameSelectedPlan(name));
+        OpenUnderlineInput("配置案名を変更", workspace.SelectedPlan.Name, name =>
+        {
+            var result = commandController.RenameSelectedPlan(name);
+            if (!result.Applied) throw new InvalidOperationException(FormatIssues(result.Issues));
+        });
+        return (true, "dialog_opened");
     }
-
     private (bool Success, string Detail) LoadProject()
     {
         if (workspace is null)
@@ -3490,6 +3483,7 @@ public sealed partial class VenueEditorGame : Game
     {
         if (disposing)
         {
+            textInputService?.Dispose();
             DisposeOptimization();
             screenshotShutterSoundInstance?.Dispose();
             screenshotShutterSound?.Dispose();
