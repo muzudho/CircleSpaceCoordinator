@@ -8,8 +8,8 @@ C#アプリケーションとPython製Excelブリッジの間で、会場、参�
 
 正式なスキーマ:
 
-- [`schemas/circle-space-project-v1.schema.json`](../../schemas/circle-space-project-v1.schema.json)
-- [匿名サンプル](../../examples/circle-space-project-v1.example.json)
+- [`schemas/circle-space-project-v1.schema.json`](../../../schemas/circle-space-project-v1.schema.json)
+- [匿名サンプル](../../../examples/circle-space-project-v1.example.json)
 
 ## JSONを正規形式にする理由
 

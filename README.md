@@ -25,9 +25,15 @@ dotnet run --project CircleSpaceCoordinator.Desktop -c Release -p:SmartAppContro
 ```
 
 テスト手順は [tests/README.md](tests/README.md) を参照してください。
+署名・リリース・ソース配布の方針と制限は [配布に関する知見](Docs/Dev/配布/README.md) にまとめています。
 配布用の署名スクリプトは `scripts/ForSmartAppControl/` にあります。開発用証明書の作成スクリプトは、実行したPCの証明書ストアと信頼設定を変更します。
 
 このリポジトリーはC#版を独立した履歴で収録しています。Python版・実データ・個人用メモ・ローカル設定は含めていません。実際の参加者データや操作ログ、スクリーンショットをコミットしないでください。
+
+## ドキュメント
+
+- [利用者向け](Docs/User/README.md)
+- [開発者向け](Docs/Dev/README.md)
 
 ## ライセンス
 
