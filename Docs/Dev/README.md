@@ -54,4 +54,4 @@ dotnet run --project CircleSpaceCoordinator.Desktop -c Release -p:SmartAppContro
 
 過去の資料には旧リポジトリーや当時の構成に関する記録も含まれます。現在の実装・運用と照合して参照してください。
 
-[トップへ戻る](../../README.md) ／ [利用者向けガイド](../User/README.md)
+[トップへ戻る](../../README.md) ／ [制作物の説明](../User/Products/README.md) ／ [使い始める](../User/GetStarted/README.md)
