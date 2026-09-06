@@ -14,8 +14,12 @@ internal static class WindowsTextRasterizer
             System.Drawing.GraphicsUnit.Pixel);
         var flags = System.Windows.Forms.TextFormatFlags.NoPadding |
                     System.Windows.Forms.TextFormatFlags.NoPrefix;
+        // Measure against the same bitmap device context used for drawing.
+        // The desktop device context can have a different DPI.
+        using var measuringBitmap = new System.Drawing.Bitmap(1, 1);
+        using var measuringGraphics = System.Drawing.Graphics.FromImage(measuringBitmap);
         var measured = System.Windows.Forms.TextRenderer.MeasureText(
-            text, font, new System.Drawing.Size(int.MaxValue, int.MaxValue), flags);
+            measuringGraphics, text, font, new System.Drawing.Size(int.MaxValue, int.MaxValue), flags);
         using var bitmap = new System.Drawing.Bitmap(
             Math.Max(1, measured.Width), Math.Max(1, measured.Height),
             System.Drawing.Imaging.PixelFormat.Format32bppArgb);

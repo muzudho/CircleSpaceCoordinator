@@ -145,14 +145,19 @@ public sealed partial class VenueEditorGame
         ApplyModalAction(action);
     }
 
-    private static int MeasureInput(string text)
+    private int MeasureInput(string text) => textRenderer?.Measure(text, 22).X ?? 0;
+
+    private Rectangle UnderlineTextBounds()
     {
-        if (text.Length == 0) return 0;
-        using var font = new System.Drawing.Font("Meiryo", 22, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Pixel);
-        return System.Windows.Forms.TextRenderer.MeasureText(text, font, new System.Drawing.Size(int.MaxValue, int.MaxValue),
-            System.Windows.Forms.TextFormatFlags.NoPadding | System.Windows.Forms.TextFormatFlags.NoPrefix).Width;
+        var bounds = UnderlineBounds();
+        return ToRectangle(new ScreenRectangle(bounds.X, bounds.Y, bounds.Width - 8, bounds.Height));
     }
-    private float UnderlineScale(string text) => Math.Min(1f, (float)((UnderlineBounds().Width - 8) / Math.Max(1, MeasureInput(text))));
+
+    private Rectangle UnderlineDrawBounds(string text) =>
+        textRenderer?.GetDrawBounds(string.IsNullOrEmpty(text) ? " " : text, UnderlineTextBounds(), 22) ?? UnderlineTextBounds();
+
+    // Use the actual rounded destination width, including both width and height fitting.
+    private float UnderlineScale(string text) => UnderlineDrawBounds(text).Width / (float)Math.Max(1, MeasureInput(text));
 
     private void DrawUnderlineInput()
     {
@@ -163,17 +168,18 @@ public sealed partial class VenueEditorGame
             ? editor.Text.Remove(editor.SelectionStart, editor.SelectionLength).Insert(insertion, compositionText)
             : editor.Text;
         var scale = UnderlineScale(display);
-        var textHeight = 28 * scale;
-        var y = bounds.Y + (bounds.Height - textHeight) / 2;
+        var destination = UnderlineDrawBounds(display);
+        var textHeight = destination.Height;
+        var y = destination.Y;
         if (editor.SelectionLength > 0 && compositionText.Length == 0)
             DrawRectangle(new ScreenRectangle(bounds.X + MeasureInput(editor.Text[..editor.SelectionStart]) * scale, y,
                 Math.Max(1, (MeasureInput(editor.Text[..(editor.SelectionStart + editor.SelectionLength)]) - MeasureInput(editor.Text[..editor.SelectionStart])) * scale), textHeight), new Color(45, 95, 125));
-        textRenderer?.Draw(display, ToRectangle(new ScreenRectangle(bounds.X, y, bounds.Width - 8, textHeight)), Color.White, 22);
+        textRenderer?.Draw(display, UnderlineTextBounds(), Color.White, 22);
         DrawLine(new ScreenPoint(bounds.X, bounds.Y + bounds.Height), new ScreenPoint(bounds.X + bounds.Width, bounds.Y + bounds.Height),
             modalFocus < 0 ? 3 : 1, new Color(99, 223, 185));
         var caretX = bounds.X + MeasureInput(editor.Text[..insertion]) * scale;
         if (compositionText.Length > 0)
-            DrawLine(new ScreenPoint(caretX, y + textHeight), new ScreenPoint(caretX + MeasureInput(compositionText) * scale, y + textHeight), 2, new Color(255, 225, 128));
+            DrawLine(new ScreenPoint(caretX, y + textHeight), new ScreenPoint(bounds.X + MeasureInput(display[..(insertion + compositionText.Length)]) * scale, y + textHeight), 2, new Color(255, 225, 128));
         if (modalFocus < 0) DrawRectangle(new ScreenRectangle(caretX, y, 2, textHeight), new Color(147, 244, 200));
         textInputService?.SetInputArea(new ScreenRectangle(caretX, bounds.Y, Math.Max(1, bounds.Width - (caretX - bounds.X)), bounds.Height));
     }
