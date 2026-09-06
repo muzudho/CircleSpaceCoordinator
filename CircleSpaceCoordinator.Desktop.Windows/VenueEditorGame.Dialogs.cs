@@ -117,6 +117,7 @@ public sealed partial class VenueEditorGame
         if (modalWidth == GraphicsDevice.Viewport.Width && modalHeight == GraphicsDevice.Viewport.Height) return;
         modalWidth = GraphicsDevice.Viewport.Width;
         modalHeight = GraphicsDevice.Viewport.Height;
+        var initializeFocus = modalButtons.Count == 0;
         pressedModalButton = null;
         modalButtons.Clear();
         var bounds = ModalBounds();
@@ -142,8 +143,9 @@ public sealed partial class VenueEditorGame
         }, modalDialog.Kind == ModalDialogKind.Progress ? ModalDialogAction.Stop : ModalDialogAction.Accept,
             right, bottom, buttonWidth);
         // Destructive confirmation defaults to Cancel.
-        modalFocus = modalDialog.Kind == ModalDialogKind.Minutes ? 2 : 0;
-        if (modalDialog.Kind == ModalDialogKind.Text) modalFocus = -1;
+        if (initializeFocus)
+            modalFocus = modalDialog.Kind == ModalDialogKind.Text ? TextInputFocus
+                : modalDialog.Kind == ModalDialogKind.Minutes ? 2 : 0;
     }
 
     private void DrawModalDialog()

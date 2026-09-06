@@ -10,6 +10,8 @@ using Microsoft.Xna.Framework.Input;
 
 public sealed partial class VenueEditorGame
 {
+    private const int TextInputFocus = -1;
+    private const int NoModalFocus = -2;
     private ITextInputService? textInputService;
     private UnderlineTextEditor? underlineEditor;
     private string compositionText = "";
@@ -38,7 +40,7 @@ public sealed partial class VenueEditorGame
         return new ScreenRectangle(bounds.X + 20, bounds.Y + bounds.Height - 136, bounds.Width - 40, 46);
     }
 
-    private const int TextInputHelpHeight = 88;
+    private const int TextInputHelpHeight = 112;
 
     private void DrawTextInputHelp()
     {
@@ -53,6 +55,7 @@ public sealed partial class VenueEditorGame
             "キーボード操作　Ctrl+A：全選択　Ctrl+C：コピー　Ctrl+V：貼り付け　Ctrl+X：切り取り",
             "Ctrl+Z：元に戻す　Ctrl+Y：やり直し　←／→・Home／End：移動　Shift 併用：範囲選択",
             "Tab：入力欄・ボタンを移動　Enter：確定／選択中のボタンを実行　Esc：キャンセル（IME 変換中を除く）",
+            "Ctrl+P：画面を撮影　余白をクリック：入力フォーカスを外す（変換中の文字は取り消します）",
         ];
         for (var index = 0; index < lines.Length; index++)
             textRenderer?.Draw(lines[index], new Rectangle(16, top + 8 + index * 25, Math.Max(1, width - 32), 23),
@@ -69,12 +72,24 @@ public sealed partial class VenueEditorGame
             if (update.IsComposition) compositionText = update.Text;
             else
             {
-                if (modalFocus < 0) editor.Insert(update.Text);
+                if (modalFocus == TextInputFocus) editor.Insert(update.Text);
                 compositionText = "";
             }
         }
         if (hadComposition || updates.Count > 0 || compositionText.Length > 0) suppressTextConfirmation = true;
         else if (keyboard.IsKeyUp(Keys.Enter) && keyboard.IsKeyUp(Keys.Escape)) suppressTextConfirmation = false;
+        var pointer = new ScreenPoint(mouse.X, mouse.Y);
+        if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released &&
+            !Contains(UnderlineBounds(), pointer) && !modalButtons.Any(item => item.Button.Contains(pointer)))
+        {
+            // Leave the modal open, but stop editing. Uncommitted IME text is cancelled.
+            modalFocus = NoModalFocus;
+            textInputService.Stop();
+            compositionText = "";
+            pressedModalButton?.CancelPress();
+            pressedModalButton = null;
+            return true;
+        }
         if (compositionText.Length > 0) return true;
         if (!suppressTextConfirmation && IsPressed(keyboard, Keys.Escape))
         {
@@ -84,14 +99,15 @@ public sealed partial class VenueEditorGame
         if (IsPressed(keyboard, Keys.Tab))
         {
             modalFocus = modalFocus >= modalButtons.Count - 1 ? -1 : modalFocus + 1;
-            if (modalFocus < 0) textInputService.Start(); else textInputService.Stop();
+            if (modalFocus == TextInputFocus) textInputService.Start(); else textInputService.Stop();
         }
-        if (!suppressTextConfirmation && (IsPressed(keyboard, Keys.Enter) || (modalFocus >= 0 && IsPressed(keyboard, Keys.Space))))
+        if (!suppressTextConfirmation && modalFocus != NoModalFocus &&
+            (IsPressed(keyboard, Keys.Enter) || (modalFocus >= 0 && IsPressed(keyboard, Keys.Space))))
         {
-            ConfirmUnderlineInput(modalFocus < 0 ? ModalDialogAction.Accept : modalButtons[modalFocus].Action);
+            ConfirmUnderlineInput(modalFocus == TextInputFocus ? ModalDialogAction.Accept : modalButtons[modalFocus].Action);
             return true;
         }
-        if (modalFocus < 0)
+        if (modalFocus == TextInputFocus)
         {
             var control = IsControlDown(keyboard);
             var shift = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
@@ -121,13 +137,12 @@ public sealed partial class VenueEditorGame
                 }
             }
         }
-        var pointer = new ScreenPoint(mouse.X, mouse.Y);
         foreach (var (button, _) in modalButtons) button.UpdatePointer(pointer);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
             if (Contains(UnderlineBounds(), pointer))
             {
-                modalFocus = -1;
+                modalFocus = TextInputFocus;
                 textInputService.Start();
                 var boundaries = StringInfo.ParseCombiningCharacters(editor.Text).Append(editor.Text.Length);
                 var scale = UnderlineScale(editor.Text);
@@ -159,7 +174,7 @@ public sealed partial class VenueEditorGame
         if (action == ModalDialogAction.Accept && string.IsNullOrWhiteSpace(underlineEditor?.Text))
         {
             modalDialog!.Message = "名前を入力してください。空白だけの名前は使用できません。";
-            modalFocus = -1;
+            modalFocus = TextInputFocus;
             textInputService?.Start();
             return;
         }
@@ -192,16 +207,16 @@ public sealed partial class VenueEditorGame
         var destination = UnderlineDrawBounds(display);
         var textHeight = destination.Height;
         var y = destination.Y;
-        if (editor.SelectionLength > 0 && compositionText.Length == 0)
+        if (modalFocus == TextInputFocus && editor.SelectionLength > 0 && compositionText.Length == 0)
             DrawRectangle(new ScreenRectangle(bounds.X + MeasureInput(editor.Text[..editor.SelectionStart]) * scale, y,
                 Math.Max(1, (MeasureInput(editor.Text[..(editor.SelectionStart + editor.SelectionLength)]) - MeasureInput(editor.Text[..editor.SelectionStart])) * scale), textHeight), new Color(45, 95, 125));
         textRenderer?.Draw(display, UnderlineTextBounds(), Color.White, 22);
         DrawLine(new ScreenPoint(bounds.X, bounds.Y + bounds.Height), new ScreenPoint(bounds.X + bounds.Width, bounds.Y + bounds.Height),
-            modalFocus < 0 ? 3 : 1, new Color(99, 223, 185));
+            modalFocus == TextInputFocus ? 3 : 1, new Color(99, 223, 185));
         var caretX = bounds.X + MeasureInput(editor.Text[..insertion]) * scale;
         if (compositionText.Length > 0)
             DrawLine(new ScreenPoint(caretX, y + textHeight), new ScreenPoint(bounds.X + MeasureInput(display[..(insertion + compositionText.Length)]) * scale, y + textHeight), 2, new Color(255, 225, 128));
-        if (modalFocus < 0) DrawRectangle(new ScreenRectangle(caretX, y, 2, textHeight), new Color(147, 244, 200));
+        if (modalFocus == TextInputFocus) DrawRectangle(new ScreenRectangle(caretX, y, 2, textHeight), new Color(147, 244, 200));
         textInputService?.SetInputArea(new ScreenRectangle(caretX, bounds.Y, Math.Max(1, bounds.Width - (caretX - bounds.X)), bounds.Height));
     }
 }

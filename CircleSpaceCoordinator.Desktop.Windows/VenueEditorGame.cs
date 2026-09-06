@@ -167,6 +167,9 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
+        // Capturing the current screen is available even while a modal owns input.
+        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
+            screenshotRequested = true;
         PollOptimization();
         if (UpdateModalDialog(keyboard, mouse))
         {
@@ -179,8 +182,6 @@ public sealed partial class VenueEditorGame : Game
 
         if (keyboard.IsKeyDown(Keys.Escape))
             Exit();
-        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
-            screenshotRequested = true;
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.S))
             SaveProject();
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.O))
