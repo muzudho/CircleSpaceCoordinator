@@ -48,6 +48,7 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartA
 | [配布](配布/README.md) | 署名、リリース、ソース配布の知見 |
 | [運用](運用/) | 運用作業の手順 |
 | [開発](開発/) | 引き継ぎ、開発日誌 |
+| [文房具 UI](開発/文房具UI/README.md) | 画面共有に向けた調査、移行計画、ボタンの試験導入 |
 | [設計](設計/) | 各機能とデータ形式の設計 |
 | [素材](素材/) | 開発に関する素材 |
 | [Architecture](architecture.md) | アプリケーションの構成と責務 |

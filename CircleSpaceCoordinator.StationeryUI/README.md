@@ -8,6 +8,8 @@ MonoGame上のテキスト入力、IME合成表示、ボタン、ダイアログ
 
 最初の境界として `Text/ITextCompositionService.cs` を追加済みです。
 
+`Controls/StationeryButtonRenderer.cs` は囲碁側の文房具ボタンの外観を移植した共通描画です。背景・枠・影を描画コールバックへ渡し、アイコンやラベルの描画を利用側に任せます。[調査・実装記録](../Docs/Dev/開発/文房具UI/README.md) を参照してください。移植元のライセンスは `ThirdParty/KifuwarabeGo2026-LICENSE.txt` にあります。
+
 `Canvas/GridViewport.cs` は、グリッドと画面座標の変換、パン、アンカー位置を維持するズームを提供します。MonoGame型や計算DLLには依存しません。
 
 `Controls/IconButtonModel.cs` は、文房具UIの方針を参考に、位置、アクセシブル名、有効・選択・ホバー・押下状態、クリック判定を所有します。描画はホスト側へ委譲し、MonoGameには依存しません。

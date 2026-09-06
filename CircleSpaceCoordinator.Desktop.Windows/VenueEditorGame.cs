@@ -2713,30 +2713,21 @@ public sealed class VenueEditorGame : Game
         DrawRectangle(new ScreenRectangle(0d, 0d, GraphicsDevice.Viewport.Width, ToolbarHeight), new Color(18, 22, 28));
         foreach (var button in toolbarButtons)
         {
-            var bounds = button.Model.Bounds;
-            var offset = button.Model.IsPressed ? 2d : 0d;
-            var shifted = new ScreenRectangle(bounds.X + offset, bounds.Y + offset, bounds.Width, bounds.Height);
-            var fill = !button.Model.IsEnabled
-                ? new Color(24, 27, 31)
-                : button.Model.IsSelected
-                    ? new Color(31, 151, 112)
-                    : button.Model.IsPointerOver ? new Color(58, 82, 94) : new Color(36, 48, 58);
-            var border = !button.Model.IsEnabled
-                ? new Color(43, 50, 56)
-                : button.Model.IsPointerOver ? new Color(178, 219, 226) : new Color(126, 150, 164);
-            DrawRectangle(new ScreenRectangle(shifted.X + 4d, shifted.Y + 5d, shifted.Width, shifted.Height), new Color(0, 0, 0, 95));
-            DrawRectangle(shifted, fill);
-            DrawOutline(shifted, 2d, border);
-            DrawOutline(new ScreenRectangle(shifted.X + 3d, shifted.Y + 3d, shifted.Width - 6d, shifted.Height - 6d), 1d,
-                new Color(255, 255, 255, button.Model.IsPointerOver ? 70 : 36));
-            var foreground = button.Model.IsEnabled ? Color.White : new Color(91, 100, 106);
-            if (button.Action is ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode)
-                textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(shifted, 5), foreground, 17, true);
-            else
-                DrawToolbarIcon(button.Action, shifted, foreground);
+            StationeryButtonRenderer.Draw(button.Model,
+                (bounds, color) => DrawRectangle(bounds, ToButtonColor(color)),
+                (bounds, thickness, color) => DrawOutline(bounds, thickness, ToButtonColor(color)),
+                (bounds, color) =>
+                {
+                    var foreground = ToButtonColor(color);
+                    if (button.Action is ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode)
+                        textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
+                    else
+                        DrawToolbarIcon(button.Action, bounds, foreground);
+                });
         }
     }
 
+    private static Color ToButtonColor(ButtonColor color) => new(color.R, color.G, color.B, color.A);
     private void DrawToolbarIcon(ToolbarAction action, ScreenRectangle bounds, Color color)
     {
         var center = new ScreenPoint(bounds.X + bounds.Width / 2d, bounds.Y + bounds.Height / 2d);
