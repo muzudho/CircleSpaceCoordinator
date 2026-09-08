@@ -2,7 +2,7 @@ namespace CircleSpaceCoordinator.Desktop.Core;
 
 using CircleSpaceCoordinator.Application.Workspace;
 using CircleSpaceCoordinator.Infrastructure.Json;
-using CircleSpaceCoordinator.StationeryUI.Text;
+using StationeryUI.Text;
 
 public sealed class DesktopApplication(
     ProjectWorkspace workspace,

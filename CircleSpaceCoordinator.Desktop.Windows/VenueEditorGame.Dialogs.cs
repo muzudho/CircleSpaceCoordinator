@@ -1,8 +1,8 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.OptimizationEngine;
-using CircleSpaceCoordinator.StationeryUI.Canvas;
-using CircleSpaceCoordinator.StationeryUI.Controls;
+using StationeryUI.Canvas;
+using StationeryUI.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 

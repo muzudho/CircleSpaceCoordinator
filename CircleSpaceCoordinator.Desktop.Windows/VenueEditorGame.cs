@@ -17,8 +17,8 @@ using CircleSpaceCoordinator.Desktop.Windows.Persistence;
 using CircleSpaceCoordinator.Desktop.Windows.Screenshots;
 using CircleSpaceCoordinator.Desktop.Windows.Text;
 using CircleSpaceCoordinator.Infrastructure.Tabular;
-using CircleSpaceCoordinator.StationeryUI.Canvas;
-using CircleSpaceCoordinator.StationeryUI.Controls;
+using StationeryUI.Canvas;
+using StationeryUI.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -590,6 +590,7 @@ public sealed partial class VenueEditorGame : Game
                 (rectangle, color) => spriteBatch.Draw(pixel, rectangle, color));
             spriteBatch.End();
         }
+        textRenderer?.EndFrame();
         base.Draw(gameTime);
     }
 

@@ -1,3 +1,4 @@
+2026-09-08: Reusable controls, viewport and text editing now come from the StationeryUI 0.1.0 package: https://github.com/muzudho/StationeryUI. This project is a compatibility reference point and contains no copied control implementation. Windows input and rasterization use StationeryUI.Windows 0.1.0. The initial packages are in LocalPackages/StationeryUI; NuGet.Config enables clean restoration without a sibling repository.
 # StationeryUI library
 
 GUI部品を再利用するためのクラスライブラリーです。計算用のCoreやApplicationには依存しません。

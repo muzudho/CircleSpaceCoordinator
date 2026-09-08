@@ -1,7 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Core;
 
 using CircleSpaceCoordinator.Core.Geometry;
-using CircleSpaceCoordinator.StationeryUI.Canvas;
+using StationeryUI.Canvas;
 
 public static class VenueCanvasMapper
 {

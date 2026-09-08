@@ -1,10 +1,11 @@
+using global::StationeryUI.Windows;
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using System.Globalization;
 using CircleSpaceCoordinator.Desktop.Windows.Text;
-using CircleSpaceCoordinator.StationeryUI.Canvas;
-using CircleSpaceCoordinator.StationeryUI.Controls;
-using CircleSpaceCoordinator.StationeryUI.Text;
+using StationeryUI.Canvas;
+using StationeryUI.Controls;
+using StationeryUI.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 

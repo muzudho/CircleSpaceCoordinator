@@ -30,4 +30,6 @@
           Condition="'$(SmartAppControlSigningEnabled)' == 'true'">
     <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\ForSmartAppControl\Sign-BuildOutput.ps1&quot; -Path &quot;$(TargetDir).&quot;" />
   </Target>
+  <ItemGroup><PackageReference Include="StationeryUI.Windows" Version="0.1.0" /></ItemGroup>
+  <ItemGroup><PackageReference Include="StationeryUI.MonoGame" Version="0.1.0" /></ItemGroup>
 </Project>

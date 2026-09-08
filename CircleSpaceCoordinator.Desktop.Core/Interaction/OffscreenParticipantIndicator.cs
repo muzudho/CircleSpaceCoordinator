@@ -1,6 +1,6 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
-using CircleSpaceCoordinator.StationeryUI.Canvas;
+using StationeryUI.Canvas;
 
 public enum ScreenEdge { Left, Right, Top, Bottom }
 

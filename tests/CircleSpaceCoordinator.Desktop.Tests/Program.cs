@@ -11,7 +11,7 @@ using CircleSpaceCoordinator.Desktop.Core.Interaction;
 using CircleSpaceCoordinator.Desktop.Core.Logging;
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.Infrastructure.Json;
-using CircleSpaceCoordinator.StationeryUI.Canvas;
+using StationeryUI.Canvas;
 using CircleSpaceCoordinator.OptimizationEngine;
 
 internal static class Program

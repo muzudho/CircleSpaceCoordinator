@@ -1,8 +1,8 @@
-namespace CircleSpaceCoordinator.StationeryUI.Tests;
+namespace StationeryUI.Tests;
 
-using CircleSpaceCoordinator.StationeryUI.Canvas;
-using CircleSpaceCoordinator.StationeryUI.Controls;
-using CircleSpaceCoordinator.StationeryUI.Text;
+using StationeryUI.Canvas;
+using StationeryUI.Controls;
+using StationeryUI.Text;
 
 internal static class Program
 {

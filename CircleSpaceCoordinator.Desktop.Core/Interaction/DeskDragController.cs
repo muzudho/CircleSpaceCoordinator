@@ -4,7 +4,7 @@ using CircleSpaceCoordinator.Application.Editing;
 using CircleSpaceCoordinator.Application.Workspace;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Validation;
-using CircleSpaceCoordinator.StationeryUI.Canvas;
+using StationeryUI.Canvas;
 
 public sealed record DeskDropResult(
     bool Applied,
