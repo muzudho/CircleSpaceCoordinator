@@ -54,6 +54,7 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartA
 | 資料 | 内容 |
 | --- | --- |
 | [配布](配布/README.md) | 署名、リリース、ソース配布の知見 |
+| [トラブルシューティング](Troubleshooting/README.md) | 起動・開発中の問題、調査結果、当面の対処方法 |
 | [運用](運用/) | 運用作業の手順 |
 | [最新の開発日誌（2026年9月）](Log/2026/09.md) | 月ごとの開発の経緯、改善点、確認結果 |
 | [開発](開発/) | 引き継ぎ、実装計画 |
