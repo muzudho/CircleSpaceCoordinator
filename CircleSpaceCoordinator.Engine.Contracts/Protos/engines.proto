@@ -1,0 +1,62 @@
+syntax = "proto3";
+package circlespace.engines.v1;
+option csharp_namespace = "CircleSpaceCoordinator.Engine.Contracts.V1";
+
+// JSON payloads use the existing schemaVersion-bearing project exchange format.
+// Paths and GUI objects never cross the process boundary.
+service Editor {
+  rpc Open (OpenRequest) returns (WorkspaceState);
+  rpc Get (WorkspaceRequest) returns (WorkspaceState);
+  rpc Edit (EditRequest) returns (WorkspaceState);
+  rpc Optimize (EditorOptimizeRequest) returns (WorkspaceState);
+  rpc Close (WorkspaceRequest) returns (Empty);
+}
+
+service Thinking {
+  rpc Optimize (ThinkingRequest) returns (ThinkingResult);
+}
+
+message Empty {}
+message OpenRequest { string project_json = 1; }
+message WorkspaceRequest { string workspace_id = 1; }
+message WorkspaceState {
+  string workspace_id = 1;
+  int64 revision = 2;
+  string project_json = 3;
+  bool can_undo = 4;
+  bool can_redo = 5;
+}
+message RenamePlan { string plan_id = 1; string name = 2; }
+message EditRequest {
+  string workspace_id = 1;
+  int64 expected_revision = 2;
+  oneof command {
+    RenamePlan rename_plan = 3;
+    Empty undo = 4;
+    Empty redo = 5;
+  }
+}
+message OptimizationOptions {
+  int32 maximum_iterations = 1; // Required, positive.
+  int32 time_limit_ms = 2; // Required, 1..600000.
+  optional int32 random_seed = 3;
+}
+message EditorOptimizeRequest {
+  string workspace_id = 1;
+  int64 expected_revision = 2;
+  string source_plan_id = 3;
+  string new_plan_id = 4;
+  string new_plan_name = 5;
+  OptimizationOptions options = 6;
+}
+message ThinkingRequest {
+  string project_json = 1;
+  string plan_id = 2;
+  OptimizationOptions options = 3;
+}
+message ThinkingResult {
+  string project_json = 1; // Input project with the requested plan optimized.
+  int32 iteration_count = 2;
+  double general_attendee_score = 3;
+  double circle_participant_score = 4;
+}

@@ -12,4 +12,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ForSmartAppContr
 
 モデルの評価・配置編集・Undo/Redo・JSONとExcelの入出力・UIの座標変換・操作ログ・配布ファイルの検査を検証します。
 
+`CircleSpaceCoordinator.Engine.Tests` は GUI なしで編集・思考の gRPC ホストを動的なループバックポートで起動し、編集履歴・版競合・探索・通信失敗を実通信で検証します。[構成と手動確認手順](../Docs/Dev/設計/ヘッドレスエンジンとgRPC.md) を参照してください。
+
 `CircleSpaceCoordinator.Desktop.Tests` は `Desktop.Core` を参照する `net10.0` のテストです。Windows 実行プロジェクトや Windows Desktop Runtime を必要とせず、共通処理を検証できます。現在の実行確認は Windows で行っています。

@@ -25,11 +25,15 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartA
 | `CircleSpaceCoordinator.Application/` | 配置編集、案の管理、Undo/Redo |
 | `CircleSpaceCoordinator.Infrastructure/` | JSON、参加者表の読み込み、Excel 出力 |
 | `CircleSpaceCoordinator.OptimizationEngine/` | 自動配置 |
+| `CircleSpaceCoordinator.Engine.Contracts/` | gRPC の API 契約 |
+| `CircleSpaceCoordinator.EditorEngine/` | ヘッドレスの編集 gRPC サーバー |
+| `CircleSpaceCoordinator.ThinkingEngine/` | ヘッドレスの探索 gRPC サーバー |
 | `CircleSpaceCoordinator.StationeryUI/` | UI 部品 |
 | [`CircleSpaceCoordinator.Desktop.Core/`](../../CircleSpaceCoordinator.Desktop.Core/README.md) | Windows API に依存しないデスクトップ共通処理 |
 | `CircleSpaceCoordinator.Desktop.Windows/` | Windows 用の実行・画面処理 |
 | `tests/` | C# のテスト |
 | `tools/CircleSpaceCoordinator.ProjectCli/` | コマンドラインツール |
+| `tools/CircleSpaceCoordinator.EditorCli/` | エディターエンジン用 gRPC CLI |
 | `examples/`, `schemas/` | 架空サンプルと JSON スキーマ |
 | `scripts/ForSmartAppControl/` | 署名・配布用スクリプト |
 
@@ -53,6 +57,7 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartA
 | [設計](設計/) | 各機能とデータ形式の設計 |
 | [素材](素材/) | 開発に関する素材 |
 | [Architecture](architecture.md) | アプリケーションの構成と責務 |
+| [ヘッドレスエンジンと gRPC](設計/ヘッドレスエンジンとgRPC.md) | ３つの責務、API、起動例、GUI の移行計画 |
 | [情報点検と残作業](public-release-review.md) | 公開に向けた点検記録 |
 
 過去の資料には旧リポジトリーや当時の構成に関する記録も含まれます。現在の実装・運用と照合して参照してください。

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../CircleSpaceCoordinator.EditorEngine/CircleSpaceCoordinator.EditorEngine.csproj" />
+    <ProjectReference Include="../../CircleSpaceCoordinator.ThinkingEngine/CircleSpaceCoordinator.ThinkingEngine.csproj" />
+    <None Include="../../examples/circle-space-project-v1.example.json" Link="sample.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,4 +1,7 @@
 <Solution>
+  <Project Path="CircleSpaceCoordinator.Engine.Contracts/CircleSpaceCoordinator.Engine.Contracts.csproj" />
+  <Project Path="CircleSpaceCoordinator.EditorEngine/CircleSpaceCoordinator.EditorEngine.csproj" />
+  <Project Path="CircleSpaceCoordinator.ThinkingEngine/CircleSpaceCoordinator.ThinkingEngine.csproj" />
   <Project Path="CircleSpaceCoordinator.Desktop.Core/CircleSpaceCoordinator.Desktop.Core.csproj" />
   <Project Path="CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
   <Project Path="CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
@@ -7,6 +10,7 @@
   <Project Path="CircleSpaceCoordinator.OptimizationEngine/CircleSpaceCoordinator.OptimizationEngine.csproj" />
   <Project Path="CircleSpaceCoordinator.StationeryUI/CircleSpaceCoordinator.StationeryUI.csproj" />
   <Folder Name="/tests/">
+    <Project Path="tests/CircleSpaceCoordinator.Engine.Tests/CircleSpaceCoordinator.Engine.Tests.csproj" />
     <Project Path="tests/CircleSpaceCoordinator.Application.Tests/CircleSpaceCoordinator.Application.Tests.csproj" />
     <Project Path="tests/CircleSpaceCoordinator.Core.Tests/CircleSpaceCoordinator.Core.Tests.csproj" />
     <Project Path="tests/CircleSpaceCoordinator.Desktop.Tests/CircleSpaceCoordinator.Desktop.Tests.csproj" />
@@ -14,6 +18,7 @@
     <Project Path="tests/CircleSpaceCoordinator.StationeryUI.Tests/CircleSpaceCoordinator.StationeryUI.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/CircleSpaceCoordinator.EditorCli/CircleSpaceCoordinator.EditorCli.csproj" />
     <Project Path="tools/CircleSpaceCoordinator.ProjectCli/CircleSpaceCoordinator.ProjectCli.csproj" />
   </Folder>
 </Solution>
