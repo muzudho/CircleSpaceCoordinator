@@ -16,8 +16,12 @@ using CircleSpaceCoordinator.OptimizationEngine;
 
 internal static class Program
 {
-    private static int Main()
+    private static async Task<int> Main()
     {
+        await using var engine = CircleSpaceCoordinator.EditorEngine.EditorEngineHost.Build(["--port", "0", "--Logging:LogLevel:Default", "Warning"]);
+        await engine.StartAsync();
+        using var connection = new CircleSpaceCoordinator.EditorClient.EditorConnection(engine.Urls.Single());
+        CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
             ("Dragging previews then commits one desk move", DragPreviewThenCommit),

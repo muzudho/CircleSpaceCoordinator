@@ -1,6 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
-using CircleSpaceCoordinator.Application.Workspace;
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.EditorClient;
 using CircleSpaceCoordinator.Core.Model;
 
 internal sealed class GenreStyleDialog : System.Windows.Forms.Form
@@ -23,7 +24,7 @@ internal sealed class GenreStyleDialog : System.Windows.Forms.Form
         new("uniform-horizontal", "▰▱▰▱ （均等）横縞"),
         new("dots", "●○●○ 水玉"),
     ];
-    private readonly ProjectWorkspace workspace;
+    private readonly IEditorWorkspace workspace;
     private readonly System.Windows.Forms.DataGridView grid = new()
     {
         AllowUserToAddRows = false,
@@ -33,7 +34,7 @@ internal sealed class GenreStyleDialog : System.Windows.Forms.Form
         SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect,
     };
 
-    private GenreStyleDialog(ProjectWorkspace workspace)
+    private GenreStyleDialog(IEditorWorkspace workspace)
     {
         this.workspace = workspace;
         Text = "ジャンルと色・網掛けパターンの対応";
@@ -107,7 +108,7 @@ internal sealed class GenreStyleDialog : System.Windows.Forms.Form
         PopulateRows();
     }
 
-    public static bool ShowEditor(ProjectWorkspace workspace, System.Windows.Forms.IWin32Window? owner = null)
+    public static bool ShowEditor(IEditorWorkspace workspace, System.Windows.Forms.IWin32Window? owner = null)
     {
         using var dialog = new GenreStyleDialog(workspace);
         return dialog.ShowDialog(owner) == System.Windows.Forms.DialogResult.OK;
@@ -157,7 +158,7 @@ internal sealed class GenreStyleDialog : System.Windows.Forms.Form
                 System.Windows.Forms.MessageBoxIcon.Warning);
             return;
         }
-        workspace.ApplyProjectEdit(project => project with { GenreStyles = mappings });
+        workspace.Execute(new SetGenreStyles(mappings), selectedPlanEdit: false);
         DialogResult = System.Windows.Forms.DialogResult.OK;
         Close();
     }

@@ -2,6 +2,7 @@ namespace CircleSpaceCoordinator.Application.Editing;
 
 using CircleSpaceCoordinator.Core.Model;
 using CircleSpaceCoordinator.Core.Validation;
+using CircleSpaceCoordinator.Engine.Model;
 
 public sealed class ProjectEditHistory
 {
@@ -16,6 +17,16 @@ public sealed class ProjectEditHistory
     }
 
     public CircleSpaceProject Current { get; private set; }
+
+    public EditHistoryState Capture() => new(Current, undoStack.ToArray(), redoStack.ToArray());
+    public void Restore(EditHistoryState state)
+    {
+        EnsureValid(state.Current);
+        Current = state.Current;
+        undoStack.Clear(); redoStack.Clear();
+        foreach (var project in state.Undo.Reverse()) undoStack.Push(project);
+        foreach (var project in state.Redo.Reverse()) redoStack.Push(project);
+    }
 
     public bool CanUndo => undoStack.Count > 0;
 

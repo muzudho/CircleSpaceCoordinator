@@ -1,6 +1,96 @@
 # エディター GUI・エディターエンジン・思考エンジンの分離
 
-2026-09-09 に合意した設計方針と、最初の実装範囲を記録します。
+2026-09-09 に合意した設計方針と、GUI の gRPC 移行後の実装を記録します。
+
+## 現在の実装（GUI の移行まで完了）
+
+計画した５項目（編集 API、探索ジョブ、GUI の接続切替、参照の禁止、起動終了・保存・同時実行制限・互換性検査・同梱）を実装しました。以下の「初版」の記述は開発の経緯です。
+
+GUI は EditorClient を通してエディターエンジンを呼び出します。エディターエンジンが編集・選択・Undo/Redo の正本を所有し、GUI は表示用スナップショットをキャッシュします。描画ごとの RPC や評価計算は行いません。ドラッグ途中のプレビュー、カメラ、ホバー、ダイアログは GUI が所有します。
+
+### プロジェクト境界
+
+| プロジェクト | 役割 |
+| --- | --- |
+| EditorClient | gRPC クライアント、表示用キャッシュ、子エンジンの起動終了 |
+| Engine.Model | 許可された編集操作、表示用データ、履歴保存用データの契約 |
+| Core | 会場・配置・座標・評価結果のデータ型 |
+| Calculations | 検証、評価、トポロジー解析、配置の射影。GUI は参照しない |
+| Application | エディターの操作と履歴 |
+| TableIO | Excel・CSV のファイル入出力アダプター |
+
+互換性のため一部の型の名前空間は維持していますが、アセンブリは分離しました。GUI に残る TableIO はファイルの入出力を担当し、参加者一覧の更新・検証・評価はエディターエンジンが担当します。
+
+思考側が使用する参加者配置・交換の共通処理も Calculations に置きました。ThinkingEngine / OptimizationEngine は Application、EditorEngine、GUI を参照せず、この方向もビルドで検査します。
+
+`Directory.Build.targets` は GUI と EditorClient の解決済み参照を検査し、Application / Calculations / OptimizationEngine / Infrastructure / 各サーバー実装への参照が混入したらビルドを失敗させます。同梱用の `ReferenceOutputAssembly=false` は実装を呼び出す参照ではありません。
+
+### 編集 API と CLI
+
+Editor に Execute / Select / Load / ConvertDocument / Describe を追加しました。Execute は机の追加・移動・回転・削除、席名、会場サイズ、柱、島・対面の定義、参加者の配置・交換・仮置き、配置案の作成・複製・削除・名前変更・紐付け、参加者一覧更新、ジャンル表示設定を扱います。
+
+[`EditorOperations.cs`](../../../CircleSpaceCoordinator.Engine.Model/EditorOperations.cs) の許可された型を、`operation` 判別子付きの JSON として `operation_json` に格納します。任意の型やメソッドを実行する API ではありません。`selected_plan_edit=true` は未使用の机配置を含むキャンバス編集用です。配置一覧の作成削除・紐付けや参加者一覧更新には false を使います。
+
+Get と変更応答の `view_json` は、プロジェクト、選択、評価、ランキング、トポロジー、結合関係を含みます。保存形式への変換・検証・評価付き JSON の生成は ConvertDocument が行い、ローカルファイルの読書きは GUI / CLI が担当します。
+
+CLI の追加コマンドは次のとおりです。
+
+```text
+describe
+execute <workspace> <revision> <operation.json> [--project]
+select-plan|select-desk <workspace> <revision> <layout-id>
+load <workspace> <revision> <input.json>
+start <workspace> <revision> <source-plan> <new-plan> <name> <time-ms> <iterations>
+watch|stop|release-job <job-id>
+```
+
+例えば案名変更の操作ファイルは次の形式です。
+
+```json
+{"operation":"PlanCatalogService.RenamePlan","planId":"plan-1","newPlanName":"変更後の名前"}
+```
+
+選択と Load でも版が増えます。Load は Undo/Redo をリセットします。編集 RPC は同期で応答を待つため、エンジンが応答しない場合は最大15秒待つことがあります。重い探索は非同期です。
+
+### 探索ジョブと停止
+
+StartJob がジョブ ID を返し、WatchJob が進捗と最終結果を配信します。再接続すると現在の状態から購読できます。GUI もこの経路を使用し、エディターは Thinking の Run / Stop を呼び出します。
+
+StopJob は「現在までの最高案を返して終了する」要求です。結果を新しい案として追加し、Undo できます。GUI は開始時より改善した場合だけ追加します。単発 Optimize の通信キャンセルは結果を反映せず中断するため、用途が異なります。
+
+進捗は最新値を優先し、遅い購読者のために全イベントを蓄積しません。エディターは同時に１ジョブ、思考エンジンは単発 API を含め同時に１計算です。完了ジョブは ReleaseJob で解放でき、未解放の完了ジョブも最終アクセスから10分後に次の開始要求で整理します。最大128ジョブです。購読を切断しても計算は継続します。
+
+### セッション保存・復旧・解放
+
+`--state-directory <directory>` を指定すると、現在のプロジェクト、選択、版、Undo/Redo 履歴を操作ごとに保存します。GUI が起動するエンジンは `%LOCALAPPDATA%/CircleSpaceCoordinator/EngineSessions` を使用します。単独サーバーは省略時にメモリーのみです。
+
+一時ファイルからの置換で保存し、保存失敗時はメモリー上の編集も確定しません。同じ保存先を使うサーバー間でも保存時の版を検査します。サーバー再起動後は以前の workspace ID を Get に渡すと履歴ごと復元できます。保存先の `<workspace ID>.json` が復旧対象です。実行中の探索ジョブは再起動をまたいで再開しません。
+
+GUI の通常終了ではセッションを Close し、子エンジンを終了します。Close は保存済みセッションも削除するので、必要なプロジェクトは通常の保存操作でファイルへ書き出します。異常終了時の保存済みセッションは、CLI の Get / export で取り出せます。GUI が古いセッションを自動的に上書き復元することはありません。稼働中のジョブがあるセッションは停止・完了してから Close します。
+
+メモリー上は最大128セッションです。30分以上使われていない非稼働セッションは、新規セッションの受入れ時にメモリーから解放します。永続化している場合は Get で復元できます。保存ファイルは Close まで保持し、自動削除しません。
+
+### 起動・配布・互換性
+
+GUI は同梱の２つのエンジンを非表示で自動起動し、動的なループバックポートに接続します。手動でのサーバー起動は不要です。親 GUI の終了を子エンジンも監視します。
+
+通常の GUI ビルドでは `engines/editor/` と `engines/thinking/` に必要なファイルをコピーし、publish では２つのエンジンも publish します。このサブフォルダーも一緒に配布してください。
+
+```powershell
+dotnet publish CircleSpaceCoordinator.Desktop.Windows -c Release -r win-x64 --self-contained true -p:SmartAppControlSigningEnabled=false -p:DebugType=None -p:DebugSymbols=false -o artifacts/headless-win-x64
+```
+
+起動時の Describe による版確認に加え、[`engine-api-v1-baseline.json`](../../../schemas/engine-api-v1-baseline.json) とテストで RPC・フィールド番号・操作の既存プロパティを検査します。破壊的変更は API の版を分けます。検査を通すためだけに基準ファイルを書き換えません。
+
+GUI を表示せずに、同梱したエンジンの自動起動・編集・終了を確認するコマンドです。
+
+```powershell
+dotnet run --project tests/CircleSpaceCoordinator.Engine.Tests -c Release -- --runtime artifacts/headless-win-x64
+```
+
+配布前は `scripts/ForSmartAppControl/Test-PublicReleaseContent.ps1 -Path <publishフォルダー>` も実行します。２つのエンジンの必須ファイルを確認し、設定・セッション・ログ・デバッグシンボルなどの混入を拒否します。GUI の起動確認で生成された設定とログは、配布用フォルダーから取り除いてください。
+
+ネットワーク公開用の認証・TLS、ジョブの再起動後再開、更新要求 ID による重複排除は、ローカルアプリ向けの今回の移行とは別の拡張事項です。
 
 ## 目的と用語
 
@@ -34,7 +124,7 @@
 
 現在のサーバー内部では、既存の Core / Application / Infrastructure を再利用します。ThinkingEngine は既存の OptimizationEngine を呼び出します。共通モデル・配置の検証・評価を GUI から独立して保持します。
 
-## 最初の実装
+## 初版の実装（履歴）
 
 | プロジェクト | 内容 |
 | --- | --- |
@@ -98,9 +188,9 @@ CLI の標準出力は protobuf JSON 形式です。`revision` は 64 bit 整数
 
 初版は `127.0.0.1` の HTTP/2 専用ポートを使用し、メッセージ上限は送受信それぞれ 32 MiB です。認証・TLS は実装していないため、信頼できるローカル環境で開発するための構成です。別マシンへの公開は認証・TLS・実行資源の制限を整えてから対応します。gRPC の HTTP/2 要件は [Microsoft の説明](https://learn.microsoft.com/ja-jp/aspnet/core/grpc/aspnetcore?view=aspnetcore-10.0) に基づきます。
 
-## 移行の残作業
+## 初版で立てた移行計画（上記の実装で完了）
 
-今回の実装はヘッドレスの縦断経路です。既存の Desktop.Windows / Desktop.Core はまだ Application / Infrastructure / OptimizationEngine を直接参照しており、既存 GUI の分離完了を意味しません。
+初版ではヘッドレスの縦断経路を追加し、Desktop.Windows / Desktop.Core の直接参照は残していました。その後、以下の計画を実装しました。
 
 1. 机の編集・参加者割当て・案の作成削除・選択・表示用スナップショットなど、残りの操作を契約へ追加する。
 2. 探索の進捗ストリーム、ジョブ ID、停止時の途中結果取得を設計する。初版の探索応答は完了時のみ。

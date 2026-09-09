@@ -3,10 +3,17 @@ $repositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $fixture = Join-Path $repositoryRoot ('artifacts\privacy-tests\' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
 [System.IO.File]::WriteAllText((Join-Path $fixture 'CircleSpaceCoordinator.Desktop.Windows.exe'), 'inventory-test-only')
+foreach ($engine in @(@{ Folder = 'editor'; Name = 'EditorEngine' }, @{ Folder = 'thinking'; Name = 'ThinkingEngine' })) {
+    $directory = Join-Path $fixture "engines/$($engine.Folder)"
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    foreach ($extension in @('exe', 'dll', 'deps.json', 'runtimeconfig.json')) {
+        [System.IO.File]::WriteAllText((Join-Path $directory "CircleSpaceCoordinator.$($engine.Name).$extension"), 'inventory-test-only')
+    }
+}
 $gate = Join-Path $PSScriptRoot 'Test-PublicReleaseContent.ps1'
 & $gate -Path $fixture | Out-Null
 $passed = 1
-foreach ($name in @('application-settings.json', 'private-input.xlsx', 'debug.pdb', 'unknown.json')) {
+foreach ($name in @('application-settings.json', 'private-input.xlsx', 'debug.pdb', 'unknown.json', 'engines/editor/session.json', 'engines/thinking/application-settings.json')) {
     $file = Join-Path $fixture $name
     [System.IO.File]::WriteAllText($file, 'fictional-test-content')
     $wasRejected = $false
@@ -17,6 +24,13 @@ foreach ($name in @('application-settings.json', 'private-input.xlsx', 'debug.pd
     if (-not $wasRejected) { throw "Release gate failed to reject test fixture: $name" }
     $passed++
 }
+$engineExecutable = Join-Path $fixture 'engines/thinking/CircleSpaceCoordinator.ThinkingEngine.exe'
+Remove-Item -LiteralPath $engineExecutable
+$wasRejected = $false
+try { & $gate -Path $fixture | Out-Null } catch { $wasRejected = $true }
+if (-not $wasRejected) { throw 'Release gate accepted a missing thinking engine.' }
+[System.IO.File]::WriteAllText($engineExecutable, 'inventory-test-only')
+$passed++
 $exampleDirectory = Join-Path $fixture 'examples'
 New-Item -ItemType Directory -Path $exampleDirectory | Out-Null
 $example = Join-Path $exampleDirectory 'circle-space-project-v1.example.json'

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../CircleSpaceCoordinator.Engine.Contracts/CircleSpaceCoordinator.Engine.Contracts.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.Engine.Model/CircleSpaceCoordinator.Engine.Model.csproj" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.83.0" />
+  </ItemGroup>
+</Project>

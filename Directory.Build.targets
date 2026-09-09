@@ -1,0 +1,12 @@
+<Project>
+  <Target Name="EnforceDesktopEngineBoundary" AfterTargets="ResolveReferences"
+          Condition="'$(MSBuildProjectName)' == 'CircleSpaceCoordinator.Desktop.Core' or '$(MSBuildProjectName)' == 'CircleSpaceCoordinator.Desktop.Windows' or '$(MSBuildProjectName)' == 'CircleSpaceCoordinator.EditorClient'">
+    <Error Condition="'%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.Application' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.Calculations' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.OptimizationEngine' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.Infrastructure' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.EditorEngine' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.ThinkingEngine'"
+           Text="GUI/client must call the engine through gRPC, not reference %(ReferencePath.Filename)." />
+  </Target>
+  <Target Name="EnforceThinkingEngineBoundary" AfterTargets="ResolveReferences"
+          Condition="'$(MSBuildProjectName)' == 'CircleSpaceCoordinator.ThinkingEngine' or '$(MSBuildProjectName)' == 'CircleSpaceCoordinator.OptimizationEngine'">
+    <Error Condition="'%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.Application' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.EditorEngine' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.EditorClient' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.Desktop.Core' or '%(ReferencePath.Filename)' == 'CircleSpaceCoordinator.Desktop.Windows'"
+           Text="Thinking engine must not reference editor or GUI implementations: %(ReferencePath.Filename)." />
+  </Target>
+</Project>

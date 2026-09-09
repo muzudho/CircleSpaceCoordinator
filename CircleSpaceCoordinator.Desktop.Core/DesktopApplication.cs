@@ -1,23 +1,23 @@
 namespace CircleSpaceCoordinator.Desktop.Core;
 
-using CircleSpaceCoordinator.Application.Workspace;
-using CircleSpaceCoordinator.Infrastructure.Json;
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.EditorClient;
+
 using StationeryUI.Text;
 
 public sealed class DesktopApplication(
-    ProjectWorkspace workspace,
+    IEditorWorkspace workspace,
     ITextCompositionService textComposition)
 {
-    public ProjectWorkspace Workspace { get; } = workspace ?? throw new ArgumentNullException(nameof(workspace));
+    public IEditorWorkspace Workspace { get; } = workspace ?? throw new ArgumentNullException(nameof(workspace));
 
     public ITextCompositionService TextComposition { get; } =
         textComposition ?? throw new ArgumentNullException(nameof(textComposition));
 
-    public static ProjectWorkspace LoadWorkspace(string jsonPath)
+    public static RemoteWorkspace LoadWorkspace(string jsonPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jsonPath);
         var fullPath = Path.GetFullPath(jsonPath);
-        var project = ProjectJsonSerializer.Load(File.ReadAllText(fullPath));
-        return new ProjectWorkspace(project);
+        return EditorConnection.Current.Open(File.ReadAllText(fullPath));
     }
 }

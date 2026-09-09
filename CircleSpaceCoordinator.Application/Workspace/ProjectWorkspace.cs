@@ -4,8 +4,9 @@ using CircleSpaceCoordinator.Application.Editing;
 using CircleSpaceCoordinator.Application.Plans;
 using CircleSpaceCoordinator.Application.Queries;
 using CircleSpaceCoordinator.Core.Model;
+using CircleSpaceCoordinator.Engine.Model;
 
-public sealed class ProjectWorkspace
+public sealed class ProjectWorkspace : IEditorWorkspace
 {
     private readonly ProjectEditHistory history;
     private string selectedPlanId = "";
@@ -24,6 +25,33 @@ public sealed class ProjectWorkspace
     }
 
     public CircleSpaceProject Project => history.Current;
+
+    public WorkspaceCheckpoint Capture() => new(history.Capture(), selectedPlanId, selectedDeskLayoutId);
+    public static ProjectWorkspace Restore(WorkspaceCheckpoint state)
+    {
+        var workspace = new ProjectWorkspace(state.History.Current);
+        workspace.history.Restore(state.History);
+        workspace.selectedPlanId = state.SelectedPlanId;
+        workspace.selectedDeskLayoutId = state.SelectedDeskLayoutId;
+        workspace.ReconcileSelection();
+        return workspace;
+    }
+
+    public void Execute(EditorOperation operation, bool selectedPlanEdit = true)
+    {
+        if (operation is IPlanOperation target)
+        {
+            if (selectedPlanEdit && !HasSelectedCircleLayout && target.planId == SelectedPlanId)
+                ApplySelectedPlanEdit(project => EditorOperationHandler.Apply(project, operation));
+            else
+                ApplyProjectEdit(project => LayoutProjection.CommitLegacyPlanEdits(
+                    EditorOperationHandler.Apply(project, operation), target.planId));
+        }
+        else if (operation is PlanCatalogServiceCopyDeskLayout copy)
+            ApplyProjectEdit(project => LayoutProjection.CommitLegacyPlanEdits(
+                EditorOperationHandler.Apply(project, operation), copy.destinationPlanId));
+        else ApplyProjectEdit(project => EditorOperationHandler.Apply(project, operation));
+    }
 
     public string SelectedPlanId
     {

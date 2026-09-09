@@ -1,8 +1,9 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
-using CircleSpaceCoordinator.Application.Editing;
+
 using CircleSpaceCoordinator.Application.Plans;
-using CircleSpaceCoordinator.Application.Workspace;
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.EditorClient;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Model;
 using CircleSpaceCoordinator.Core.Validation;
@@ -17,7 +18,7 @@ public sealed record EditorCommandResult(
     public static EditorCommandResult NoTarget { get; } = new(false, []);
 }
 
-public sealed class EditorCommandController(ProjectWorkspace workspace)
+public sealed class EditorCommandController(IEditorWorkspace workspace)
 {
     public void CyclePlan(int direction)
     {
@@ -44,8 +45,7 @@ public sealed class EditorCommandController(ProjectWorkspace workspace)
             newId = $"{source.Id}-revision-{revision++}";
         }
         while (usedIds.Contains(newId));
-        var result = Apply(project => PlanCatalogService.DuplicatePlan(
-            project,
+        var result = Apply( new PlanCatalogServiceDuplicatePlan(
             source.Id,
             newId,
             newName.Trim()));
@@ -57,14 +57,13 @@ public sealed class EditorCommandController(ProjectWorkspace workspace)
     public EditorCommandResult RenameSelectedPlan(string newName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(newName);
-        return Apply(project => PlanCatalogService.RenamePlan(
-            project,
+        return Apply( new PlanCatalogServiceRenamePlan(
             workspace.SelectedPlanId,
             newName.Trim()));
     }
 
-    public EditorCommandResult CopyDeskLayout(string sourcePlanId, string destinationPlanId) => Apply(project =>
-        PlanCatalogService.CopyDeskLayout(project, sourcePlanId, destinationPlanId));
+    public EditorCommandResult CopyDeskLayout(string sourcePlanId, string destinationPlanId) => Apply(
+        new PlanCatalogServiceCopyDeskLayout( sourcePlanId, destinationPlanId));
 
     public EditorCommandResult AddOptimizedPlan(CirclePlacementOptimizationResult result)
     {
@@ -79,7 +78,7 @@ public sealed class EditorCommandController(ProjectWorkspace workspace)
         }
         while (usedIds.Contains(id));
         var name = $"{source.Name} 自動最適化";
-        var resultCommand = Apply(project => PlanCatalogService.AddOptimizedPlan(project, result.BestPlan, id, name));
+        var resultCommand = Apply( new PlanCatalogServiceAddOptimizedPlan( result.BestPlan, id, name));
         if (resultCommand.Applied)
             workspace.SelectPlan(id);
         return resultCommand;
@@ -113,8 +112,8 @@ public sealed class EditorCommandController(ProjectWorkspace workspace)
             : (QuarterTurn)(((int)desk.Orientation + 3) % 4);
         try
         {
-            workspace.Apply((project, planId) =>
-                PlanDeskEditor.RotateDesk(project, planId, desk.Id, orientation));
+            workspace.Execute(
+                new PlanDeskEditorRotateDesk( workspace.SelectedPlanId, desk.Id, orientation));
             return new EditorCommandResult(true, [], orientation);
         }
         catch (ProjectValidationException exception)
@@ -137,8 +136,7 @@ public sealed class EditorCommandController(ProjectWorkspace workspace)
         }
         while (usedIds.Contains(id));
 
-        var result = Apply(project => PlanDeskEditor.AddDesk(
-            project,
+        var result = Apply( new PlanDeskEditorAddDesk(
             workspace.SelectedPlanId,
             new DeskPlacement(id, deskType.Id, anchor, orientation)));
         return result.Applied ? result with { AffectedOrientation = orientation } : result;
@@ -149,74 +147,71 @@ public sealed class EditorCommandController(ProjectWorkspace workspace)
         var desk = workspace.GetSelectedPlanSnapshot().Desks.LastOrDefault(item => item.OccupiedCells.Contains(cell));
         return desk is null
             ? EditorCommandResult.NoTarget
-            : Apply(project => PlanDeskEditor.RemoveDesk(project, workspace.SelectedPlanId, desk.Id));
+            : Apply( new PlanDeskEditorRemoveDesk( workspace.SelectedPlanId, desk.Id));
     }
 
-    public EditorCommandResult SetDeskNumber(string deskPlacementId, string? deskNumber) => Apply(project =>
-        PlanDeskEditor.SetDeskNumber(project, workspace.SelectedPlanId, deskPlacementId, deskNumber));
+    public EditorCommandResult SetDeskNumber(string deskPlacementId, string? deskNumber) => Apply(
+        new PlanDeskEditorSetDeskNumber( workspace.SelectedPlanId, deskPlacementId, deskNumber));
 
     public EditorCommandResult FillDesks()
     {
         var deskType = workspace.Project.DeskTypes.FirstOrDefault();
         return deskType is null
             ? EditorCommandResult.NoTarget
-            : Apply(project => DeskLayoutService.FillAvailableCells(
-                project,
+            : Apply( new DeskLayoutServiceFillAvailableCells(
                 workspace.SelectedPlanId,
                 deskType.Id));
     }
 
-    public EditorCommandResult ResizeVenue(int widthDelta, int heightDelta) => Apply(project =>
-        VenueEditor.Resize(
-            project,
-            project.Venue.Width + widthDelta,
-            project.Venue.Height + heightDelta));
+    public EditorCommandResult ResizeVenue(int widthDelta, int heightDelta) => Apply(
+        new VenueEditorResize(
+            workspace.Project.Venue.Width + widthDelta,
+            workspace.Project.Venue.Height + heightDelta));
 
-    public EditorCommandResult AddPillarAt(GridPosition cell) => Apply(project =>
-        VenueEditor.AddPillar(project, cell));
+    public EditorCommandResult AddPillarAt(GridPosition cell) => Apply(
+        new VenueEditorAddPillar( cell));
 
-    public EditorCommandResult RemovePillarAt(GridPosition cell) => Apply(project =>
-        VenueEditor.RemovePillar(project, cell));
+    public EditorCommandResult RemovePillarAt(GridPosition cell) => Apply(
+        new VenueEditorRemovePillar( cell));
 
     public EditorCommandResult SetSeatLabel(
         string deskPlacementId,
         GridPosition relativeCell,
         string blockName,
-        string seatName) => Apply(project =>
-        DeskSeatLabelEditor.SetLabel(
-            project, workspace.SelectedPlanId, deskPlacementId, relativeCell, blockName, seatName));
+        string seatName) => Apply(
+        new DeskSeatLabelEditorSetLabel( workspace.SelectedPlanId, deskPlacementId, relativeCell, blockName, seatName));
 
-    public EditorCommandResult RemoveSeatLabel(string deskPlacementId, GridPosition relativeCell) => Apply(project =>
-        DeskSeatLabelEditor.RemoveLabel(project, workspace.SelectedPlanId, deskPlacementId, relativeCell));
+    public EditorCommandResult RemoveSeatLabel(string deskPlacementId, GridPosition relativeCell) => Apply(
+        new DeskSeatLabelEditorRemoveLabel( workspace.SelectedPlanId, deskPlacementId, relativeCell));
 
-    public EditorCommandResult ReplaceSeatLabels(IReadOnlyList<DeskSeatLabel> labels) => Apply(project =>
-        DeskSeatLabelEditor.ReplaceLabels(project, workspace.SelectedPlanId, labels));
+    public EditorCommandResult ReplaceSeatLabels(IReadOnlyList<DeskSeatLabel> labels) => Apply(
+        new DeskSeatLabelEditorReplaceLabels( workspace.SelectedPlanId, labels));
 
     public EditorCommandResult AddIslandConnector(
-        string firstDeskId, string secondDeskId, GridPosition firstCell, GridPosition secondCell) => Apply(project =>
-        VenueTopologyEditor.AddConnector(project, workspace.SelectedPlanId, firstDeskId, secondDeskId, firstCell, secondCell));
+        string firstDeskId, string secondDeskId, GridPosition firstCell, GridPosition secondCell) => Apply(
+        new VenueTopologyEditorAddConnector( workspace.SelectedPlanId, firstDeskId, secondDeskId, firstCell, secondCell));
 
-    public EditorCommandResult AddFacingRegion(GridPosition first, GridPosition second) => Apply(project =>
-        VenueTopologyEditor.AddFacingRegion(project, workspace.SelectedPlanId, first, second));
+    public EditorCommandResult AddFacingRegion(GridPosition first, GridPosition second) => Apply(
+        new VenueTopologyEditorAddFacingRegion( workspace.SelectedPlanId, first, second));
 
-    public EditorCommandResult ToggleAutomaticIslandConnection(GridPosition first, GridPosition second) => Apply(project =>
-        VenueTopologyEditor.ToggleAutomaticConnection(project, workspace.SelectedPlanId, first, second));
+    public EditorCommandResult ToggleAutomaticIslandConnection(GridPosition first, GridPosition second) => Apply(
+        new VenueTopologyEditorToggleAutomaticConnection( workspace.SelectedPlanId, first, second));
 
-    public EditorCommandResult RemoveIslandConnector(string connectorId) => Apply(project =>
-        VenueTopologyEditor.RemoveConnector(project, workspace.SelectedPlanId, connectorId));
+    public EditorCommandResult RemoveIslandConnector(string connectorId) => Apply(
+        new VenueTopologyEditorRemoveConnector( workspace.SelectedPlanId, connectorId));
 
     public EditorCommandResult RemoveTopologyAt(GridPosition cell)
     {
         var deskId = workspace.GetSelectedPlanSnapshot().Desks
             .LastOrDefault(item => item.OccupiedCells.Contains(cell))?.Id;
-        return Apply(project => VenueTopologyEditor.RemoveAt(project, workspace.SelectedPlanId, cell, deskId));
+        return Apply( new VenueTopologyEditorRemoveAt( workspace.SelectedPlanId, cell, deskId));
     }
 
-    private EditorCommandResult Apply(Func<CircleSpaceProject, CircleSpaceProject> edit)
+    private EditorCommandResult Apply(EditorOperation edit)
     {
         try
         {
-            workspace.ApplySelectedPlanEdit(edit);
+            workspace.Execute(edit);
             return EditorCommandResult.Success;
         }
         catch (ProjectValidationException exception)

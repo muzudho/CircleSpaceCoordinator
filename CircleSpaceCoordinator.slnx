@@ -1,4 +1,9 @@
 <Solution>
+  <Project Path="CircleSpaceCoordinator.Calculations/CircleSpaceCoordinator.Calculations.csproj" />
+  <Project Path="CircleSpaceCoordinator.Engine.Model/CircleSpaceCoordinator.Engine.Model.csproj" />
+  <Project Path="CircleSpaceCoordinator.EditorClient/CircleSpaceCoordinator.EditorClient.csproj" />
+  <Project Path="CircleSpaceCoordinator.TableIO/CircleSpaceCoordinator.TableIO.csproj" />
+
   <Project Path="CircleSpaceCoordinator.Engine.Contracts/CircleSpaceCoordinator.Engine.Contracts.csproj" />
   <Project Path="CircleSpaceCoordinator.EditorEngine/CircleSpaceCoordinator.EditorEngine.csproj" />
   <Project Path="CircleSpaceCoordinator.ThinkingEngine/CircleSpaceCoordinator.ThinkingEngine.csproj" />

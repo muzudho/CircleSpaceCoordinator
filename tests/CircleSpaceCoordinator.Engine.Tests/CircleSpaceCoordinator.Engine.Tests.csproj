@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../CircleSpaceCoordinator.EditorClient/CircleSpaceCoordinator.EditorClient.csproj" />
+    <ProjectReference Include="../../CircleSpaceCoordinator.Desktop.Core/CircleSpaceCoordinator.Desktop.Core.csproj" />
     <ProjectReference Include="../../CircleSpaceCoordinator.EditorEngine/CircleSpaceCoordinator.EditorEngine.csproj" />
     <ProjectReference Include="../../CircleSpaceCoordinator.ThinkingEngine/CircleSpaceCoordinator.ThinkingEngine.csproj" />
     <None Include="../../examples/circle-space-project-v1.example.json" Link="sample.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../schemas/engine-api-v1-baseline.json" Link="api-v1-baseline.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('../../schemas/engine-api-v1-baseline.json')" />
   </ItemGroup>
 </Project>

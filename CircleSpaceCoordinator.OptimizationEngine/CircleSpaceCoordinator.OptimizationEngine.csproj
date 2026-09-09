@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="../CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.Engine.Model/CircleSpaceCoordinator.Engine.Model.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.Calculations/CircleSpaceCoordinator.Calculations.csproj" />
     <ProjectReference Include="../CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
   </ItemGroup>
 </Project>

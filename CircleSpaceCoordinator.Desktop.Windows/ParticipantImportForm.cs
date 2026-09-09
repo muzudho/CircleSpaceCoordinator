@@ -1,13 +1,14 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
-using CircleSpaceCoordinator.Application.Participants;
-using CircleSpaceCoordinator.Application.Workspace;
+
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.EditorClient;
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.Infrastructure.Tabular;
 
 internal sealed class ParticipantImportForm : System.Windows.Forms.Form
 {
-    private readonly ProjectWorkspace workspace;
+    private readonly IEditorWorkspace workspace;
     private readonly IReadOnlyList<ParticipantTableSheet> sheets;
     private readonly System.Windows.Forms.ComboBox sheetBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
     private readonly System.Windows.Forms.ComboBox circleIdBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
@@ -24,7 +25,7 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
         RowHeadersVisible = false,
     };
 
-    private ParticipantImportForm(ProjectWorkspace workspace, string path, IReadOnlyList<ParticipantTableSheet> sheets)
+    private ParticipantImportForm(IEditorWorkspace workspace, string path, IReadOnlyList<ParticipantTableSheet> sheets)
     {
         this.workspace = workspace;
         this.sheets = sheets;
@@ -95,7 +96,7 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
 
     public int ImportedCount { get; private set; }
 
-    public static int? ShowImport(ProjectWorkspace workspace, ApplicationSettingsService? settings = null, System.Windows.Forms.IWin32Window? owner = null)
+    public static int? ShowImport(IEditorWorkspace workspace, ApplicationSettingsService? settings = null, System.Windows.Forms.IWin32Window? owner = null)
     {
         using var dialog = new System.Windows.Forms.OpenFileDialog
         {
@@ -161,7 +162,7 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
                 System.Windows.Forms.MessageBoxIcon.Question);
             if (answer != System.Windows.Forms.DialogResult.OK)
                 return;
-            workspace.ApplyProjectEdit(project => ParticipantCatalogService.ReplaceParticipants(project, rows));
+            workspace.Execute(new ParticipantCatalogServiceReplaceParticipants(rows), selectedPlanEdit: false);
             ImportedCount = rows.Count;
             DialogResult = System.Windows.Forms.DialogResult.OK;
             Close();

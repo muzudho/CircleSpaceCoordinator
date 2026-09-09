@@ -16,6 +16,7 @@ public static class ThinkingEngineHost
             options.MaxReceiveMessageSize = 32 * 1024 * 1024;
             options.MaxSendMessageSize = 32 * 1024 * 1024;
         });
+        builder.Services.AddSingleton<ThinkingService>();
         var app = builder.Build();
         app.MapGrpcService<ThinkingService>();
         return app;

@@ -1,6 +1,8 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.OptimizationEngine;
+using CircleSpaceCoordinator.Engine.Contracts.V1;
+using CircleSpaceCoordinator.Engine.Model;
 using StationeryUI.Canvas;
 using StationeryUI.Controls;
 using Microsoft.Xna.Framework;
@@ -16,7 +18,7 @@ public sealed partial class VenueEditorGame
     private int modalWidth;
     private int modalHeight;
     private int modalFocus;
-    private Task<CirclePlacementOptimizationResult>? optimizationTask;
+    private Task<JobEvent>? optimizationTask;
     private CancellationTokenSource? optimizationCancellation;
     private readonly LatestOptimizationProgress optimizationProgress = new();
 
@@ -203,8 +205,7 @@ public sealed partial class VenueEditorGame
         var token = optimizationCancellation.Token;
         optimizationProgress.Clear();
         OpenModal(new ModalDialogModel(ModalDialogKind.Progress, "自動最適化", "配置案を最適化しています…"));
-        optimizationTask = Task.Run(() => new CirclePlacementOptimizationEngine().Optimize(project, planId,
-            new CirclePlacementOptimizationOptions { TimeLimit = TimeSpan.FromMinutes(minutes) }, optimizationProgress, token));
+        optimizationTask = workspace.OptimizeAsync(minutes, optimizationProgress, token);
         Log("optimization_started", success: true);
     }
 
@@ -225,14 +226,16 @@ public sealed partial class VenueEditorGame
         optimizationCancellation = null;
         try
         {
-            var result = completed.GetAwaiter().GetResult();
+            var completion = completed.GetAwaiter().GetResult();
+            workspace!.Accept(completion.State);
+            var result = WireJson.Read<CirclePlacementOptimizationResult>(completion.ResultJson);
             if (result.BestScore.CompareTo(result.InitialScore) <= 0)
             {
                 ShowInAppMessage("自動最適化", "今回の試行では、開始時より評価を改善できませんでした。");
                 Log("optimization_completed", success: true, detail: "not_improved");
                 return;
             }
-            var applied = commandController!.AddOptimizedPlan(result);
+            var applied = CircleSpaceCoordinator.Desktop.Core.Interaction.EditorCommandResult.Success;
             ShowInAppMessage("自動最適化", applied.Applied
                 ? $"最適化した配置案を新しく追加しました。\n開始時　一般 {result.InitialScore.GeneralAttendeeScore:F2}　サークル {result.InitialScore.CircleParticipantScore:F2}\n最高　一般 {result.BestScore.GeneralAttendeeScore:F2}　サークル {result.BestScore.CircleParticipantScore:F2}\n試行回数 {result.IterationCount:N0}"
                 : "配置案を追加できませんでした。\n" + FormatIssues(applied.Issues));

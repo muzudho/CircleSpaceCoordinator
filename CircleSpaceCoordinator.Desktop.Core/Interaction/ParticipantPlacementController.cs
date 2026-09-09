@@ -1,11 +1,12 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
-using CircleSpaceCoordinator.Application.Editing;
-using CircleSpaceCoordinator.Application.Workspace;
+
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.EditorClient;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Validation;
 
-public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
+public sealed class ParticipantPlacementController(IEditorWorkspace workspace)
 {
     private string? selectedParticipantId;
 
@@ -99,11 +100,10 @@ public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
             var existing = workspace.SelectedPlan.Assignments
                 .SingleOrDefault(item => item.ParticipantId == participantId);
             var temporary = workspace.SelectedPlan.TemporaryPlacements.SingleOrDefault(item => item.ParticipantId == participantId);
-            workspace.Apply((project, planId) => existing is null
-                ? ParticipantAssignmentEditor.Assign(project, planId, participantId, cells, scoringPosition, temporary?.CombinedSpaceId)
-                : ParticipantAssignmentEditor.Reassign(
-                    project,
-                    planId,
+            workspace.Execute( existing is null
+                ? new ParticipantAssignmentEditorAssign( workspace.SelectedPlanId, participantId, cells, scoringPosition, temporary?.CombinedSpaceId)
+                : new ParticipantAssignmentEditorReassign(
+                    workspace.SelectedPlanId,
                     participantId,
                     cells,
                     scoringPosition,
@@ -124,8 +124,8 @@ public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
         if (assignment is null)
             return EditorCommandResult.NoTarget;
 
-        workspace.Apply((project, planId) =>
-            ParticipantAssignmentEditor.Unassign(project, planId, assignment.ParticipantId));
+        workspace.Execute(
+            new ParticipantAssignmentEditorUnassign( workspace.SelectedPlanId, assignment.ParticipantId));
         ReconcileSelection();
         return EditorCommandResult.Success;
     }
@@ -140,7 +140,7 @@ public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
         {
             if (workspace.SelectedPlan.TemporaryPlacements.Any(item => item.ParticipantId == firstParticipantId || item.ParticipantId == secondParticipantId))
             {
-                workspace.Apply((project, planId) => TemporaryPlacementEditor.Swap(project, planId, firstParticipantId, secondParticipantId));
+                workspace.Execute( new TemporaryPlacementEditorSwap( workspace.SelectedPlanId, firstParticipantId, secondParticipantId));
                 ReconcileSelection();
                 return EditorCommandResult.Success;
             }
@@ -149,8 +149,7 @@ public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
             var firstAssignment = snapshot.Assignments.Single(item => item.ParticipantId == firstParticipantId);
             if (firstGroup.Length == 1 && firstAssignment.OccupiedCells.Count == 1)
             {
-                workspace.Apply((project, planId) => ParticipantAssignmentEditor.Swap(
-                    project, planId, firstParticipantId, secondParticipantId));
+                workspace.Execute( new ParticipantAssignmentEditorSwap( workspace.SelectedPlanId, firstParticipantId, secondParticipantId));
                 ReconcileSelection();
                 return EditorCommandResult.Success;
             }
@@ -167,16 +166,15 @@ public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
             {
                 // Dropping one member of an approved combined circle onto its
                 // partner reverses their two cells without moving the pair.
-                workspace.Apply((project, planId) => ParticipantAssignmentEditor.Swap(
-                    project, planId, firstParticipantId, secondParticipantId));
+                workspace.Execute( new ParticipantAssignmentEditorSwap( workspace.SelectedPlanId, firstParticipantId, secondParticipantId));
                 ReconcileSelection();
                 return EditorCommandResult.Success;
             }
 
             var swapsWholeDesk = firstGroup.Length > 1 || firstAssignment.OccupiedCells.Count > 1;
-            workspace.Apply((project, planId) => swapsWholeDesk
-                ? ParticipantAssignmentEditor.SwapGroups(project, planId, firstGroup, secondGroup)
-                : ParticipantAssignmentEditor.Swap(project, planId, firstParticipantId, secondParticipantId));
+            workspace.Execute( swapsWholeDesk
+                ? new ParticipantAssignmentEditorSwapGroups( workspace.SelectedPlanId, firstGroup, secondGroup)
+                : new ParticipantAssignmentEditorSwap( workspace.SelectedPlanId, firstParticipantId, secondParticipantId));
             ReconcileSelection();
             return EditorCommandResult.Success;
         }
@@ -202,8 +200,7 @@ public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
     {
         try
         {
-            workspace.Apply((project, planId) => TemporaryPlacementEditor.SwapRegions(
-                project, planId, sourceTopLeft, destinationTopLeft, width, height));
+            workspace.Execute( new TemporaryPlacementEditorSwapRegions( workspace.SelectedPlanId, sourceTopLeft, destinationTopLeft, width, height));
             ReconcileSelection();
             return EditorCommandResult.Success;
         }
@@ -220,7 +217,7 @@ public sealed class ParticipantPlacementController(ProjectWorkspace workspace)
         var delta = new GridPosition(destination.X - originalPosition.X, destination.Y - originalPosition.Y);
         try
         {
-            workspace.Apply((project, planId) => TemporaryPlacementEditor.Park(project, planId, participantId,
+            workspace.Execute( new TemporaryPlacementEditorPark( workspace.SelectedPlanId, participantId,
                 displayCells.Select(cell => cell + delta).ToHashSet(), destination));
             ReconcileSelection();
             return EditorCommandResult.Success;

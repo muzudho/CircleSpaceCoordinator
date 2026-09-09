@@ -5,6 +5,15 @@ option csharp_namespace = "CircleSpaceCoordinator.Engine.Contracts.V1";
 // JSON payloads use the existing schemaVersion-bearing project exchange format.
 // Paths and GUI objects never cross the process boundary.
 service Editor {
+  rpc StartJob (EditorOptimizeRequest) returns (JobHandle);
+  rpc WatchJob (JobHandle) returns (stream JobEvent);
+  rpc StopJob (JobHandle) returns (Empty);
+  rpc ReleaseJob (JobHandle) returns (Empty);
+  rpc Describe (Empty) returns (EngineInfo);
+  rpc Execute (OperationRequest) returns (WorkspaceState);
+  rpc Select (SelectionRequest) returns (WorkspaceState);
+  rpc Load (LoadRequest) returns (WorkspaceState);
+  rpc ConvertDocument (DocumentRequest) returns (DocumentReply);
   rpc Open (OpenRequest) returns (WorkspaceState);
   rpc Get (WorkspaceRequest) returns (WorkspaceState);
   rpc Edit (EditRequest) returns (WorkspaceState);
@@ -13,6 +22,9 @@ service Editor {
 }
 
 service Thinking {
+  rpc Describe (Empty) returns (EngineInfo);
+  rpc Run (ThinkingJobRequest) returns (stream JobEvent);
+  rpc Stop (JobHandle) returns (Empty);
   rpc Optimize (ThinkingRequest) returns (ThinkingResult);
 }
 
@@ -25,7 +37,26 @@ message WorkspaceState {
   string project_json = 3;
   bool can_undo = 4;
   bool can_redo = 5;
+  string view_json = 6;
 }
+
+message EngineInfo { int32 api_major = 1; string engine = 2; }
+message OperationRequest {
+  string workspace_id = 1;
+  int64 expected_revision = 2;
+  string operation_json = 3;
+  bool selected_plan_edit = 4;
+}
+message SelectionRequest {
+  string workspace_id = 1;
+  int64 expected_revision = 2;
+  oneof target { string plan_id = 3; string desk_layout_id = 4; }
+}
+message LoadRequest { string workspace_id = 1; int64 expected_revision = 2; string project_json = 3; }
+message DocumentRequest {
+  oneof input { string project_json = 1; string model_json = 2; }
+}
+message DocumentReply { string project_json = 1; string model_json = 2; }
 message RenamePlan { string plan_id = 1; string name = 2; }
 message EditRequest {
   string workspace_id = 1;
@@ -38,7 +69,7 @@ message EditRequest {
 }
 message OptimizationOptions {
   int32 maximum_iterations = 1; // Required, positive.
-  int32 time_limit_ms = 2; // Required, 1..600000.
+  int32 time_limit_ms = 2; // Required, 1..7200000 (120 minutes).
   optional int32 random_seed = 3;
 }
 message EditorOptimizeRequest {
@@ -48,6 +79,19 @@ message EditorOptimizeRequest {
   string new_plan_id = 4;
   string new_plan_name = 5;
   OptimizationOptions options = 6;
+  bool only_if_improved = 7;
+}
+
+message JobHandle { string job_id = 1; }
+message ThinkingJobRequest { string job_id = 1; ThinkingRequest input = 2; }
+message JobEvent {
+  string job_id = 1;
+  string progress_json = 2;
+  string result_json = 3;
+  WorkspaceState state = 4;
+  bool completed = 5;
+  string error_code = 6;
+  string error_message = 7;
 }
 message ThinkingRequest {
   string project_json = 1;

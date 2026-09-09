@@ -3,8 +3,9 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 using CircleSpaceCoordinator.Desktop.Core;
 using CircleSpaceCoordinator.Desktop.Core.Screenshots;
 using System.Text.RegularExpressions;
-using CircleSpaceCoordinator.Application.Workspace;
-using CircleSpaceCoordinator.Application.Layouts;
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.EditorClient;
+
 using CircleSpaceCoordinator.Application.Queries;
 using CircleSpaceCoordinator.Application.Plans;
 using CircleSpaceCoordinator.Core.Evaluation;
@@ -56,7 +57,7 @@ public sealed partial class VenueEditorGame : Game
     ];
     private readonly GraphicsDeviceManager graphics;
     private readonly GridViewport viewport = new(32d);
-    private readonly ProjectWorkspace? workspace;
+    private readonly RemoteWorkspace? workspace;
     private readonly DeskDragController? dragController;
     private readonly EditorCommandController? commandController;
     private readonly ParticipantPlacementController? participantController;
@@ -104,7 +105,7 @@ public sealed partial class VenueEditorGame : Game
     private bool showEvaluationAnalysis;
 
     public VenueEditorGame(
-        ProjectWorkspace? workspace = null,
+        RemoteWorkspace? workspace = null,
         IOperationLogger? operationLogger = null,
         string? projectSavePath = null,
         ApplicationSettingsService? settings = null)
@@ -152,6 +153,17 @@ public sealed partial class VenueEditorGame : Game
     }
 
     protected override void Update(GameTime gameTime)
+    {
+        try { UpdateEditor(gameTime); }
+        catch (InvalidOperationException exception) when (exception.InnerException is Grpc.Core.RpcException)
+        {
+            CancelInProgressPointerInteraction();
+            try { workspace?.Refresh(); } catch (InvalidOperationException) { }
+            ShowInAppMessage("エディターエンジンとの通信", exception.Message);
+        }
+    }
+
+    private void UpdateEditor(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
@@ -1092,7 +1104,7 @@ public sealed partial class VenueEditorGame : Game
         var disabledConnections = workspace.SelectedPlan.DisabledIslandConnections
             .Select(connection => NormalizeConnection(connection.FirstCell, connection.SecondCell))
             .ToHashSet();
-        foreach (var connection in VenueTopologyAnalyzer.GetAutomaticCellEdges(workspace.SelectedPlan, deskTypes))
+        foreach (var connection in workspace.View.AutomaticEdges)
         {
             var normalized = NormalizeConnection(connection.FirstCell, connection.SecondCell);
             var color = disabledConnections.Contains(normalized) ? DisabledIslandConnectionColor : IslandConnectionColor;
@@ -1147,9 +1159,9 @@ public sealed partial class VenueEditorGame : Game
         if (workspace is null)
             return;
         var plan = workspace.SelectedPlan;
-        var topology = VenueTopologyAnalyzer.Build(workspace.Project, plan);
+        var topology = workspace.View.Topology;
         var participantsById = workspace.Project.Participants.ToDictionary(item => item.Id, StringComparer.Ordinal);
-        var combinedPartners = GeneralAttendeeEvaluator.BuildCombinedPartners(workspace.Project, plan);
+        var combinedPartners = workspace.View.CombinedPartners;
         var genresByParticipant = participantsById.ToDictionary(
             pair => pair.Key,
             pair => combinedPartners[pair.Key].Append(pair.Key)
@@ -1232,7 +1244,7 @@ public sealed partial class VenueEditorGame : Game
         if (workspace is null)
             return false;
         var deskTypes = workspace.Project.DeskTypes.ToDictionary(item => item.Id, StringComparer.Ordinal);
-        var candidate = VenueTopologyAnalyzer.GetAutomaticCellEdges(workspace.SelectedPlan, deskTypes)
+        var candidate = workspace.View.AutomaticEdges
             .Select(item => (Connection: item, Distance: DistanceSquaredToSegment(pointer,
                 GetCellCenter(item.FirstCell), GetCellCenter(item.SecondCell))))
             .Where(item => item.Distance <= 81d)
@@ -3231,13 +3243,13 @@ public sealed partial class VenueEditorGame : Game
         {
             if (isDesk)
             {
-                workspace.ApplyProjectEdit(project => LayoutCatalogService.CreateDeskLayout(project, id, name));
+                workspace.Execute(new LayoutCatalogServiceCreateDeskLayout( id, name), selectedPlanEdit: false);
                 workspace.SelectDeskLayout(id);
             }
             else
             {
                 var deskLayoutId = SelectedDeskLayoutId();
-                workspace.ApplyProjectEdit(project => LayoutCatalogService.CreateCircleLayout(project, id, name, deskLayoutId));
+                workspace.Execute(new LayoutCatalogServiceCreateCircleLayout( id, name, deskLayoutId), selectedPlanEdit: false);
                 workspace.SelectPlan(id);
             }
             return (true, $"id={id}");
@@ -3270,9 +3282,9 @@ public sealed partial class VenueEditorGame : Game
             if (action != ModalDialogAction.Accept) return;
             try
             {
-                workspace.ApplyProjectEdit(project => isDesk
-                    ? LayoutCatalogService.RemoveDeskLayout(project, id)
-                    : LayoutCatalogService.RemoveCircleLayout(project, id));
+                workspace.Execute(isDesk
+                    ? new LayoutCatalogServiceRemoveDeskLayout( id)
+                    : new LayoutCatalogServiceRemoveCircleLayout(id), selectedPlanEdit: false);
                 Log("layout_delete", success: true);
             }
             catch (Exception exception)
@@ -3291,7 +3303,7 @@ public sealed partial class VenueEditorGame : Game
         if (target is null || target == circle.DeskLayoutId) return (false, "cancelled");
         try
         {
-            workspace.ApplyProjectEdit(project => LayoutCatalogService.ReassignCircleLayout(project, circle.Id, target));
+            workspace.Execute(new LayoutCatalogServiceReassignCircleLayout( circle.Id, target), selectedPlanEdit: false);
             workspace.SelectPlan(circle.Id);
             return (true, $"deskLayoutId={target}");
         }
@@ -3315,9 +3327,9 @@ public sealed partial class VenueEditorGame : Game
             : workspace.Project.CircleLayouts.Single(item => item.Id == id).Name;
         OpenUnderlineInput(isDesk ? "机配置の名前を変更" : "サークル配置の名前を変更", currentName, name =>
         {
-            workspace.ApplyProjectEdit(project => isDesk
-                ? LayoutCatalogService.RenameDeskLayout(project, id, name)
-                : LayoutCatalogService.RenameCircleLayout(project, id, name));
+            workspace.Execute(isDesk
+                ? new LayoutCatalogServiceRenameDeskLayout( id, name)
+                : new LayoutCatalogServiceRenameCircleLayout(id, name), selectedPlanEdit: false);
         });
         return (true, "dialog_opened");
     }

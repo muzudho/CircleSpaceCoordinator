@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><PackageReference Include="ClosedXML" Version="0.105.1" /><ProjectReference Include="../CircleSpaceCoordinator.Engine.Model/CircleSpaceCoordinator.Engine.Model.csproj" /></ItemGroup></Project>

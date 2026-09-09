@@ -23,6 +23,7 @@ public static class EditorEngineHost
             new GrpcChannelOptions { MaxReceiveMessageSize = 32 * 1024 * 1024, MaxSendMessageSize = 32 * 1024 * 1024 }));
         builder.Services.AddSingleton(provider => new Thinking.ThinkingClient(provider.GetRequiredService<GrpcChannel>()));
         builder.Services.AddSingleton<EditorService>();
+        builder.Services.AddSingleton<SessionRepository>();
         var app = builder.Build();
         app.MapGrpcService<EditorService>();
         return app;

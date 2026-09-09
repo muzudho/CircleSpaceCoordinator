@@ -2,14 +2,14 @@ namespace CircleSpaceCoordinator.Desktop.Core.Persistence;
 
 using CircleSpaceCoordinator.Core.Evaluation;
 using CircleSpaceCoordinator.Core.Model;
-using CircleSpaceCoordinator.Infrastructure.Json;
+using CircleSpaceCoordinator.EditorClient;
 
 public static class ProjectFileService
 {
     public static CircleSpaceProject Load(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return ProjectJsonSerializer.Load(File.ReadAllText(Path.GetFullPath(path)));
+        return EditorConnection.Current.Decode(File.ReadAllText(Path.GetFullPath(path)));
     }
 
     public static string GetDefaultWorkingCopyPath()
@@ -31,7 +31,7 @@ public static class ProjectFileService
         var directory = Path.GetDirectoryName(fullPath)
             ?? throw new ArgumentException("The save path has no directory.", nameof(path));
         Directory.CreateDirectory(directory);
-        var json = ProjectJsonSerializer.Save(project, ProjectEvaluator.Evaluate(project));
+        var json = EditorConnection.Current.Encode(project);
         var temporaryPath = fullPath + ".tmp";
         try
         {

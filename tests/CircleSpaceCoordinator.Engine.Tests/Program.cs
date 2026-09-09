@@ -12,6 +12,32 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using System.Net;
 
+if (args is ["--write-contract-baseline", var baselinePath])
+{
+    await File.WriteAllTextAsync(baselinePath, System.Text.Json.JsonSerializer.Serialize(ApiCompatibility.Capture(), new System.Text.Json.JsonSerializerOptions { WriteIndented = true }) + "\n");
+    return;
+}
+
+if (args is ["--runtime", var baseDirectory])
+{
+    try
+    {
+        using var runtime = await CircleSpaceCoordinator.EditorClient.EngineRuntime.StartAsync(Path.GetFullPath(baseDirectory),
+            Path.Combine(Path.GetTempPath(), "circle-space-runtime-" + Guid.NewGuid().ToString("N")));
+        using var workspace = runtime.Connection.Open(await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "sample.json")));
+        workspace.Execute(new CircleSpaceCoordinator.Engine.Model.PlanCatalogServiceRenamePlan(workspace.SelectedPlanId, "Runtime smoke"));
+        if (workspace.SelectedPlan.Name != "Runtime smoke") throw new Exception("Runtime editing failed.");
+        Console.WriteLine("PASS: packaged engine startup, API handshake, editing and shutdown.");
+    }
+    catch (Exception exception)
+    {
+        Console.Error.WriteLine(exception.Message);
+        Environment.ExitCode = 1;
+    }
+    return;
+}
+
+ApiCompatibility.Verify();
 await using var thinkingHost = ThinkingEngineHost.Build(["--port", "0", "--Logging:LogLevel:Default", "Warning"]);
 await thinkingHost.StartAsync();
 await using var editorHost = EditorEngineHost.Build(["--port", "0", "--thinking-address", Address(thinkingHost),
@@ -22,6 +48,7 @@ try
     using var channel = GrpcChannel.ForAddress(Address(editorHost));
     var client = new Editor.EditorClient(channel);
     var json = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "sample.json"));
+    await ExtendedChecks.Run(Address(editorHost), json);
     await Expect(StatusCode.InvalidArgument, async () => await client.OpenAsync(new OpenRequest { ProjectJson = "{" }));
     var opened = await client.OpenAsync(new OpenRequest { ProjectJson = json });
     var id = opened.WorkspaceId;
@@ -141,6 +168,23 @@ static async Task CheckConcurrentThinking(string json, string planId)
         await controlled.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
         after = await client.GetAsync(new WorkspaceRequest { WorkspaceId = state.WorkspaceId });
         Check(after.ProjectJson == edited.ProjectJson && after.Revision == 2, "cancellation propagates without mutation");
+
+        controlled.Reset();
+        var job = await client.StartJobAsync(request);
+        await controlled.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var duringJob = await client.EditAsync(new EditRequest
+        {
+            WorkspaceId = state.WorkspaceId, ExpectedRevision = 2,
+            RenamePlan = new RenamePlan { PlanId = planId, Name = "Edited during streamed job" },
+        });
+        controlled.Release.TrySetResult();
+        using var stream = client.WatchJob(job, deadline: DateTime.UtcNow.AddSeconds(10));
+        JobEvent? final = null;
+        await foreach (var item in stream.ResponseStream.ReadAllAsync()) if (item.Completed) final = item;
+        Check(final?.ErrorCode == "Aborted", "streamed job rejects a stale result");
+        after = await client.GetAsync(new WorkspaceRequest { WorkspaceId = state.WorkspaceId });
+        Check(after.ProjectJson == duringJob.ProjectJson && after.Revision == 3, "streamed result preserves concurrent editing");
+        await client.ReleaseJobAsync(job);
     }
     finally
     {
@@ -152,6 +196,17 @@ static async Task CheckConcurrentThinking(string json, string planId)
 
 public sealed class ControlledThinking : Thinking.ThinkingBase
 {
+    public override async Task Run(ThinkingJobRequest request, IServerStreamWriter<JobEvent> response, ServerCallContext context)
+    {
+        Started.TrySetResult();
+        await Release.Task.WaitAsync(context.CancellationToken);
+        var project = ProjectJsonSerializer.Load(request.Input.ProjectJson);
+        var score = new CircleSpaceCoordinator.OptimizationEngine.CirclePlacementOptimizationScore(0, 0);
+        var result = new CircleSpaceCoordinator.OptimizationEngine.CirclePlacementOptimizationResult(
+            project.Plans.Single(plan => plan.Id == request.Input.PlanId), score, score, 1, 0, false);
+        await response.WriteAsync(new JobEvent { JobId = request.JobId, Completed = true,
+            ResultJson = CircleSpaceCoordinator.Engine.Model.WireJson.Write(result) });
+    }
     public TaskCompletionSource Started { get; private set; } = NewSignal();
     public TaskCompletionSource Release { get; private set; } = NewSignal();
     public TaskCompletionSource Cancelled { get; private set; } = NewSignal();

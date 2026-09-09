@@ -2,8 +2,6 @@ namespace CircleSpaceCoordinator.Core.Model;
 
 using CircleSpaceCoordinator.Core.Geometry;
 
-public sealed record DeskRun(QuarterTurn Orientation, IReadOnlyList<string> DeskIds);
-
 public static class DeskRunDetector
 {
     public static IReadOnlyList<DeskRun> Detect(Plan plan, IReadOnlyDictionary<string, DeskType> deskTypes)

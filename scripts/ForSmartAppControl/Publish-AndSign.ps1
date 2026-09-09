@@ -21,6 +21,7 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
 }
 $projects = @(
 	@{ Name = 'CircleSpaceCoordinator.Desktop.Windows'; Path = 'CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordinator.Desktop.Windows.csproj' },
+	@{ Name = 'CircleSpaceCoordinator.EditorCli'; Path = 'tools\CircleSpaceCoordinator.EditorCli\CircleSpaceCoordinator.EditorCli.csproj' },
 	@{ Name = 'CircleSpaceCoordinator.ProjectCli'; Path = 'tools\CircleSpaceCoordinator.ProjectCli\CircleSpaceCoordinator.ProjectCli.csproj' }
 )
 

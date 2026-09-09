@@ -9,6 +9,12 @@ $releaseRoot = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\', '/')
 $repositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $rejected = @()
 $allowedJson = @('CircleSpaceCoordinator.Desktop.Windows.deps.json', 'CircleSpaceCoordinator.Desktop.Windows.runtimeconfig.json')
+$requiredEngineFiles = @()
+foreach ($engine in @(@{ Folder = 'editor'; Name = 'EditorEngine' }, @{ Folder = 'thinking'; Name = 'ThinkingEngine' })) {
+    $prefix = "engines/$($engine.Folder)/CircleSpaceCoordinator.$($engine.Name)"
+    $allowedJson += @("$prefix.deps.json", "$prefix.runtimeconfig.json")
+    $requiredEngineFiles += @("$prefix.exe", "$prefix.dll", "$prefix.deps.json", "$prefix.runtimeconfig.json")
+}
 if (Get-ChildItem -LiteralPath $releaseRoot -Recurse -Force -Directory |
     Where-Object { $_.Attributes -band [System.IO.FileAttributes]::ReparsePoint }) {
     throw 'Public release folders must not contain filesystem links.'
@@ -37,5 +43,10 @@ if ($rejected.Count -gt 0) {
 }
 if (-not (Test-Path -LiteralPath (Join-Path $releaseRoot 'CircleSpaceCoordinator.Desktop.Windows.exe') -PathType Leaf)) {
     throw 'Public release content check: the application executable is missing.'
+}
+foreach ($relative in $requiredEngineFiles) {
+    if (-not (Test-Path -LiteralPath (Join-Path $releaseRoot $relative) -PathType Leaf)) {
+        throw 'Public release content check: a required headless engine file is missing.'
+    }
 }
 Write-Output 'Public release file inventory check passed. Binary metadata and source/history review are separate checks.'

@@ -1,7 +1,8 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
-using CircleSpaceCoordinator.Application.Editing;
-using CircleSpaceCoordinator.Application.Workspace;
+
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.EditorClient;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Validation;
 using StationeryUI.Canvas;
@@ -14,7 +15,7 @@ public sealed record DeskDropResult(
     public static DeskDropResult Success { get; } = new(true, []);
 }
 
-public sealed class DeskDragController(ProjectWorkspace workspace, GridViewport viewport)
+public sealed class DeskDragController(IEditorWorkspace workspace, GridViewport viewport)
 {
     private string? draggedPlanId;
     private string? draggedDeskId;
@@ -67,7 +68,7 @@ public sealed class DeskDragController(ProjectWorkspace workspace, GridViewport 
             var orientation = workspace.SelectedPlan.DeskPlacements
                 .Single(item => item.Id == deskId)
                 .Orientation;
-            workspace.ApplySelectedPlanEdit(project => PlanDeskEditor.MoveDesk(project, planId, deskId, anchor));
+            workspace.Execute(new PlanDeskEditorMoveDesk( planId, deskId, anchor));
             return new DeskDropResult(true, [], orientation);
         }
         catch (ProjectValidationException exception)

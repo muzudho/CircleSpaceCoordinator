@@ -8,14 +8,16 @@ using CircleSpaceCoordinator.Infrastructure.Json;
 using CircleSpaceCoordinator.OptimizationEngine;
 using Grpc.Core;
 
-public sealed class ThinkingService : Thinking.ThinkingBase
+public sealed partial class ThinkingService : Thinking.ThinkingBase
 {
     public override async Task<ThinkingResult> Optimize(ThinkingRequest request, ServerCallContext context)
     {
+        if (!await slots.WaitAsync(0, context.CancellationToken))
+            throw new RpcException(new Status(StatusCode.ResourceExhausted, "Thinking engine is busy."));
         try
         {
-            if (request.Options is not { MaximumIterations: > 0, TimeLimitMs: > 0 and <= 600000 })
-                throw new ArgumentException("Positive iterations and time_limit_ms in 1..600000 are required.");
+            if (request.Options is not { MaximumIterations: > 0, TimeLimitMs: > 0 and <= 7200000 })
+                throw new ArgumentException("Positive iterations and time_limit_ms in 1..7200000 are required.");
             var project = ProjectJsonSerializer.Load(request.ProjectJson);
             if (!project.Plans.Any(plan => plan.Id == request.PlanId))
                 throw new RpcException(new Status(StatusCode.NotFound, "Plan does not exist."));
@@ -43,5 +45,6 @@ public sealed class ThinkingService : Thinking.ThinkingBase
         { throw new RpcException(new Status(StatusCode.InvalidArgument, exception.Message)); }
         catch (InvalidOperationException exception)
         { throw new RpcException(new Status(StatusCode.FailedPrecondition, exception.Message)); }
+        finally { slots.Release(); }
     }
 }

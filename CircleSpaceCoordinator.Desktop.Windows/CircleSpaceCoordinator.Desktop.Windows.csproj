@@ -7,11 +7,10 @@
     <SmartAppControlSigningEnabled Condition="'$(SmartAppControlSigningEnabled)' == '' and '$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT'">true</SmartAppControlSigningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../CircleSpaceCoordinator.EditorClient/CircleSpaceCoordinator.EditorClient.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.TableIO/CircleSpaceCoordinator.TableIO.csproj" />
     <ProjectReference Include="../CircleSpaceCoordinator.Desktop.Core/CircleSpaceCoordinator.Desktop.Core.csproj" />
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.5.1" />
-    <ProjectReference Include="../CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
-    <ProjectReference Include="../CircleSpaceCoordinator.Infrastructure/CircleSpaceCoordinator.Infrastructure.csproj" />
-    <ProjectReference Include="../CircleSpaceCoordinator.OptimizationEngine/CircleSpaceCoordinator.OptimizationEngine.csproj" />
     <ProjectReference Include="../CircleSpaceCoordinator.StationeryUI/CircleSpaceCoordinator.StationeryUI.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -32,4 +31,5 @@
   </Target>
   <ItemGroup><PackageReference Include="StationeryUI.Windows" Version="0.1.0" /></ItemGroup>
   <ItemGroup><PackageReference Include="StationeryUI.MonoGame" Version="0.1.0" /></ItemGroup>
+  <Import Project="../scripts/Build/EngineHosting.targets" />
 </Project>

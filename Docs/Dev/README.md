@@ -21,9 +21,13 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartA
 
 | パス | 役割 |
 | --- | --- |
-| `CircleSpaceCoordinator.Core/` | 会場・机・参加者のモデルと評価 |
+| `CircleSpaceCoordinator.Core/` | 会場・机・参加者のモデルと評価結果の型 |
+| `CircleSpaceCoordinator.Calculations/` | GUI が参照しない検証・評価・トポロジー解析 |
+| `CircleSpaceCoordinator.Engine.Model/` | 編集操作と表示用データの契約 |
+| `CircleSpaceCoordinator.EditorClient/` | gRPC クライアントとエンジンの起動終了 |
+| `CircleSpaceCoordinator.TableIO/` | Excel・CSV アダプター |
 | `CircleSpaceCoordinator.Application/` | 配置編集、案の管理、Undo/Redo |
-| `CircleSpaceCoordinator.Infrastructure/` | JSON、参加者表の読み込み、Excel 出力 |
+| `CircleSpaceCoordinator.Infrastructure/` | サーバー側の保存 JSON 変換 |
 | `CircleSpaceCoordinator.OptimizationEngine/` | 自動配置 |
 | `CircleSpaceCoordinator.Engine.Contracts/` | gRPC の API 契約 |
 | `CircleSpaceCoordinator.EditorEngine/` | ヘッドレスの編集 gRPC サーバー |

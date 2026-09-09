@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../CircleSpaceCoordinator.Calculations/CircleSpaceCoordinator.Calculations.csproj" />
     <ProjectReference Include="../../CircleSpaceCoordinator.Core/CircleSpaceCoordinator.Core.csproj" />
   </ItemGroup>
 </Project>

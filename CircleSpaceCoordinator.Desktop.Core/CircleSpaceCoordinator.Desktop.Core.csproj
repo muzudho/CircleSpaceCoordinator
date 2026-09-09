@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="../CircleSpaceCoordinator.Application/CircleSpaceCoordinator.Application.csproj" />
-    <ProjectReference Include="../CircleSpaceCoordinator.Infrastructure/CircleSpaceCoordinator.Infrastructure.csproj" />
-    <ProjectReference Include="../CircleSpaceCoordinator.OptimizationEngine/CircleSpaceCoordinator.OptimizationEngine.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.EditorClient/CircleSpaceCoordinator.EditorClient.csproj" />
+    <ProjectReference Include="../CircleSpaceCoordinator.TableIO/CircleSpaceCoordinator.TableIO.csproj" />
     <ProjectReference Include="../CircleSpaceCoordinator.StationeryUI/CircleSpaceCoordinator.StationeryUI.csproj" />
   </ItemGroup>
 </Project>

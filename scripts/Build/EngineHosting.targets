@@ -1,0 +1,27 @@
+<Project>
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.EditorEngine/CircleSpaceCoordinator.EditorEngine.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.ThinkingEngine/CircleSpaceCoordinator.ThinkingEngine.csproj" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+  <Target Name="CopyHeadlessEngines" AfterTargets="Build" BeforeTargets="SignBuildOutputForSmartAppControl" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_EngineSuffix Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)/</_EngineSuffix>
+      <_EditorBuildRoot>$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.EditorEngine/bin/$(Configuration)/net10.0/$(_EngineSuffix)</_EditorBuildRoot>
+      <_ThinkingBuildRoot>$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.ThinkingEngine/bin/$(Configuration)/net10.0/$(_EngineSuffix)</_ThinkingBuildRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <_EditorArtifacts Include="$(_EditorBuildRoot)**/*"
+                        Exclude="$(_EditorBuildRoot)sessions/**/*;$(_EditorBuildRoot)publish/**/*;$(_EditorBuildRoot)win-*/**/*;$(_EditorBuildRoot)linux-*/**/*;$(_EditorBuildRoot)osx-*/**/*" />
+      <_ThinkingArtifacts Include="$(_ThinkingBuildRoot)**/*"
+                          Exclude="$(_ThinkingBuildRoot)publish/**/*;$(_ThinkingBuildRoot)win-*/**/*;$(_ThinkingBuildRoot)linux-*/**/*;$(_ThinkingBuildRoot)osx-*/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_EditorArtifacts)" DestinationFiles="@(_EditorArtifacts->'$(TargetDir)engines/editor/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ThinkingArtifacts)" DestinationFiles="@(_ThinkingArtifacts->'$(TargetDir)engines/thinking/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishHeadlessEngines" AfterTargets="Publish">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.EditorEngine/CircleSpaceCoordinator.EditorEngine.csproj"
+             Targets="Publish" Properties="TargetFramework=net10.0;PublishDir=$([System.IO.Path]::GetFullPath('$(PublishDir)'))engines/editor/" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.ThinkingEngine/CircleSpaceCoordinator.ThinkingEngine.csproj"
+             Targets="Publish" Properties="TargetFramework=net10.0;PublishDir=$([System.IO.Path]::GetFullPath('$(PublishDir)'))engines/thinking/" />
+  </Target>
+</Project>

@@ -11,7 +11,7 @@ Windows の画面 API に依存しない、デスクトップアプリの共通�
 | 操作ログの整形と書込み | `Logging/` |
 | スクリーンショットの保存パス生成 | `Screenshots/ScreenshotPath.cs` |
 
-参照方向は `Desktop.Windows` → `Desktop.Core` → `Application` / `Infrastructure` / `OptimizationEngine` / `StationeryUI` です。会場・配置の基本ルールは既存の `CircleSpaceCoordinator.Core` が担当します。
+参照方向は `Desktop.Windows` → `Desktop.Core` → `EditorClient` / `TableIO` / `StationeryUI` です。共有データ型は `Engine.Model` / `Core`、編集・検証・評価の実装は gRPC のサーバー側にあります。コントローラーは操作契約を作り、GUI の実行時には `RemoteWorkspace` が gRPC で送ります。
 
 Windows のダイアログ、文字のラスタライズ、音声再生、実行開始処理は `Desktop.Windows` に残しています。`VenueEditorGame` や描画処理も Windows 実装と結びついているため、現段階ではそちらに残しています。
 
