@@ -2,71 +2,61 @@
 
 記録日：2026-09-09
 
-## 今どうやり過ごしているか
+## 調査対象
 
-**既存の開発用自己署名と Debug ビルド後の自動署名を維持し、Visual Studio を再起動したところ、本人から F5 で起動できたとの報告がありました。現在はこの状態で開発を継続します。**
+Windows 上の Visual Studio で開発中の `CircleSpaceCoordinator.Desktop.Windows` で、Debug ビルド後の F5 起動時に DLL が Smart App Control（SAC）に拒否される事象を調査します。
 
-再起動後の起動成功は確認報告として残しますが、再起動が SAC の判定を変えたのか、自己署名が効いたのかは特定できていません。再起動を SAC の確実な解除方法とは扱いません。今回の対応では新しい証明書の作成、Windows の保護設定の変更、有料署名の導入は行っていません。
+今回の問いは **開発用自己署名を行わないと F5 起動できないか** です。Visual Studio の再起動、PC の再起動、SAC の設定変更、証明書の再作成は比較対象にしません。
 
-## 症状と経緯
+既存の確認では、`CircleSpaceCoordinator.EditorClient.dll` の読み込みが `0x800711C7` で拒否され、Code Integrity イベント 3033 / 3077 のポリシー ID は `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` でした。拒否された DLL は Authenticode `Valid` で、開発用証明書も現在のユーザーの `My`、`Root`、`TrustedPublisher` に登録済みでした。[コード署名の調査記録](../配布/コード署名.md#2026-09-09-f5-起動失敗と既存の開発用署名の照合) を参照してください。
 
-対象は Windows 上の Visual Studio で開発中の `CircleSpaceCoordinator.Desktop.Windows` です。発生時の Windows・Visual Studio の詳細バージョンと対象コミットは、既存記録にはありません。
+自己署名の `Valid` はローカルの署名検証結果です。SAC が自己署名を信頼することは保証しません。
 
-| 順序 | 確認・報告内容 |
-| --- | --- |
-| 1 | 本人から「F5 キーで何も起動しない」と報告 |
-| 2 | 通常ユーザー環境で Debug ビルドと自動署名は成功。しかし `CircleSpaceCoordinator.EditorClient.dll` の読み込みが `0x800711C7` で拒否された |
-| 3 | Code Integrity イベント 3033 / 3077 にポリシー ID `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` を確認 |
-| 4 | 拒否された DLL の Authenticode は `Valid`。開発用証明書は通常ユーザーの `My`、`Root`、`TrustedPublisher` に登録済み。同梱エンジンの EXE / DLL も署名検証は `Valid` |
-| 5 | 本人が Visual Studio を再起動し、その後「F5 キーで起動した」と報告 |
+## 自動署名の切替
 
-手順 2～4 の詳細は [コード署名の調査記録](../配布/コード署名.md#2026-09-09-f5-起動失敗と既存の開発用署名の照合) を参照してください。手順 5 は本人の報告であり、再起動前後のバイナリ・SAC 設定・ログを比較した検証はしていません。PC 自体を再起動して解決したという記録でもありません。
+`CircleSpaceCoordinator.Desktop.Windows` は Windows の Debug ビルドで `SmartAppControlSigningEnabled` が未指定なら `true` になります。ビルド出力に次のメッセージが表示され、実験条件を確認できます。
 
-比較対象に挙がったコンピューター囲碁プログラムについても、本人から「警告が出ないだけで、何も対策していない」と訂正がありました。別プロジェクトで自己署名による SAC 対策が成功した事例としては扱いません。
-
-## 現在の署名処理
-
-[Desktop.Windows のプロジェクト設定](../../../CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.csproj) は、Windows の Debug ビルドで `SmartAppControlSigningEnabled` が未指定なら `true` にし、ビルド後に [Sign-BuildOutput.ps1](../../../scripts/ForSmartAppControl/Sign-BuildOutput.ps1) を実行します。このスクリプトは現在のユーザーの証明書ストアから、秘密鍵を持つ有効な `CN=CircleSpaceCoordinator Development Code Signing` 証明書を選び、出力先を署名処理に渡します。
-
-今回の調査では、署名が `Valid` の DLL も拒否されました。Microsoft の説明でも、SAC が署名判定で考慮する証明書は信頼されたプロバイダーが発行したものです。ローカルでの自己署名の検証成功だけでは、SAC の許可は保証できません。[Microsoft：SAC の署名要件](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control)
-
-### ビルド時に「証明書がない」と出る場合
-
-既存調査では、隔離環境から通常ユーザーの証明書ストアが見えず、署名処理が失敗しました。これは実行時の DLL ブロックとは別の問題です。通常ユーザー側に証明書がないとは限りません。
-
-署名を行わずビルドだけ確認する場合は、リポジトリーのルートで次を実行します。
-
-```powershell
-dotnet build CircleSpaceCoordinator.slnx -c Release -p:SmartAppControlSigningEnabled=false
+```text
+Smart App Control diagnostic: automatic signing is true.
 ```
 
-`SmartAppControlSigningEnabled=false` はプロジェクト独自の署名処理を止める指定です。Windows の SAC を無効にする指定ではなく、生成した EXE / DLL の起動許可も保証しません。
-
-## 再発したとき
-
-1. 発生時刻、対象コミット、Debug / Release、警告に表示されたファイル名とエラーを控えます。
-2. ビルド・署名の段階で失敗したのか、成功後の起動・DLL 読み込みで拒否されたのかを切り分けます。
-3. 未保存の作業を保存し、Visual Studio を終了して開き直し、同じソリューションで F5 起動を試します。今回はこの操作後に起動成功の報告がありました。
-4. 起動できなければ、Windows セキュリティの「アプリとブラウザー コントロール」で SAC の現在の状態を確認します。イベント ビューアーの「アプリケーションとサービス ログ → Microsoft → Windows → CodeIntegrity → Operational」で、発生時刻付近のイベント 3033 / 3077、対象ファイル、ポリシー名・ID を確認します。
-5. 拒否された実ファイルの署名を確認し、結果を追記します。`Valid` でも許可されたとは判断しません。
-
-署名確認の例です。パスは警告・イベントに記録された対象ファイルに置き換えてください。
+署名ありの条件では通常の Debug ビルドを使用します。署名なしの条件では、リポジトリーのルートで次を実行してください。
 
 ```powershell
-Get-AuthenticodeSignature -LiteralPath '.\CircleSpaceCoordinator.Desktop.Windows\bin\Debug\net10.0-windows\CircleSpaceCoordinator.EditorClient.dll' |
-    Format-List Path, Status, StatusMessage, SignerCertificate
+dotnet build CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.csproj -c Debug -p:SmartAppControlSigningEnabled=false
 ```
 
-起動できた場合も、試した操作と確認範囲を残します。再発時には Windows・Visual Studio のバージョン、再起動前後の SAC 状態、対象ファイルの SHA-256 も記録すると比較できます。
+`SmartAppControlSigningEnabled=false` はプロジェクト独自の署名処理だけを止めます。Windows の SAC を無効にする指定ではありません。
 
-## 配布での扱いと未解決事項
+## 切り分け手順
 
-v1.0.0 の ZIP は、本人からダウンロード・展開後に起動できた報告があります。これは今回の Debug / F5 起動とは別の事例です。[当時の設定・署名・ログの記録](../配布/v1.0.0のZIP起動とSmart%20App%20Control.md) を参照してください。
+同じ Windows ユーザー、同じコミット、同じ Debug 構成、同じ SAC 設定で、次の二つの試行を行います。試行の途中で Visual Studio や PC を再起動せず、保護設定と証明書ストアを変更しません。
 
-SAC はクラウドによる安全性判定も利用するため、未署名なら必ずブロックされるわけではありません。今回も ZIP の事例も、許可された直接の理由は未特定です。[Microsoft：SAC FAQ](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)
+1. **署名あり**: 通常の Debug ビルド後、Visual Studio から F5 を一度実行します。
+2. **署名なし**: 上記の `SmartAppControlSigningEnabled=false` を付けて Debug ビルドし直した後、同じ Visual Studio セッションから F5 を一度実行します。
 
-有料署名を採用せず、ソースと Windows x64 用 ZIP を提供する現行方針を続けます。利用者自身のビルドも SAC の許可を保証する方法ではありません。詳細は [配布方針](../配布/README.md) と [ソース配布と SAC の制限](../配布/ソース配布とSmart%20App%20Control.md) にまとめています。
+各 F5 の直後に、実行結果を指定して診断を保存します。`-Since` にはビルド開始時刻より前の時刻を指定します。`-FailureDetails` にはブロックされたファイル名、HRESULT、警告文を記録します。
 
-今後確認が必要なのは、再起動後に起動できた理由、再ビルド時の再発有無、他の PC や配布版での動作です。現状の扱いは「起動復旧の報告あり・根本原因未特定」です。
+```powershell
+.\scripts\ForSmartAppControl\Save-SmartAppControlDiagnostic.ps1 `
+  -Path '.\CircleSpaceCoordinator.Desktop.Windows\bin\Debug\net10.0-windows' `
+  -ReportDirectory '.\Docs\Dev\Troubleshooting\SmartAppControl' `
+  -Signing Enabled `
+  -F5Result Succeeded `
+  -Attempt '署名あり-1' `
+  -Since '2026-09-09T10:00:00'
+```
+
+`-Signing` は `Enabled` または `Disabled`、`-F5Result` は `Succeeded`、`Blocked`、`NotRun` を指定します。スクリプトは出力 EXE/DLL の SHA-256、Authenticode 状態、Windows と SAC の観測可能な設定値、Visual Studio プロセス、該当時刻以降の Code Integrity イベント 3033 / 3077 を時刻付き JSON に保存します。証明書の秘密鍵やバイナリ本体は保存しません。
+
+## 判定と横展開
+
+`Docs/Dev/Troubleshooting/SmartAppControl/結果テンプレート.md` に試行結果を転記します。署名ありで成功し、同一条件の署名なしで同じファイルが SAC によりブロックされた場合、その環境・そのコミットでは **自動署名が F5 起動に必要だった** と記録できます。
+
+両条件で成功、または両条件で失敗した場合は、自動署名の必要性は判定できません。条件が異なる、対象バイナリのハッシュが異なる、Code Integrity イベントを取得できない場合も判定不能です。別の PC、コミット、Windows 更新後では同じ手順を繰り返し、結果を一般化しません。
+
+## 配布との区別
+
+この調査は開発時の Debug / F5 起動だけを対象にします。v1.0.0 の ZIP の起動報告は別の事例であり、自己署名の効果を示すものではありません。[v1.0.0 の ZIP 起動と Smart App Control](../配布/v1.0.0のZIP起動とSmart%20App%20Control.md) を参照してください。
 
 [トラブルシューティング一覧へ戻る](README.md) ／ [開発者向けガイド](../README.md)

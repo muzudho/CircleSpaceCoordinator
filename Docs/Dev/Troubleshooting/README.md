@@ -4,7 +4,7 @@
 
 | 問題 | 現在の状況 |
 | --- | --- |
-| [Smart App Control による起動ブロック](Smart%20App%20Controlによる起動ブロック.md) | Visual Studio の再起動後に F5 起動成功の報告あり。既存の開発用自己署名を維持して作業を継続。根本原因は未特定 |
+| [Smart App Control による起動ブロック](Smart%20App%20Controlによる起動ブロック.md) | 開発用自己署名の有無が Debug / F5 起動に必要かを切り分け中 |
 
 ## 記録するとき
 

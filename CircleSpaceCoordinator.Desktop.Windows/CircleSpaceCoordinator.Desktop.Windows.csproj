@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
@@ -24,6 +24,9 @@
   <ItemGroup>
     <None Update="application-settings.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>
+  <Target Name="ReportSmartAppControlSigningConfiguration" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT'">
+    <Message Text="Smart App Control diagnostic: automatic signing is $(SmartAppControlSigningEnabled)." Importance="high" />
+  </Target>
   <Target Name="SignBuildOutputForSmartAppControl"
           AfterTargets="Build"
           Condition="'$(SmartAppControlSigningEnabled)' == 'true'">
