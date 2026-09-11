@@ -16,13 +16,33 @@ if (-not $certificate.HasPrivateKey) {
 	throw "Certificate '$CertificateThumbprint' does not have a private key."
 }
 
+# Explicit allowlist of assemblies built from this repository. Never re-sign
+# third-party dependencies, including StationeryUI, MonoGame and native DLLs.
+$ownedAssemblies = @(
+	'CircleSpaceCoordinator.Application',
+	'CircleSpaceCoordinator.Calculations',
+	'CircleSpaceCoordinator.Core',
+	'CircleSpaceCoordinator.Desktop.Core',
+	'CircleSpaceCoordinator.Desktop.Windows',
+	'CircleSpaceCoordinator.EditorClient',
+	'CircleSpaceCoordinator.EditorCli',
+	'CircleSpaceCoordinator.EditorEngine',
+	'CircleSpaceCoordinator.Engine.Contracts',
+	'CircleSpaceCoordinator.Engine.Model',
+	'CircleSpaceCoordinator.Infrastructure',
+	'CircleSpaceCoordinator.OptimizationEngine',
+	'CircleSpaceCoordinator.ProjectCli',
+	'CircleSpaceCoordinator.StationeryUI',
+	'CircleSpaceCoordinator.TableIO',
+	'CircleSpaceCoordinator.ThinkingEngine'
+)
 $files = @(
 	Get-ChildItem -LiteralPath $Path -Recurse -File |
-		Where-Object { $_.Extension -in '.exe', '.dll' } |
+		Where-Object { $_.Extension -in '.exe', '.dll' -and $_.BaseName -in $ownedAssemblies } |
 		Sort-Object FullName
 )
 if ($files.Count -eq 0) {
-	throw "No EXE or DLL files were found to sign in: $Path"
+	throw "No repository-owned EXE or DLL files were found to sign in: $Path"
 }
 
 foreach ($file in $files) {

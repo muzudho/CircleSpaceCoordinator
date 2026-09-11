@@ -1,6 +1,5 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
-using CircleSpaceCoordinator.Engine.Model;
 using CircleSpaceCoordinator.Desktop.Core;
 using CircleSpaceCoordinator.Desktop.Core.Logging;
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
