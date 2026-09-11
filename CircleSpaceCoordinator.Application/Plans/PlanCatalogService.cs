@@ -61,6 +61,7 @@ public static class PlanCatalogService
         {
             Plans = project.Plans.Where((_, index) => index != planIndex).ToArray(),
             CircleLayouts = project.CircleLayouts.Where(circle => circle.Id != planId).ToArray(),
+            ExportPlanId = project.ExportPlanId == planId ? null : project.ExportPlanId,
         });
     }
 

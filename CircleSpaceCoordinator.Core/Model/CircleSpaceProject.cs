@@ -23,6 +23,9 @@ public sealed record CircleSpaceProject(
 
     public ParticipantTableSource? ParticipantTableSource { get; init; }
 
+    /// <summary>Explicitly chosen export plan; independent of the currently edited plan.</summary>
+    public string? ExportPlanId { get; init; }
+
     /// <summary>
     /// Physical layouts. Empty means this is a legacy in-memory project whose Plans
     /// have not yet been migrated. New projects must populate both layout lists.

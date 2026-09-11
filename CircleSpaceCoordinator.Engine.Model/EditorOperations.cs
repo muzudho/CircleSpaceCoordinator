@@ -5,6 +5,7 @@ using CircleSpaceCoordinator.Application.Participants;
 using System.Text.Json.Serialization;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "operation")]
+[JsonDerivedType(typeof(SetExportPlan), "SetExportPlan")]
 [JsonDerivedType(typeof(DeskLayoutServiceFillAvailableCells), "DeskLayoutService.FillAvailableCells")]
 [JsonDerivedType(typeof(DeskSeatLabelEditorReplaceLabels), "DeskSeatLabelEditor.ReplaceLabels")]
 [JsonDerivedType(typeof(DeskSeatLabelEditorSetLabel), "DeskSeatLabelEditor.SetLabel")]
@@ -94,6 +95,7 @@ public sealed record PlanCatalogServiceDuplicatePlan(string sourcePlanId, string
 public sealed record PlanCatalogServiceAddOptimizedPlan(Plan optimizedPlan, string newPlanId, string newPlanName) : EditorOperation;
 public sealed record PlanCatalogServiceCopyDeskLayout(string sourcePlanId, string destinationPlanId) : EditorOperation;
 public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) : EditorOperation;
+public sealed record SetExportPlan(string? planId) : EditorOperation;
 public sealed record UpsertChannel(string id, string name, string? sourceColumn) : EditorOperation;
 public sealed record RemoveChannel(string id) : EditorOperation;
 public sealed record SetChannelWeights(string planId, string channelId, IReadOnlyList<GridPosition> cells, double weight) : EditorOperation, IPlanOperation;

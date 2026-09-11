@@ -5,6 +5,12 @@ using CircleSpaceCoordinator.Infrastructure.Tabular;
 
 public static class CircleSeatExportBuilder
 {
+    public static Plan? GetExportPlan(CircleSpaceProject project) =>
+        project.ExportPlanId is { } id ? project.Plans.FirstOrDefault(plan => plan.Id == id) : null;
+
+    public static IReadOnlyList<CircleSeatExportRow> BuildDecided(CircleSpaceProject project) =>
+        Build(project, GetExportPlan(project) ?? throw new InvalidOperationException("配置案が未決定です。［配置決定案を選択する］で選択してください。"));
+
     public static IReadOnlyList<DeskPlacement> FindMissingDeskNumbers(Plan plan) =>
         plan.DeskPlacements.Where(desk => string.IsNullOrWhiteSpace(desk.DeskNumber)).ToArray();
 

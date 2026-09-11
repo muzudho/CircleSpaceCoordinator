@@ -52,6 +52,9 @@ public static class EditorOperationHandler
         PlanCatalogServiceAddOptimizedPlan op => PlanCatalogService.AddOptimizedPlan(project, op.optimizedPlan, op.newPlanId, op.newPlanName),
         PlanCatalogServiceCopyDeskLayout op => PlanCatalogService.CopyDeskLayout(project, op.sourcePlanId, op.destinationPlanId),
         SetGenreStyles op => project with { GenreStyles = op.styles },
+        SetExportPlan op => op.planId is null || project.Plans.Any(plan => plan.Id == op.planId)
+            ? project with { ExportPlanId = op.planId }
+            : throw new InvalidOperationException("選択した配置案は存在しません。"),
         UpsertChannel op => ChannelEditor.Upsert(project, op.id, op.name, op.sourceColumn),
         RemoveChannel op => ChannelEditor.Remove(project, op.id),
         SetChannelWeights op => ChannelEditor.SetWeights(project, op.planId, op.channelId, op.cells, op.weight),

@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Export requires an explicit decision and preserves it independently of editor selection", ExportPlanDecision),
             ("Imported table survives remote import, save, undo and redo with ordered duplicate headers", ParticipantTableImportRoundTrip),
             ("Table viewport reaches the last cell of 10000 by 100 without copying values", LargeParticipantTableViewport),
             ("Dragging previews then commits one desk move", DragPreviewThenCommit),
@@ -1011,6 +1012,48 @@ internal static class Program
         {
             if (File.Exists(path)) File.Delete(path);
         }
+    }
+
+    private static void ExportPlanDecision()
+    {
+        var project = CreateProject();
+        var first = project.Plans[0] with
+        {
+            DeskPlacements = [project.Plans[0].DeskPlacements[0] with { DeskNumber = "01" }],
+            SeatLabels = [new DeskSeatLabel("desk-1", new(0, 0), "ア", "01左")],
+        };
+        var second = first with { Id = "plan-2", Name = "決定候補", SeatLabels = [new DeskSeatLabel("desk-1", new(0, 0), "イ", "02左")],
+            DeskPlacements = [first.DeskPlacements[0] with { DeskNumber = "02" }] };
+        project = project with { Plans = [first, second] };
+        AssertEqual<Plan?>(null, CircleSeatExportBuilder.GetExportPlan(project));
+        var rejected = false;
+        try { CircleSeatExportBuilder.BuildDecided(project); } catch (InvalidOperationException) { rejected = true; }
+        AssertEqual(true, rejected);
+        var connection = CircleSpaceCoordinator.EditorClient.EditorConnection.Current!;
+        var remote = connection.Open(ProjectJsonSerializer.Save(project));
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.SetExportPlan("plan-2"), false);
+        remote.SelectPlan("plan-1");
+        AssertEqual("plan-1", remote.SelectedPlan.Id);
+        AssertEqual("plan-2", remote.Project.ExportPlanId);
+        var rows = CircleSeatExportBuilder.BuildDecided(remote.Project);
+        AssertEqual("イ", rows.Single().BlockName);
+        AssertEqual("02", rows.Single().SeatName);
+        var restored = ProjectJsonSerializer.Load(connection.Encode(remote.Project));
+        AssertEqual("plan-2", restored.ExportPlanId);
+        remote.Undo();
+        AssertEqual<string?>(null, remote.Project.ExportPlanId);
+        remote.Redo();
+        AssertEqual("plan-2", remote.Project.ExportPlanId);
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.LayoutCatalogServiceRemoveCircleLayout("plan-2"), false);
+        AssertEqual<string?>(null, remote.Project.ExportPlanId);
+        remote.Undo();
+        AssertEqual("plan-2", remote.Project.ExportPlanId);
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.SetExportPlan(null), false);
+        AssertEqual<Plan?>(null, CircleSeatExportBuilder.GetExportPlan(remote.Project));
+        remote.Undo();
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.PlanCatalogServiceRemovePlan("plan-2"), false);
+        AssertEqual<string?>(null, remote.Project.ExportPlanId);
+        AssertEqual<Plan?>(null, CircleSeatExportBuilder.GetExportPlan(project with { ExportPlanId = "missing" }));
     }
 
     private static void ParticipantTableImportRoundTrip()

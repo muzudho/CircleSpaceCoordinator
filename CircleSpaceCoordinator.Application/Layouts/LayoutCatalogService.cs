@@ -35,7 +35,8 @@ public static class LayoutCatalogService
         var layouts = project.CircleLayouts.Where(item => item.Id != circleLayoutId).ToArray();
         if (layouts.Length == project.CircleLayouts.Count)
             throw new KeyNotFoundException($"Circle layout '{circleLayoutId}' does not exist.");
-        return ValidateProjected(project with { CircleLayouts = layouts });
+        return ValidateProjected(project with { CircleLayouts = layouts,
+            ExportPlanId = project.ExportPlanId == circleLayoutId ? null : project.ExportPlanId });
     }
 
     public static CircleSpaceProject RemoveDeskLayout(CircleSpaceProject project, string deskLayoutId)

@@ -14,6 +14,10 @@
     "evaluation"
   ],
   "properties": {
+    "exportPlanId": {
+      "type": "string",
+      "description": "Explicitly selected export plan ID. Omitted means undecided. Independent of the editor selection."
+    },
     "participantTableSource": {
       "type": "object",
       "additionalProperties": false,
