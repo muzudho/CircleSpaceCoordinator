@@ -2266,7 +2266,6 @@ public sealed partial class VenueEditorGame : Game
         };
         var circleActions = new[]
         {
-            ToolbarAction.ExportSeatAssignments,
             ToolbarAction.OptimizeCirclePlacement,
             ToolbarAction.AssignParticipant,
             ToolbarAction.UnassignParticipant,
