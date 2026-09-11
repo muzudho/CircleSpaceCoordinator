@@ -10,6 +10,7 @@ public sealed record EvaluationFeature(
     double OverallWeight)
 {
     public string? Description { get; init; }
+    public string? SourceColumn { get; init; }
 }
 
 public sealed record WeightMap(

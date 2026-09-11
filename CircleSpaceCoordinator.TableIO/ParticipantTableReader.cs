@@ -7,7 +7,12 @@ using Microsoft.VisualBasic.FileIO;
 public sealed record ParticipantTableSheet(
     string Name,
     IReadOnlyList<string> Headers,
-    IReadOnlyList<IReadOnlyList<string>> Rows);
+    IReadOnlyList<IReadOnlyList<string>> Rows)
+{
+    // Preserve numeric precision for evaluation even when Excel displays rounded
+    // values or percentages. The ordinary rows still preserve formatted IDs.
+    public IReadOnlyList<IReadOnlyList<string>>? ChannelRows { get; init; }
+}
 
 public static class ParticipantTableReader
 {
@@ -45,12 +50,18 @@ public static class ParticipantTableReader
             .Select(column => worksheet.Cell(firstRow, column).GetFormattedString().Trim())
             .ToArray();
         var rows = Enumerable.Range(firstRow + 1, Math.Max(0, lastRow - firstRow))
-            .Select(row => (IReadOnlyList<string>)Enumerable.Range(firstColumn, headers.Length)
-                .Select(column => worksheet.Cell(row, column).GetFormattedString().Trim())
-                .ToArray())
-            .Where(row => row.Any(value => !string.IsNullOrWhiteSpace(value)))
+            .Select(row =>
+            {
+                var cells = Enumerable.Range(firstColumn, headers.Length).Select(column => worksheet.Cell(row, column)).ToArray();
+                return (Display: (IReadOnlyList<string>)cells.Select(cell => cell.GetFormattedString().Trim()).ToArray(),
+                    Channel: (IReadOnlyList<string>)cells.Select(cell => cell.DataType == XLDataType.Number
+                        ? cell.GetDouble().ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+                        : cell.GetFormattedString().Trim()).ToArray());
+            })
+            .Where(row => row.Display.Any(value => !string.IsNullOrWhiteSpace(value)))
             .ToArray();
-        return new ParticipantTableSheet(worksheet.Name, headers, rows);
+        return new ParticipantTableSheet(worksheet.Name, headers, rows.Select(row => row.Display).ToArray())
+        { ChannelRows = rows.Select(row => row.Channel).ToArray() };
     }
 
     private static ParticipantTableSheet ReadCsv(string path)

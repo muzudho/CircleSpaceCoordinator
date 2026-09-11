@@ -277,6 +277,11 @@
             "$ref": "#/$defs/finiteNumber"
           }
         },
+        "sourceValues": {
+          "type": "object",
+          "description": "Imported table values keyed by column header, retained for channel mapping.",
+          "additionalProperties": { "type": "string" }
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -327,6 +332,10 @@
         },
         "overallWeight": {
           "$ref": "#/$defs/finiteNumber"
+        },
+        "sourceColumn": {
+          "type": ["string", "null"],
+          "description": "Imported table column mapped to this evaluation channel."
         }
       }
     },

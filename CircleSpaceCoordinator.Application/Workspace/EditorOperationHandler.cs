@@ -52,6 +52,9 @@ public static class EditorOperationHandler
         PlanCatalogServiceAddOptimizedPlan op => PlanCatalogService.AddOptimizedPlan(project, op.optimizedPlan, op.newPlanId, op.newPlanName),
         PlanCatalogServiceCopyDeskLayout op => PlanCatalogService.CopyDeskLayout(project, op.sourcePlanId, op.destinationPlanId),
         SetGenreStyles op => project with { GenreStyles = op.styles },
+        UpsertChannel op => ChannelEditor.Upsert(project, op.id, op.name, op.sourceColumn),
+        RemoveChannel op => ChannelEditor.Remove(project, op.id),
+        SetChannelWeights op => ChannelEditor.SetWeights(project, op.planId, op.channelId, op.cells, op.weight),
         _ => throw new ArgumentException("Unsupported editor operation."),
     };
 }

@@ -27,6 +27,8 @@ internal static class Program
 
         var tests = new (string Name, Action Run)[]
         {
+            ("Channel column mappings and imported values survive JSON round trip", ChannelRoundTrip),
+            ("Channel imports preserve Excel numeric precision and formatted circle IDs", ChannelNumericPrecision),
             ("Anonymous version-1 example loads and evaluates", ExampleLoadsAndEvaluates),
             ("Project and evaluation results survive JSON round trip", ProjectRoundTrip),
             ("Project-wide editor view survives JSON round trip", EditorViewRoundTrip),
@@ -296,6 +298,52 @@ internal static class Program
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static void ChannelRoundTrip()
+    {
+        var rows = ParticipantTableMapper.Map(new ParticipantTableSheet("Sheet",
+            ["ID", "Name", "書籍の有無", "Other", "Other"],
+            [new[] { "a", "A", "1", "0.5", "0" }, new[] { "b", "B", "", "1", "0" }]), new(0, 1));
+        AssertEqual("1", rows[0].SourceValues["書籍の有無"]);
+        AssertEqual("0.5", rows[0].SourceValues["[4] Other"]);
+        AssertEqual("0", rows[0].SourceValues["[5] Other"]);
+        var project = ProjectJsonSerializer.Load(ReadExample());
+        var feature = project.Evaluation.Features[0] with { SourceColumn = "書籍の有無" };
+        project = project with
+        {
+            Participants = project.Participants.Select(item => item with { SourceValues = rows[0].SourceValues }).ToArray(),
+            Evaluation = project.Evaluation with { Features = project.Evaluation.Features.Select(item => item.Id == feature.Id ? feature : item).ToArray() },
+        };
+        var loaded = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(project));
+        AssertEqual("書籍の有無", loaded.Evaluation.Features[0].SourceColumn!);
+        AssertEqual("1", loaded.Participants[0].SourceValues["書籍の有無"]);
+        AssertEqual(ProjectJsonSerializer.Save(project), ProjectJsonSerializer.Save(loaded));
+    }
+
+    private static void ChannelNumericPrecision()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"channel-precision-{Guid.NewGuid():N}.xlsx");
+        try
+        {
+            using (var workbook = new XLWorkbook())
+            {
+                var sheet = workbook.AddWorksheet("Values");
+                sheet.Cell(1, 1).Value = "ID";
+                sheet.Cell(1, 2).Value = "Name";
+                sheet.Cell(1, 3).Value = "Weight";
+                sheet.Cell(2, 1).Value = 1;
+                sheet.Cell(2, 1).Style.NumberFormat.Format = "0000";
+                sheet.Cell(2, 2).Value = "Fictional";
+                sheet.Cell(2, 3).Value = 0.123456;
+                sheet.Cell(2, 3).Style.NumberFormat.Format = "0%";
+                workbook.SaveAs(path);
+            }
+            var rows = ParticipantTableMapper.Map(ParticipantTableReader.Read(path).Single(), new(0, 1));
+            AssertEqual("0001", rows[0].CircleId);
+            AssertEqual("0.123456", rows[0].SourceValues["Weight"]);
+        }
+        finally { File.Delete(path); }
     }
 
     private static string ReadExample()

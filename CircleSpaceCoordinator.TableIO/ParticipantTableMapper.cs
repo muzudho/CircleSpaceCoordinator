@@ -26,12 +26,31 @@ public static class ParticipantTableMapper
         if (mapping.GenreIdColumn is { } genreColumn)
             EnsureColumn(genreColumn, sheet.Headers.Count, nameof(mapping.GenreIdColumn));
 
+        var usedKeys = new HashSet<string>(StringComparer.Ordinal);
+        var columnKeys = sheet.Headers.Select((_, column) =>
+        {
+            var key = ColumnKey(sheet.Headers, column);
+            while (!usedKeys.Add(key)) key = $"[{column + 1}] {key}";
+            return key;
+        }).ToArray();
         return sheet.Rows.Select((row, index) => new ParticipantImportRow(
             Value(row, mapping.CircleIdColumn),
             Value(row, mapping.DisplayNameColumn),
             ParseRequiredCellCount(row, mapping.RequiredCellCountColumn, index),
             mapping.CombinedWithCircleIdColumn is { } column ? NullIfEmpty(Value(row, column)) : null,
-            mapping.GenreIdColumn is { } genre ? NullIfEmpty(Value(row, genre)) : null)).ToArray();
+            mapping.GenreIdColumn is { } genre ? NullIfEmpty(Value(row, genre)) : null)
+        {
+            SourceValues = columnKeys.Select((key, column) => (Key: key, Value: Value(sheet.ChannelRows?[index] ?? row, column)))
+                .ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal),
+        }).ToArray();
+    }
+
+    private static string ColumnKey(IReadOnlyList<string> headers, int column)
+    {
+        var name = headers[column].Trim();
+        // Include the column index for blank or duplicate headers.
+        return name.Length == 0 || headers.Count(item => item.Trim() == name) > 1
+            ? $"[{column + 1}] {name}" : name;
     }
 
     public static ParticipantColumnMapping Guess(IReadOnlyList<string> headers)

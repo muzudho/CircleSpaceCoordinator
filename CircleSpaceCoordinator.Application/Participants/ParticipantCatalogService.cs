@@ -37,6 +37,7 @@ public static class ParticipantCatalogService
                     RequiredCellCount = row.RequiredCellCount,
                     CombinedWithCircleId = NormalizeOptional(row.CombinedWithCircleId),
                     GenreId = NormalizeOptional(row.GenreId),
+                    SourceValues = row.SourceValues,
                 };
             return new Participant(NewInternalId(), row.DisplayName, row.RequiredCellCount,
                 new Dictionary<string, double>())
@@ -44,6 +45,7 @@ public static class ParticipantCatalogService
                 CircleId = row.CircleId,
                 CombinedWithCircleId = NormalizeOptional(row.CombinedWithCircleId),
                 GenreId = NormalizeOptional(row.GenreId),
+                SourceValues = row.SourceValues,
             };
         }).ToArray();
         var retainedIds = participants.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
@@ -57,7 +59,8 @@ public static class ParticipantCatalogService
                     assignment.OccupiedCells.Count == requiredCellsById[assignment.ParticipantId])
                 .ToArray(),
         }).ToArray();
-        var result = project with { Participants = participants, Plans = plans };
+        var result = CircleSpaceCoordinator.Application.Editing.ChannelEditor.RefreshValues(
+            project with { Participants = participants, Plans = plans });
         var projectIssues = ProjectValidator.Validate(result);
         if (projectIssues.Count > 0)
             throw new ProjectValidationException(projectIssues);

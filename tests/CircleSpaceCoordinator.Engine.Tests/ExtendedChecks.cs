@@ -49,6 +49,21 @@ internal static class ExtendedChecks
         Check(workspace.Project.Plans.Single(plan => plan.Id == "p").DeskPlacements[0].Anchor == new GridPosition(0, 3), "explicit target edits persist without changing selection");
         workspace.Execute(new SetGenreStyles([new("test", "red", "blue", "solid")]), false);
         Check(workspace.Project.GenreStyles.Count == 1, "remote styles");
+        workspace.SelectPlan("p");
+        workspace.Execute(new ParticipantCatalogServiceReplaceParticipants(workspace.Project.Participants.Select(item =>
+            new CircleSpaceCoordinator.Application.Participants.ParticipantImportRow(item.CircleId, item.DisplayName, item.RequiredCellCount)
+            { SourceValues = new Dictionary<string, string> { ["Books"] = "1" } }).ToArray()), false);
+        workspace.Execute(new UpsertChannel("books", "Books", "Books"), false);
+        var scoringCell = workspace.SelectedPlan.Assignments[0].ScoringPosition;
+        workspace.Execute(new SetChannelWeights("p", "books", [scoringCell], 0.75));
+        Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == 0.75, "remote channel score");
+        workspace.Undo();
+        Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == 0, "remote channel undo");
+        workspace.Redo();
+        Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == 0.75, "remote channel redo");
+        var channelProject = connection.Decode(connection.Encode(workspace.Project));
+        Check(channelProject.Evaluation.Features[0].SourceColumn == "Books" && channelProject.Participants[0].SourceValues["Books"] == "1",
+            "remote channel persistence");
         workspace.LoadProject(connection.Decode(json));
         Check(!workspace.CanUndo, "load resets history");
 

@@ -18,6 +18,7 @@ internal static class Program
     {
         var tests = new (string Name, Action Run)[]
         {
+            ("Channels map imported values, score, validate and undo through editor operations", ChannelChecks.Run),
             ("Moving a desk moves its circle assignment", MovingDeskMovesAssignment),
             ("Rotating a desk rotates its circle assignment", RotatingDeskMovesAssignment),
             ("Invalid desk edits are rejected", InvalidEditIsRejected),

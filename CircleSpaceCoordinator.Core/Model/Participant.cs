@@ -11,6 +11,7 @@ public sealed record Participant(
     public string? CombinedWithCircleId { get; init; }
 
     public string? GenreId { get; init; }
+    public IReadOnlyDictionary<string, string> SourceValues { get; init; } = new Dictionary<string, string>();
 
     public IReadOnlySet<string> Tags { get; init; } = new HashSet<string>();
 

@@ -69,6 +69,7 @@ public static class ProjectJsonSerializer
             CombinedWithCircleId = item.CombinedWithCircleId,
             GenreId = item.GenreId,
             Tags = item.Tags.ToHashSet(),
+            SourceValues = new Dictionary<string, string>(item.SourceValues),
         }).ToArray();
         var features = source.Evaluation.Features.Select(item => new EvaluationFeature(
             item.Id,
@@ -78,6 +79,7 @@ public static class ProjectJsonSerializer
             item.OverallWeight)
         {
             Description = item.Description,
+            SourceColumn = item.SourceColumn,
         }).ToArray();
         var weightMaps = source.Evaluation.WeightMaps.Select(item => new WeightMap(
             item.FeatureId,
@@ -240,6 +242,7 @@ public static class ProjectJsonSerializer
                 .OrderBy(feature => feature.Key, StringComparer.Ordinal)
                 .ToDictionary(feature => feature.Key, feature => feature.Value, StringComparer.Ordinal),
             Tags = item.Tags.Order(StringComparer.Ordinal).ToList(),
+            SourceValues = item.SourceValues.ToDictionary(pair => pair.Key, pair => pair.Value),
         }).ToList(),
         Evaluation = new EvaluationConfigurationDocument
         {
@@ -251,6 +254,7 @@ public static class ProjectJsonSerializer
                 Scale = item.Scale,
                 Offset = item.Offset,
                 OverallWeight = item.OverallWeight,
+                SourceColumn = item.SourceColumn,
             }).ToList(),
             WeightMaps = source.Evaluation.WeightMaps.Select(item => new WeightMapDocument
             {
@@ -467,6 +471,7 @@ public static class ProjectJsonSerializer
         public string DisplayName { get; set; } = "";
         public int RequiredCellCount { get; set; }
         public Dictionary<string, double> Features { get; set; } = [];
+        public Dictionary<string, string> SourceValues { get; set; } = [];
         public List<string> Tags { get; set; } = [];
     }
 
@@ -484,6 +489,7 @@ public static class ProjectJsonSerializer
         public double Scale { get; set; }
         public double Offset { get; set; }
         public double OverallWeight { get; set; }
+        public string? SourceColumn { get; set; }
     }
 
     private sealed class WeightMapDocument

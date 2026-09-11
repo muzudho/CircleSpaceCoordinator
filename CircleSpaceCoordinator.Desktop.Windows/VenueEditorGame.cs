@@ -272,7 +272,7 @@ public sealed partial class VenueEditorGame : Game
         }
 
         var wheelDelta = mouse.ScrollWheelValue - previousMouse.ScrollWheelValue;
-        if (wheelDelta != 0)
+        if (wheelDelta != 0 && !ScrollChannels(pointer, wheelDelta) && !ScrollPlanList(pointer, wheelDelta))
         {
             var zoom = Math.Clamp(
                 viewport.Zoom * (wheelDelta > 0 ? 1.1d : 1d / 1.1d),
@@ -293,6 +293,9 @@ public sealed partial class VenueEditorGame : Game
                 var accepted = pressedToolbarButton.Model.Press(pointer);
                 LogPointer("toolbar_press", pointer, accepted,
                     $"action={pressedToolbarButton.Action};state={(accepted ? "enabled" : "disabled")}");
+            }
+            else if (HandleChannelPanelClick(pointer))
+            {
             }
             else if (hoveredLayoutAdd)
             {
@@ -345,6 +348,10 @@ public sealed partial class VenueEditorGame : Game
                 // selected tool automatically, even when the mouse drag is still in progress.
                 leftPanActive = true;
                 LogPointer("viewport_pan_start", pointer, true, "button=left;temporary=space");
+            }
+            else if (IsWeightChannelSelected && activeCanvasTool == ToolbarAction.EditSeatName && IsPointerInEditorCanvas(pointer))
+            {
+                EditChannelWeight(VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer)));
             }
             else if (IsSeatNameRangeEditing &&
                      selectedCellRange is { } seatRange &&
@@ -549,7 +556,8 @@ public sealed partial class VenueEditorGame : Game
             DrawBlockedCells();
             DrawDesks();
             DrawMissingDeskNumbers();
-            DrawSeatLabels();
+            if (IsWeightChannelSelected) DrawChannelWeights();
+            else DrawSeatLabels();
             DrawDeskPlacementGhost();
             DrawPillarGhost();
             if (editorMode == EditorMode.IslandDefinition)
@@ -576,6 +584,7 @@ public sealed partial class VenueEditorGame : Game
             DrawRangeSelection();
             DrawDeskEditTarget();
             DrawPlanList();
+            DrawChannels();
             DrawGenreSummary();
             DrawOffscreenParticipants();
         }
@@ -692,6 +701,7 @@ public sealed partial class VenueEditorGame : Game
         var currentIndex = plans.ToList().FindIndex(plan => plan.PlanId == SelectedDisplayedLayoutId);
         var nextIndex = (currentIndex + Math.Sign(direction) + plans.Count) % plans.Count;
         SelectDisplayedLayout(plans[nextIndex].PlanId);
+        planScroll = Math.Clamp(nextIndex - GetVisiblePlanRowCount() + 1, 0, Math.Max(0, plans.Count - GetVisiblePlanRowCount()));
     }
 
     private bool ShowsDeskLayouts => editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
@@ -716,6 +726,7 @@ public sealed partial class VenueEditorGame : Game
             return;
         var plans = GetDisplayedPlans();
         var visibleCount = Math.Min(plans.Count, GetVisiblePlanRowCount());
+        planScroll = Math.Clamp(planScroll, 0, Math.Max(0, plans.Count - visibleCount));
         var panel = GetPlanListBounds(visibleCount);
         DrawRectangle(panel, new Color(20, 25, 32, 238));
         DrawOutline(panel, 2d, new Color(88, 103, 120));
@@ -762,7 +773,7 @@ public sealed partial class VenueEditorGame : Game
         var maximum = plans.Max(plan => plan.GeneralAttendeeScore);
         for (var index = 0; index < visibleCount; index++)
         {
-            var plan = plans[index];
+            var plan = plans[index + planScroll];
             var row = GetPlanRowBounds(index);
             var selected = plan.PlanId == SelectedDisplayedLayoutId;
             var hovered = plan.PlanId == hoveredPlanId;
@@ -803,19 +814,20 @@ public sealed partial class VenueEditorGame : Game
             return null;
         var plans = GetDisplayedPlans();
         var visibleCount = Math.Min(plans.Count, GetVisiblePlanRowCount());
+        planScroll = Math.Clamp(planScroll, 0, Math.Max(0, plans.Count - visibleCount));
         for (var index = 0; index < visibleCount; index++)
         {
             var row = GetPlanRowBounds(index);
             if (pointer.X >= row.X && pointer.X < row.X + row.Width &&
                 pointer.Y >= row.Y && pointer.Y < row.Y + row.Height)
-                return plans[index].PlanId;
+                return plans[index + planScroll].PlanId;
         }
         return null;
     }
 
     private int GetVisiblePlanRowCount() => Math.Max(0,
         (GraphicsDevice.PresentationParameters.BackBufferHeight - ToolbarHeight - 116 - StatusBarHeight -
-         (editorMode == EditorMode.GenrePlacement ? 210 : 0)) / 42);
+         (editorMode == EditorMode.GenrePlacement ? 210 : editorMode == EditorMode.DeskPlacement ? ChannelPanelReservedHeight : 0)) / 42);
 
     private ScreenRectangle GetPlanListBounds(int rowCount) => new(
         GraphicsDevice.PresentationParameters.BackBufferWidth - 276d,
@@ -1566,6 +1578,8 @@ public sealed partial class VenueEditorGame : Game
 
         var visiblePlanCount = Math.Min(GetDisplayedPlans().Count, GetVisiblePlanRowCount());
         if (Contains(GetPlanListBounds(visiblePlanCount), pointer))
+            return false;
+        if (editorMode == EditorMode.DeskPlacement && Contains(GetChannelPanelBounds(), pointer))
             return false;
         return editorMode != EditorMode.GenrePlacement || !Contains(GetGenreSummaryBounds(), pointer);
     }
@@ -3017,7 +3031,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.MoveDesk => "机を移動する",
         ToolbarAction.AddDesk => "机を追加する",
         ToolbarAction.RemoveDesk => "机を削除する",
-        ToolbarAction.EditSeatName => "席名を変更する（机上のセルをクリック）",
+        ToolbarAction.EditSeatName => "選択チャンネルの番地または重みを変更する（机上のセルをクリック）",
         ToolbarAction.EditDeskNumber => "机番号を変更する（全ての机に設定が必要）",
         ToolbarAction.AddPillar => "柱を置く",
         ToolbarAction.RemovePillar => "柱を消す",
