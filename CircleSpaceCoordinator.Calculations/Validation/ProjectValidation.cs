@@ -10,6 +10,12 @@ public static class ProjectValidator
         ArgumentNullException.ThrowIfNull(project);
         var issues = new List<ValidationIssue>();
 
+        if (project.ParticipantTableSource is { } source &&
+            (source.FileName is null || source.SheetName is null || source.Headers is null || source.ColumnKeys is null ||
+             source.Headers.Count != source.ColumnKeys.Count || source.Headers.Any(header => header is null) ||
+             source.ColumnKeys.Any(string.IsNullOrEmpty) || source.ColumnKeys.Distinct(StringComparer.Ordinal).Count() != source.ColumnKeys.Count))
+            Add("participantTableSource.invalid", "participantTableSource", "取込み元の見出しと列キーを確認してください。");
+
         if (project.SchemaVersion != "1.0")
             Add("schema.unsupported", "schemaVersion", "Only schema version 1.0 is supported.");
 

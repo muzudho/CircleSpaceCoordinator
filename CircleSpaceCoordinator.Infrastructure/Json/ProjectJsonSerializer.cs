@@ -166,6 +166,7 @@ public static class ProjectJsonSerializer
             plans)
         {
             Description = source.Project.Description,
+            ParticipantTableSource = source.ParticipantTableSource,
             IsConfidential = source.Project.IsConfidential,
             GenreStyles = source.GenreStyles.Select(item => new GenreStyleDefinition(
                 item.GenreId,
@@ -188,6 +189,7 @@ public static class ProjectJsonSerializer
         return new()
     {
         SchemaVersion = source.SchemaVersion,
+        ParticipantTableSource = source.ParticipantTableSource,
         Project = new ProjectMetadataDocument
         {
             Id = source.Id,
@@ -398,6 +400,7 @@ public static class ProjectJsonSerializer
         public string SchemaVersion { get; set; } = "";
         public ProjectMetadataDocument Project { get; set; } = new();
         public EditorViewDocument? EditorView { get; set; }
+        public ParticipantTableSource? ParticipantTableSource { get; set; }
         public List<GenreStyleDocument> GenreStyles { get; set; } = [];
         public VenueDocument Venue { get; set; } = new();
         public List<DeskTypeDocument> DeskTypes { get; set; } = [];

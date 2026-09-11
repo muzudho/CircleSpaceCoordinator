@@ -9,6 +9,7 @@ using CircleSpaceCoordinator.Infrastructure.Tabular;
 internal sealed class ParticipantImportForm : System.Windows.Forms.Form
 {
     private readonly IEditorWorkspace workspace;
+    private readonly string fileName;
     private readonly IReadOnlyList<ParticipantTableSheet> sheets;
     private readonly System.Windows.Forms.ComboBox sheetBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
     private readonly System.Windows.Forms.ComboBox circleIdBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
@@ -19,6 +20,7 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
     private readonly System.Windows.Forms.DataGridView preview = new()
     {
         ReadOnly = true,
+        VirtualMode = true,
         AllowUserToAddRows = false,
         AllowUserToDeleteRows = false,
         AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.DisplayedCells,
@@ -28,6 +30,7 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
     private ParticipantImportForm(IEditorWorkspace workspace, string path, IReadOnlyList<ParticipantTableSheet> sheets)
     {
         this.workspace = workspace;
+        fileName = Path.GetFileName(path);
         this.sheets = sheets;
         Text = "参加サークル一覧の読込み";
         Width = 1380;
@@ -84,6 +87,15 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
         };
         importButton.Click += (_, _) => Import();
         sheetBox.SelectedIndexChanged += (_, _) => SelectSheet();
+        preview.CellValueNeeded += (_, args) =>
+        {
+            if (sheetBox.SelectedIndex >= 0)
+            {
+                var rows = this.sheets[sheetBox.SelectedIndex].Rows;
+                if (args.RowIndex < rows.Count && args.ColumnIndex < rows[args.RowIndex].Count)
+                    args.Value = rows[args.RowIndex][args.ColumnIndex];
+            }
+        };
         Controls.Add(sourceLabel);
         Controls.AddRange([sheetBox, circleIdBox, nameBox, requiredCellCountBox, genreIdBox, combinedWithCircleIdBox, preview, importButton, cancelButton]);
         AcceptButton = importButton;
@@ -135,12 +147,11 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
         FillColumns(requiredCellCountBox, sheet.Headers, optional: true, guess.RequiredCellCountColumn);
         FillColumns(combinedWithCircleIdBox, sheet.Headers, optional: true, guess.CombinedWithCircleIdColumn);
         FillColumns(genreIdBox, sheet.Headers, optional: true, guess.GenreIdColumn);
+        preview.RowCount = 0;
         preview.Columns.Clear();
         foreach (var header in sheet.Headers.Select((text, index) => string.IsNullOrWhiteSpace(text) ? $"列 {index + 1}" : text))
             preview.Columns.Add($"column{preview.Columns.Count}", header);
-        preview.Rows.Clear();
-        foreach (var row in sheet.Rows.Take(100))
-            preview.Rows.Add(row.Cast<object>().ToArray());
+        preview.RowCount = sheet.Rows.Count;
     }
 
     private void Import()
@@ -162,7 +173,9 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
                 System.Windows.Forms.MessageBoxIcon.Question);
             if (answer != System.Windows.Forms.DialogResult.OK)
                 return;
-            workspace.Execute(new ParticipantCatalogServiceReplaceParticipants(rows), selectedPlanEdit: false);
+            var source = new CircleSpaceCoordinator.Core.Model.ParticipantTableSource(
+                fileName, sheet.Name, sheet.Headers.ToArray(), ParticipantTableMapper.GetColumnKeys(sheet.Headers));
+            workspace.Execute(new ParticipantCatalogServiceReplaceParticipants(rows, source), selectedPlanEdit: false);
             ImportedCount = rows.Count;
             DialogResult = System.Windows.Forms.DialogResult.OK;
             Close();

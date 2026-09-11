@@ -24,6 +24,8 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Imported table survives remote import, save, undo and redo with ordered duplicate headers", ParticipantTableImportRoundTrip),
+            ("Table viewport reaches the last cell of 10000 by 100 without copying values", LargeParticipantTableViewport),
             ("Dragging previews then commits one desk move", DragPreviewThenCommit),
             ("An invalid desk drop leaves the project unchanged", InvalidDropIsRejected),
             ("Cancelling a drag leaves the project unchanged", CancelLeavesProjectUnchanged),
@@ -1009,6 +1011,84 @@ internal static class Program
         {
             if (File.Exists(path)) File.Delete(path);
         }
+    }
+
+    private static void ParticipantTableImportRoundTrip()
+    {
+        var project = CreateProject();
+        var legacy = new ParticipantTableView(project);
+        AssertEqual(project.Participants[0].DisplayName, legacy.GetValue(0, 1));
+        var connection = CircleSpaceCoordinator.EditorClient.EditorConnection.Current!;
+        var remote = connection.Open(ProjectJsonSerializer.Save(project));
+        var source = new ParticipantTableSource("架空.csv", "架空", ["ID", "名前", "", "重み", "重み"],
+            ["ID", "名前", "[3] ", "[4] 重み", "[5] 重み"]);
+        var values = new Dictionary<string, string>
+        {
+            ["ID"] = "001", ["名前"] = "架空サークル", ["[3] "] = "複数行\nの値",
+            ["[4] 重み"] = "0.125", ["[5] 重み"] = "0.75",
+        };
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.ParticipantCatalogServiceReplaceParticipants(
+            [new CircleSpaceCoordinator.Application.Participants.ParticipantImportRow("001", "架空サークル", 1) { SourceValues = values }], source), false);
+        var saved = ProjectJsonSerializer.Load(connection.Encode(remote.Project));
+        var table = new ParticipantTableView(saved);
+        AssertEqual(5, table.ColumnCount);
+        AssertEqual("", table.Headers[2]);
+        AssertEqual("0.125", table.GetValue(0, 3));
+        AssertEqual("0.75", table.GetValue(0, 4));
+        AssertEqual("複数行\nの値", table.GetValue(0, 2));
+        AssertEqual("架空.csv", saved.ParticipantTableSource!.FileName);
+        remote.Undo();
+        AssertEqual<ParticipantTableSource?>(null, remote.Project.ParticipantTableSource);
+        AssertEqual(project.Participants[0].DisplayName, remote.Project.Participants[0].DisplayName);
+        remote.Redo();
+        AssertEqual("0.75", new ParticipantTableView(remote.Project).GetValue(0, 4));
+        // An import without metadata must clear stale origin information.
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.ParticipantCatalogServiceReplaceParticipants(
+            [new CircleSpaceCoordinator.Application.Participants.ParticipantImportRow("002", "別の架空サークル", 1)]), false);
+        AssertEqual<ParticipantTableSource?>(null, remote.Project.ParticipantTableSource);
+        var empty = new ParticipantTableView(project with { Participants = [] });
+        AssertEqual(0, empty.RowCount);
+        var oldColumns = new ParticipantTableView(saved with { ParticipantTableSource = null });
+        AssertEqual(5, oldColumns.ColumnCount);
+    }
+
+    private static void LargeParticipantTableViewport()
+    {
+        var keys = Enumerable.Range(0, 100).Select(i => $"列{i}").ToArray();
+        var participants = Enumerable.Range(0, 10000).Select(row =>
+            new Participant($"p{row}", $"架空{row}", 1, new Dictionary<string, double>())
+            {
+                SourceValues = keys.Select((key, column) => (key, value: $"{row}:{column}"))
+                    .ToDictionary(item => item.key, item => item.value),
+            }).ToArray();
+        var project = CreateProject() with { Participants = participants,
+            ParticipantTableSource = new ParticipantTableSource("性能確認.csv", "確認", keys, keys) };
+        var allocated = GC.GetAllocatedBytesForCurrentThread();
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var table = new ParticipantTableView(project);
+        var scroll = new TableScrollPosition();
+        scroll.MoveTo(int.MaxValue, int.MaxValue, table.RowCount, table.ColumnCount, 30, 10);
+        AssertEqual(9970, scroll.Row);
+        AssertEqual(90, scroll.Column);
+        AssertEqual("9999:99", table.GetValue(scroll.Row + 29, scroll.Column + 9));
+        var checksum = 0;
+        for (var page = 0; page < 10000; page += 30)
+        {
+            scroll.MoveTo(page, 90, table.RowCount, table.ColumnCount, 30, 10);
+            for (var r = 0; r < 30; r++)
+                for (var c = 0; c < 10; c++) checksum += table.GetValue(scroll.Row + r, scroll.Column + c).Length;
+        }
+        if (checksum == 0) throw new InvalidOperationException("No visible values read.");
+        timer.Stop();
+        var bytes = GC.GetAllocatedBytesForCurrentThread() - allocated;
+        if (bytes > 1_000_000) throw new InvalidOperationException($"Table view copied too much data: {bytes} bytes");
+        Console.WriteLine($"Table view only, 10000 x 100: {timer.ElapsedMilliseconds} ms; {bytes} allocated bytes (excludes data creation and GPU drawing)");
+        scroll.MoveTo(-1, -1, 0, 0, 30, 10);
+        AssertEqual(0, scroll.Row);
+        AssertEqual(0, scroll.Column);
+        scroll.MoveTo(9999, 99, 10000, 100, 20000, 200);
+        AssertEqual(0, scroll.Row);
+        AssertEqual(0, scroll.Column);
     }
 
     private static CircleSpaceProject CreateProject()

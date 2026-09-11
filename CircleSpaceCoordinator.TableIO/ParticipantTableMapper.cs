@@ -26,13 +26,7 @@ public static class ParticipantTableMapper
         if (mapping.GenreIdColumn is { } genreColumn)
             EnsureColumn(genreColumn, sheet.Headers.Count, nameof(mapping.GenreIdColumn));
 
-        var usedKeys = new HashSet<string>(StringComparer.Ordinal);
-        var columnKeys = sheet.Headers.Select((_, column) =>
-        {
-            var key = ColumnKey(sheet.Headers, column);
-            while (!usedKeys.Add(key)) key = $"[{column + 1}] {key}";
-            return key;
-        }).ToArray();
+        var columnKeys = GetColumnKeys(sheet.Headers);
         return sheet.Rows.Select((row, index) => new ParticipantImportRow(
             Value(row, mapping.CircleIdColumn),
             Value(row, mapping.DisplayNameColumn),
@@ -42,6 +36,17 @@ public static class ParticipantTableMapper
         {
             SourceValues = columnKeys.Select((key, column) => (Key: key, Value: Value(sheet.ChannelRows?[index] ?? row, column)))
                 .ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal),
+        }).ToArray();
+    }
+
+    public static IReadOnlyList<string> GetColumnKeys(IReadOnlyList<string> headers)
+    {
+        var usedKeys = new HashSet<string>(StringComparer.Ordinal);
+        return headers.Select((_, column) =>
+        {
+            var key = ColumnKey(headers, column);
+            while (!usedKeys.Add(key)) key = $"[{column + 1}] {key}";
+            return key;
         }).ToArray();
     }
 

@@ -7,10 +7,15 @@ public static class ParticipantCatalogService
 {
     public static CircleSpaceProject ReplaceParticipants(
         CircleSpaceProject project,
-        IReadOnlyList<ParticipantImportRow> rows)
+        IReadOnlyList<ParticipantImportRow> rows,
+        ParticipantTableSource? source = null)
     {
         ArgumentNullException.ThrowIfNull(project);
         ArgumentNullException.ThrowIfNull(rows);
+        if (source is not null && (source.Headers.Count != source.ColumnKeys.Count ||
+            source.ColumnKeys.Distinct(StringComparer.Ordinal).Count() != source.ColumnKeys.Count ||
+            rows.Any(row => source.ColumnKeys.Any(key => !row.SourceValues.ContainsKey(key)))))
+            throw new ArgumentException("取込み元の列情報と値が一致しません。", nameof(source));
         var issues = Validate(rows);
         if (issues.Count > 0)
             throw new ProjectValidationException(issues);
@@ -60,7 +65,7 @@ public static class ParticipantCatalogService
                 .ToArray(),
         }).ToArray();
         var result = CircleSpaceCoordinator.Application.Editing.ChannelEditor.RefreshValues(
-            project with { Participants = participants, Plans = plans });
+            project with { Participants = participants, Plans = plans, ParticipantTableSource = source });
         var projectIssues = ProjectValidator.Validate(result);
         if (projectIssues.Count > 0)
             throw new ProjectValidationException(projectIssues);

@@ -200,6 +200,15 @@ public sealed partial class VenueEditorGame : Game
 
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         UpdateToolbar(pointer);
+        if (editorMode == EditorMode.ParticipantData)
+        {
+            UpdateParticipantDataInput(keyboard, mouse, pointer);
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
         hoveredPlanId = editorMode == EditorMode.GenreData ? null : HitTestPlanList(pointer);
         hoveredPlanCopy = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanCopyBounds(), pointer);
         hoveredPlanRename = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanRenameBounds(), pointer);
@@ -523,6 +532,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        tableScrollDragVertical = null;
         foreach (var button in toolbarButtons) button.Model.ClearPointerState();
         hoveredPlanId = null;
         hoveredPlanCopy = hoveredPlanRename = false;
@@ -547,7 +557,9 @@ public sealed partial class VenueEditorGame : Game
             return;
 
         spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-        if (editorMode == EditorMode.GenreData)
+        if (editorMode == EditorMode.ParticipantData)
+            DrawParticipantData();
+        else if (editorMode == EditorMode.GenreData)
             DrawGenreDataDashboard();
         else
         {
@@ -2216,6 +2228,7 @@ public sealed partial class VenueEditorGame : Game
         toolbarButtons.Clear();
         var modeActions = new[]
         {
+            ToolbarAction.ParticipantDataMode,
             ToolbarAction.DeskPlacementMode,
             ToolbarAction.IslandDefinitionMode,
             ToolbarAction.GenrePlacementMode,
@@ -2253,7 +2266,6 @@ public sealed partial class VenueEditorGame : Game
         };
         var circleActions = new[]
         {
-            ToolbarAction.ImportParticipants,
             ToolbarAction.ExportSeatAssignments,
             ToolbarAction.OptimizeCirclePlacement,
             ToolbarAction.AssignParticipant,
@@ -2262,7 +2274,6 @@ public sealed partial class VenueEditorGame : Game
         };
         var genreActions = new[]
         {
-            ToolbarAction.ImportParticipants,
             ToolbarAction.EditGenreStyles,
             ToolbarAction.ToggleEvaluationAnalysis,
         };
@@ -2288,6 +2299,8 @@ public sealed partial class VenueEditorGame : Game
         }
         var modeSpecificActions = editorMode switch
         {
+            EditorMode.ParticipantData => [ToolbarAction.ImportParticipants, ToolbarAction.ExportSeatAssignments,
+                ToolbarAction.Undo, ToolbarAction.Redo],
             EditorMode.DeskPlacement => deskActions,
             EditorMode.IslandDefinition => islandActions,
             EditorMode.GenrePlacement => genreActions,
@@ -2295,16 +2308,20 @@ public sealed partial class VenueEditorGame : Game
             EditorMode.GenreData => [],
             _ => [],
         };
-        var actions = commonStart
+        var actions = (editorMode == EditorMode.ParticipantData ? Array.Empty<ToolbarAction>() : commonStart)
             .Concat(modeSpecificActions)
             .Concat(commonEnd)
             .ToArray();
+        var actionX = 12d;
         for (var index = 0; index < actions.Length; index++)
         {
             var action = actions[index];
+            var buttonWidth = editorMode == EditorMode.ParticipantData &&
+                action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d : 44d;
             toolbarButtons.Add(new ToolbarButton(
                 action,
-                new IconButtonModel(new ScreenRectangle(12d + index * 49d, 59d, 44d, 44d), GetAccessibleName(action))));
+                new IconButtonModel(new ScreenRectangle(actionX, 59d, buttonWidth, 44d), GetAccessibleName(action))));
+            actionX += buttonWidth + 5d;
         }
     }
 
@@ -2318,7 +2335,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.Undo => workspace?.CanUndo == true,
                 ToolbarAction.Redo => workspace?.CanRedo == true,
                 ToolbarAction.DuplicatePlan => workspace?.HasSelectedCircleLayout == true,
-                ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode => workspace is not null,
+                ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode => workspace is not null,
                 ToolbarAction.PanViewport or ToolbarAction.FitVenueToWindow => workspace is not null,
                 ToolbarAction.ImportParticipants => workspace is not null,
                 ToolbarAction.ExportSeatAssignments => workspace?.HasSelectedCircleLayout == true,
@@ -2336,6 +2353,7 @@ public sealed partial class VenueEditorGame : Game
                 _ => false,
             };
             button.Model.IsSelected = button.Action == activeCanvasTool ||
+                button.Action == ToolbarAction.ParticipantDataMode && editorMode == EditorMode.ParticipantData ||
                 button.Action == ToolbarAction.ToggleEvaluationAnalysis && showEvaluationAnalysis ||
                 button.Action == ToolbarAction.DeskPlacementMode && editorMode == EditorMode.DeskPlacement ||
                 button.Action == ToolbarAction.IslandDefinitionMode && editorMode == EditorMode.IslandDefinition ||
@@ -2364,6 +2382,8 @@ public sealed partial class VenueEditorGame : Game
             return LoadProject();
         if (commandController is null || workspace is null)
             return (false, "no_project");
+        if (action == ToolbarAction.ParticipantDataMode)
+            return ChangeEditorMode(EditorMode.ParticipantData);
         if (action == ToolbarAction.DeskPlacementMode)
             return ChangeEditorMode(EditorMode.DeskPlacement);
         if (action == ToolbarAction.IslandDefinitionMode)
@@ -2703,8 +2723,10 @@ public sealed partial class VenueEditorGame : Game
                 (bounds, color) =>
                 {
                     var foreground = ToButtonColor(color);
-                    if (button.Action is ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode)
+                    if (button.Action is ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
+                    else if (editorMode == EditorMode.ParticipantData && button.Action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments)
+                        textRenderer?.Draw(button.Action == ToolbarAction.ImportParticipants ? "Excel / CSV 読込" : "配置結果の書出し", ToRectangle(bounds, 5), foreground, 16, true);
                     else
                         DrawToolbarIcon(button.Action, bounds, foreground);
                 });
@@ -2958,6 +2980,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
+        ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
         ToolbarAction.DeskPlacementMode => "机配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
         ToolbarAction.GenrePlacementMode => "ジャンル配置モードへ切り替える",
@@ -3003,6 +3026,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetModeLabel(ToolbarAction action) => action switch
     {
+        ToolbarAction.ParticipantDataMode => "サークルデータ",
         ToolbarAction.DeskPlacementMode => "机配置",
         ToolbarAction.IslandDefinitionMode => "島定義",
         ToolbarAction.GenrePlacementMode => "ジャンル配置",
@@ -3047,6 +3071,13 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
+        if (editorMode == EditorMode.ParticipantData)
+        {
+            primaryStatusMessage = "サークルデータ（閲覧専用）　列見出し・行番号は固定";
+            secondaryStatusMessage = toolbarButtons.FirstOrDefault(button => button.Model.IsPointerOver)?.Model.AccessibleName
+                ?? "ホイール: 縦スクロール　Shift＋ホイール: 横　矢印 / PageUp・Down / Home・End: 移動　セルクリック: 全文";
+            return;
+        }
         var snapshot = workspace.GetSelectedPlanSnapshot();
         var participant = participantController?.SelectedParticipantName ?? "未割当てなし";
         var hoveredToolbarButton = toolbarButtons.FirstOrDefault(button => button.Model.IsPointerOver);
@@ -3474,6 +3505,7 @@ public sealed partial class VenueEditorGame : Game
             screenshotShutterSoundInstance?.Dispose();
             screenshotShutterSound?.Dispose();
             textRenderer?.Dispose();
+            tableTextRenderer?.Dispose();
             pixel?.Dispose();
             spriteBatch?.Dispose();
         }
@@ -3483,6 +3515,7 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    ParticipantDataMode,
     DeskPlacementMode,
     IslandDefinitionMode,
     GenrePlacementMode,
@@ -3532,6 +3565,7 @@ internal enum EditorMode
     GenrePlacement,
     CirclePlacement,
     GenreData,
+    ParticipantData,
 }
 
 internal sealed record ToolbarButton(ToolbarAction Action, IconButtonModel Model);

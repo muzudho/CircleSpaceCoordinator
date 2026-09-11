@@ -14,6 +14,18 @@
     "evaluation"
   ],
   "properties": {
+    "participantTableSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fileName", "sheetName", "headers", "columnKeys"],
+      "properties": {
+        "fileName": { "type": "string" },
+        "sheetName": { "type": "string" },
+        "headers": { "type": "array", "items": { "type": "string" } },
+        "columnKeys": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      },
+      "description": "Origin and ordered columns of the last successful import. Values live in participants.sourceValues."
+    },
     "schemaVersion": {
       "const": "1.0"
     },

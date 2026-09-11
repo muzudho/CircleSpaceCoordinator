@@ -85,7 +85,8 @@ public sealed record LayoutCatalogServiceRemoveDeskLayout(string deskLayoutId) :
 public sealed record LayoutCatalogServiceReassignCircleLayout(string circleLayoutId, string deskLayoutId) : EditorOperation;
 public sealed record LayoutCatalogServiceRenameDeskLayout(string deskLayoutId, string name) : EditorOperation;
 public sealed record LayoutCatalogServiceRenameCircleLayout(string circleLayoutId, string name) : EditorOperation;
-public sealed record ParticipantCatalogServiceReplaceParticipants(IReadOnlyList<ParticipantImportRow> rows) : EditorOperation;
+public sealed record ParticipantCatalogServiceReplaceParticipants(IReadOnlyList<ParticipantImportRow> rows,
+    ParticipantTableSource? source = null) : EditorOperation;
 public sealed record PlanCatalogServiceCreatePlan(string newPlanId, string newPlanName, string? description = null) : EditorOperation;
 public sealed record PlanCatalogServiceRenamePlan(string planId, string newPlanName) : EditorOperation, IPlanOperation;
 public sealed record PlanCatalogServiceRemovePlan(string planId) : EditorOperation, IPlanOperation;

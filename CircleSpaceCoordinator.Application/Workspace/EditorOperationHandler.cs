@@ -44,7 +44,7 @@ public static class EditorOperationHandler
         LayoutCatalogServiceReassignCircleLayout op => LayoutCatalogService.ReassignCircleLayout(project, op.circleLayoutId, op.deskLayoutId),
         LayoutCatalogServiceRenameDeskLayout op => LayoutCatalogService.RenameDeskLayout(project, op.deskLayoutId, op.name),
         LayoutCatalogServiceRenameCircleLayout op => LayoutCatalogService.RenameCircleLayout(project, op.circleLayoutId, op.name),
-        ParticipantCatalogServiceReplaceParticipants op => ParticipantCatalogService.ReplaceParticipants(project, op.rows),
+        ParticipantCatalogServiceReplaceParticipants op => ParticipantCatalogService.ReplaceParticipants(project, op.rows, op.source),
         PlanCatalogServiceCreatePlan op => PlanCatalogService.CreatePlan(project, op.newPlanId, op.newPlanName, op.description),
         PlanCatalogServiceRenamePlan op => PlanCatalogService.RenamePlan(project, op.planId, op.newPlanName),
         PlanCatalogServiceRemovePlan op => PlanCatalogService.RemovePlan(project, op.planId),
