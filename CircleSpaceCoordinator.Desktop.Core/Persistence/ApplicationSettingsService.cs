@@ -18,7 +18,8 @@ public sealed record ProjectWorkingState(
 public sealed record CircleLabelDisplaySettings(
     string DisplayField = "internalId",
     string? CircleIdPattern = null,
-    string? CircleIdReplacement = null);
+    string? CircleIdReplacement = null,
+    string? ChannelId = null);
 
 public sealed record ApplicationSettings(
     string ProjectsDirectory,
@@ -259,11 +260,13 @@ public sealed class ApplicationSettingsService
         {
             "circleId" => "circleId",
             "displayName" => "displayName",
+            "channel" when !string.IsNullOrWhiteSpace(display.ChannelId) => "channel",
             _ => "internalId",
         };
         var pattern = string.IsNullOrWhiteSpace(display?.CircleIdPattern) ? null : display.CircleIdPattern.Trim();
         var replacement = string.IsNullOrWhiteSpace(display?.CircleIdReplacement) ? null : display.CircleIdReplacement;
-        return new CircleLabelDisplaySettings(field, pattern, replacement);
+        return new CircleLabelDisplaySettings(field, pattern, replacement,
+            string.IsNullOrWhiteSpace(display?.ChannelId) ? null : display.ChannelId.Trim());
     }
 
     private static string? TryReadProjectName(string path)

@@ -12,6 +12,7 @@ public sealed partial class VenueEditorGame
     private string? selectedChannelId;
     private int channelScroll;
     private int planScroll;
+    private bool ShowsChannels => editorMode is EditorMode.DeskPlacement or EditorMode.CirclePlacement;
     private bool IsWeightChannelSelected => editorMode == EditorMode.DeskPlacement && selectedChannelId is not null &&
         workspace?.Project.Evaluation.Features.Any(item => item.Id == selectedChannelId) == true;
 
@@ -33,14 +34,17 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle ChannelRow(int index)
     {
         var panel = GetChannelPanelBounds();
-        return new ScreenRectangle(panel.X + 6, panel.Y + 66 + index * 48, panel.Width - 12, 46);
+        var rowHeight = editorMode == EditorMode.CirclePlacement ? 38 : 48;
+        return new ScreenRectangle(panel.X + 6, panel.Y + 66 + index * rowHeight, panel.Width - 12, rowHeight - 2);
     }
 
-    private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - 114) / 48);
+    private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - 114) /
+        (editorMode == EditorMode.CirclePlacement ? 38 : 48));
 
     private void DrawChannels()
     {
-        if (editorMode != EditorMode.DeskPlacement || workspace is null) return;
+        if (!ShowsChannels || workspace is null) return;
+        if (editorMode == EditorMode.CirclePlacement) { DrawCircleDisplayChannels(); return; }
         if (!IsWeightChannelSelected) selectedChannelId = null;
         var panel = GetChannelPanelBounds();
         var features = workspace.Project.Evaluation.Features;
@@ -74,7 +78,13 @@ public sealed partial class VenueEditorGame
 
     private bool ScrollChannels(ScreenPoint pointer, int delta)
     {
-        if (editorMode != EditorMode.DeskPlacement || workspace is null || !Contains(GetChannelPanelBounds(), pointer)) return false;
+        if (!ShowsChannels || workspace is null || !Contains(GetChannelPanelBounds(), pointer)) return false;
+        if (editorMode == EditorMode.CirclePlacement)
+        {
+            circleChannelScroll = Math.Clamp(circleChannelScroll + (delta > 0 ? -1 : 1), 0,
+                Math.Max(0, GetCircleDisplayChannels().Count - VisibleChannelRows));
+            return true;
+        }
         channelScroll = Math.Clamp(channelScroll + (delta > 0 ? -1 : 1), 0,
             Math.Max(0, workspace.Project.Evaluation.Features.Count + 1 - VisibleChannelRows));
         return true;
@@ -91,7 +101,8 @@ public sealed partial class VenueEditorGame
 
     private bool HandleChannelPanelClick(ScreenPoint pointer)
     {
-        if (editorMode != EditorMode.DeskPlacement || workspace is null || !Contains(GetChannelPanelBounds(), pointer)) return false;
+        if (!ShowsChannels || workspace is null || !Contains(GetChannelPanelBounds(), pointer)) return false;
+        if (editorMode == EditorMode.CirclePlacement) return HandleCircleDisplayChannelClick(pointer);
         try
         {
             if (Contains(ChannelButton(0), pointer)) EditChannelDefinition(create: true);

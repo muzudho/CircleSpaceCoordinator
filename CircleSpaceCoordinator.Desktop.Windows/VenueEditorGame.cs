@@ -2,7 +2,6 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.Desktop.Core;
 using CircleSpaceCoordinator.Desktop.Core.Screenshots;
-using System.Text.RegularExpressions;
 using CircleSpaceCoordinator.Engine.Model;
 using CircleSpaceCoordinator.EditorClient;
 
@@ -827,7 +826,7 @@ public sealed partial class VenueEditorGame : Game
 
     private int GetVisiblePlanRowCount() => Math.Max(0,
         (GraphicsDevice.PresentationParameters.BackBufferHeight - ToolbarHeight - 116 - StatusBarHeight -
-         (editorMode == EditorMode.GenrePlacement ? 210 : editorMode == EditorMode.DeskPlacement ? ChannelPanelReservedHeight : 0)) / 42);
+         (editorMode == EditorMode.GenrePlacement ? 210 : ShowsChannels ? ChannelPanelReservedHeight : 0)) / 42);
 
     private ScreenRectangle GetPlanListBounds(int rowCount) => new(
         GraphicsDevice.PresentationParameters.BackBufferWidth - 276d,
@@ -1579,7 +1578,7 @@ public sealed partial class VenueEditorGame : Game
         var visiblePlanCount = Math.Min(GetDisplayedPlans().Count, GetVisiblePlanRowCount());
         if (Contains(GetPlanListBounds(visiblePlanCount), pointer))
             return false;
-        if (editorMode == EditorMode.DeskPlacement && Contains(GetChannelPanelBounds(), pointer))
+        if (ShowsChannels && Contains(GetChannelPanelBounds(), pointer))
             return false;
         return editorMode != EditorMode.GenrePlacement || !Contains(GetGenreSummaryBounds(), pointer);
     }
@@ -1955,7 +1954,8 @@ public sealed partial class VenueEditorGame : Game
             DrawGenrePattern(bounds, style.Pattern, style.Secondary);
         }
         DrawOutline(bounds, 3d, new Color(207, 239, 255));
-        textRenderer?.Draw(token.Number.ToString(), ToRectangle(bounds, 2), Color.White, 14, true);
+        textRenderer?.Draw(editorMode == EditorMode.CirclePlacement ? GetCircleLabel(token) : token.Number.ToString(),
+            ToRectangle(bounds, 2), Color.White, 14, true);
     }
 
     private void AddUnassignedTokens(
@@ -2164,41 +2164,7 @@ public sealed partial class VenueEditorGame : Game
         if (participant is null)
             return token.Number.ToString();
 
-        var display = settings?.Current.CircleLabelDisplay ?? new CircleLabelDisplaySettings();
-        return display.DisplayField switch
-        {
-            "circleId" => ApplyCircleIdDisplayPattern(participant.CircleId, display),
-            "displayName" => FormatCircleNameForToken(participant.DisplayName),
-            _ => token.Number.ToString(),
-        };
-    }
-
-    private static string ApplyCircleIdDisplayPattern(string circleId, CircleLabelDisplaySettings display)
-    {
-        if (string.IsNullOrWhiteSpace(display.CircleIdPattern))
-            return circleId;
-        try
-        {
-            return Regex.Replace(circleId, display.CircleIdPattern, display.CircleIdReplacement ?? "");
-        }
-        catch (ArgumentException)
-        {
-            // A manually edited settings file must not prevent the venue from rendering.
-            return circleId;
-        }
-    }
-
-    private static string FormatCircleNameForToken(string displayName)
-    {
-        const int charactersPerLine = 4;
-        const int maximumLines = 3;
-        var compact = displayName.Replace("\r", "").Replace("\n", "").Trim();
-        var maximumCharacters = charactersPerLine * maximumLines;
-        if (compact.Length > maximumCharacters)
-            compact = compact[..(maximumCharacters - 1)] + "…";
-        return string.Join("\r\n", Enumerable.Range(0, (compact.Length + charactersPerLine - 1) / charactersPerLine)
-            .Select(index => compact.Substring(index * charactersPerLine,
-                Math.Min(charactersPerLine, compact.Length - index * charactersPerLine))));
+        return CircleLabelFormatter.Format(participant, token.Number, CurrentCircleDisplay);
     }
 
     private bool FitVenueToEditorCanvas()
@@ -2289,7 +2255,6 @@ public sealed partial class VenueEditorGame : Game
         {
             ToolbarAction.ImportParticipants,
             ToolbarAction.ExportSeatAssignments,
-            ToolbarAction.EditCircleLabelDisplay,
             ToolbarAction.OptimizeCirclePlacement,
             ToolbarAction.AssignParticipant,
             ToolbarAction.UnassignParticipant,
@@ -2357,7 +2322,6 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.PanViewport or ToolbarAction.FitVenueToWindow => workspace is not null,
                 ToolbarAction.ImportParticipants => workspace is not null,
                 ToolbarAction.ExportSeatAssignments => workspace?.HasSelectedCircleLayout == true,
-                ToolbarAction.EditCircleLabelDisplay => workspace is not null,
                 ToolbarAction.OptimizeCirclePlacement => workspace?.HasSelectedCircleLayout == true,
                 ToolbarAction.EditGenreStyles => workspace is not null && workspace.Project.Participants.Any(item => !string.IsNullOrWhiteSpace(item.GenreId)),
                 ToolbarAction.ToggleEvaluationAnalysis => workspace is not null,
@@ -2429,14 +2393,6 @@ public sealed partial class VenueEditorGame : Game
                 System.Windows.Forms.MessageBox.Show(exception.Message, "Excelへ書き出し", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
                 return (false, "export_validation_failed");
             }
-        }
-        if (action == ToolbarAction.EditCircleLabelDisplay)
-        {
-            var display = CircleLabelDisplayDialog.Show(settings?.Current.CircleLabelDisplay);
-            if (display is null)
-                return (false, "cancelled");
-            settings?.SaveCircleLabelDisplay(display);
-            return (true, $"field={display.DisplayField};regex={(string.IsNullOrWhiteSpace(display.CircleIdPattern) ? "none" : "configured")}");
         }
         if (action == ToolbarAction.OptimizeCirclePlacement)
         {
@@ -2823,10 +2779,6 @@ public sealed partial class VenueEditorGame : Game
                 DrawLine(new ScreenPoint(center.X, center.Y - 5d), new ScreenPoint(center.X, center.Y + 14d), 3d, color);
                 DrawArrowHead(new ScreenPoint(center.X, center.Y + 14d), 0d, 1d, color);
                 break;
-            case ToolbarAction.EditCircleLabelDisplay:
-                DrawOutline(new ScreenRectangle(center.X - 12d, center.Y - 10d, 24d, 20d), 2d, color);
-                textRenderer?.Draw("ID", new Rectangle((int)center.X - 8, (int)center.Y - 7, 16, 14), color, 11, true);
-                break;
             case ToolbarAction.OptimizeCirclePlacement:
                 DrawOutline(new ScreenRectangle(center.X - 11d, center.Y - 11d, 22d, 22d), 2d, color);
                 textRenderer?.Draw("最", new Rectangle((int)center.X - 8, (int)center.Y - 9, 16, 18), color, 14, true);
@@ -3015,7 +2967,6 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.FitVenueToWindow => "会場全体を画面内に収める",
         ToolbarAction.ImportParticipants => "参加サークル一覧をExcelまたはCSVから読み込む",
         ToolbarAction.ExportSeatAssignments => "配置済みサークルのブロック番号・席番号をExcelへ書き出す",
-        ToolbarAction.EditCircleLabelDisplay => "サークル配置モードで表示する内部ID・サークルID・サークル名を設定する",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",
         ToolbarAction.EditGenreStyles => "ジャンルと色・網掛けパターンの対応を編集する",
         ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（机上のセルを2回選択）",
@@ -3558,7 +3509,6 @@ internal enum ToolbarAction
     UnassignParticipant,
     ImportParticipants,
     ExportSeatAssignments,
-    EditCircleLabelDisplay,
     OptimizeCirclePlacement,
     EditGenreStyles,
     AddIslandConnector,

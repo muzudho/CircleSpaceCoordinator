@@ -45,6 +45,7 @@ internal static class Program
             ("Application settings remember the last project beside the executable", SettingsRememberLastProject),
             ("Application settings remember separate import and export directories", SettingsRememberExcelDirectories),
             ("Application settings preserve the shared circle label display", SettingsPreserveCircleLabelDisplay),
+            ("Circle labels show channel coefficients and preserve ID regex behavior", CircleLabelsShowChannelValues),
             ("Legacy application settings migrate the last project into the catalog", LegacySettingsMigrateProject),
             ("An empty project catalog recovers valid JSON files from its project directory", EmptyCatalogRecoversProjects),
             ("Application settings preserve project order and remove only registrations", SettingsManageProjectCatalog),
@@ -554,12 +555,42 @@ internal static class Program
             AssertEqual("circleId", display.DisplayField);
             AssertEqual("\\w+\\d+-(\\d+)", display.CircleIdPattern!);
             AssertEqual("$1", display.CircleIdReplacement!);
+            settings.SaveCircleLabelDisplay(display with { DisplayField = "channel", ChannelId = "books" });
+            var channel = new ApplicationSettingsService(settingsPath).Current.CircleLabelDisplay!;
+            AssertEqual("channel", channel.DisplayField);
+            AssertEqual("books", channel.ChannelId!);
+            AssertEqual(display.CircleIdPattern!, channel.CircleIdPattern!);
+            AssertEqual("$1", channel.CircleIdReplacement!);
+            settings.SaveCircleLabelDisplay(channel with { DisplayField = "circleId", ChannelId = null });
+            AssertEqual(display, new ApplicationSettingsService(settingsPath).Current.CircleLabelDisplay!);
         }
         finally
         {
             if (Directory.Exists(directory))
                 Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static void CircleLabelsShowChannelValues()
+    {
+        var participant = new Participant("internal-a", "abcdefghijklmnop", 1,
+            new Dictionary<string, double> { ["books"] = 1, ["fraction"] = 0.125, ["zero"] = 0 }) { CircleId = "event12-003" };
+        var display = new CircleLabelDisplaySettings("circleId", @"^\w+\d+-(\d+)$", "$1");
+        AssertEqual("003", CircleLabelFormatter.Format(participant, 7, display));
+        AssertEqual("7", CircleLabelFormatter.Format(participant, 7, display with { DisplayField = "internalId" }));
+        AssertEqual("abcd\r\nefgh\r\nijk…", CircleLabelFormatter.Format(participant, 7, display with { DisplayField = "displayName" }));
+        AssertEqual("1", CircleLabelFormatter.Format(participant, 7, display with { DisplayField = "channel", ChannelId = "books" }));
+        AssertEqual("0", CircleLabelFormatter.Format(participant, 7, display with { DisplayField = "channel", ChannelId = "zero" }));
+        AssertEqual("0", CircleLabelFormatter.Format(participant, 7, display with { DisplayField = "channel", ChannelId = "unset" }));
+        var previousCulture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+            AssertEqual("0.125", CircleLabelFormatter.Format(participant, 7, display with { DisplayField = "channel", ChannelId = "fraction" }));
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; }
+        AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = "[" }));
+        AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = null }));
     }
 
     private static void SettingsManageProjectCatalog()
