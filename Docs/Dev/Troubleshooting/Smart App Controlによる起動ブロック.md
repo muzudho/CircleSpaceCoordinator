@@ -4,6 +4,16 @@
 
 ## 2026-09-12 EditorClient.dll の再発調査
 
+**復旧報告：開発者がソリューションをクリーンし、ビルドし直して起動したところ、Smart App Control にブロックされず起動できた。** 以下に記載する調査時点では拒否が続いていたが、その後に起動成功の報告を受けた。
+
+今回成功した手順は次のとおり。
+
+1. ソリューション全体をクリーンする。
+2. ソリューションをビルドし直す。
+3. アプリを起動する。
+
+こちらで行った GUI プロジェクトの Debug Rebuild と、開発者が行ったソリューション全体のクリーン→ビルドは区別する。起動成功は開発者からの報告であり、古いビルド出力の残存が原因だったか、SAC の判定が変化したかまでは確定していない。再発時には、今回成功した手順としてソリューション全体のクリーン→ビルド→起動を試し、結果を記録する。外部 DLL に自己署名を付けない方針は継続する。
+
 開発者から起動時のブロック報告があり、02:12:56～57 の Code Integrity イベント 3033 / 3077 で、Debug の `CircleSpaceCoordinator.Desktop.Windows.exe` が `CircleSpaceCoordinator.EditorClient.dll` を読み込む際に拒否されたことを確認した。外部 DLL ではなく、このリポジトリで作成する gRPC クライアント DLL である。ポリシーは `VerifiedAndReputableDesktop`、GUID は `{0283ac0f-fff1-49ae-ada1-8a933130cad6}`。
 
 今回の比較では Windows の保護設定・証明書ストア・外部 DLL の署名を変更していない。
@@ -14,10 +24,11 @@
 | EditorClient プロジェクトの署名前の Debug DLL に差替え、同じ GUI EXE を直接起動 | 同じ DLL を `0x800711C7` で拒否 |
 | 通常の Debug Rebuild（自作ファイルのみ自動署名）後に直接起動 | ビルドは警告・エラー0件。起動では同じ DLL を拒否 |
 | 同じソースを Release ビルド（自動署名なし）して直接起動 | ビルドは成功。今回は GUI EXE 自体をアプリ制御が拒否 |
+| その後、開発者がソリューション全体をクリーン→ビルド→起動 | SAC にブロックされず起動成功との報告 |
 
 署名あり／なしの両方で拒否されているため、この事例を「署名を外せば直る」「自己署名を付ければ直る」とは結論できない。Debug 出力は比較後、通常の Rebuild による署名付きの状態へ戻した。Visual Studio 自体の F5 操作は自動実行しておらず、再試行は同じ出力 EXE の直接起動である。
 
-診断データはローカルの `artifacts/debug-startup-check/diagnostic-20260912-022150.json` に保存した。`F5Result` は `NotRun` とし、開発者の報告と EXE の直接起動を区別した。今回の拒否は未解消。コンパイル成功や Authenticode の `Valid` を起動成功として扱わない。
+診断データはローカルの `artifacts/debug-startup-check/diagnostic-20260912-022150.json` に保存した。`F5Result` は `NotRun` とし、開発者の報告と EXE の直接起動を区別した。この診断を保存した時点では未解消だったが、その後、上記のクリーン→ビルドによる起動成功が報告された。コンパイル成功や Authenticode の `Valid` を起動成功として扱わない。
 
 Microsoft の [Smart App Control 向けコード署名](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control) は、SAC が信頼する発行元の証明書を対象としている。開発用自己署名だけで安定した許可を保証するものではない。自動署名の対象を闇雲に増やしたり、外部 DLL に自己署名を付けたりして対処しない。
 
