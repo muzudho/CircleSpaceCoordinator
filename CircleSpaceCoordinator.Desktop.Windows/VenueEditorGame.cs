@@ -180,6 +180,15 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
+        if (UpdateDeskRing(keyboard, mouse))
+        {
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
+
         // Capturing the current screen is available even while a modal owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
@@ -557,6 +566,9 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedDeskRingButton?.CancelPress();
+        pressedDeskRingButton = null;
+        foreach (var button in deskRingButtons) button.ClearPointerState();
         selectingUnderlineText = false;
         tableScrollDragVertical = null;
         draggingPlanScrollbar = false;
@@ -632,6 +644,7 @@ public sealed partial class VenueEditorGame : Game
         DrawConfidentialBadge();
         DrawStatusBar();
         DrawModalDialog();
+        DrawDeskRing();
         spriteBatch.End();
 
         if (screenshotRequested)
@@ -2280,8 +2293,7 @@ public sealed partial class VenueEditorGame : Game
         var deskActions = new[]
         {
             ToolbarAction.MoveDesk,
-            ToolbarAction.AddDesk,
-            ToolbarAction.RemoveDesk,
+            ToolbarAction.DeskMenu,
             ToolbarAction.EditSeatName,
             ToolbarAction.EditDeskNumber,
             ToolbarAction.AddPillar,
@@ -2353,7 +2365,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
+            var buttonWidth = action == ToolbarAction.DeskMenu ? 90d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
                 action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
@@ -2367,7 +2379,7 @@ public sealed partial class VenueEditorGame : Game
     // Keep each state group together before commands that run once per click.
     private static int GetToolbarActionGroup(ToolbarAction action) => action switch
     {
-        ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or
+        ToolbarAction.DeskMenu or ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or
         ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or
         ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
         ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
@@ -2382,6 +2394,7 @@ public sealed partial class VenueEditorGame : Game
         {
             button.Model.IsEnabled = button.Action switch
             {
+                ToolbarAction.DeskMenu => workspace is not null,
                 ToolbarAction.PreviousPlan or ToolbarAction.NextPlan => GetDisplayedPlans().Count > 1,
                 ToolbarAction.Undo => workspace?.CanUndo == true,
                 ToolbarAction.Redo => workspace?.CanRedo == true,
@@ -2405,6 +2418,7 @@ public sealed partial class VenueEditorGame : Game
                 _ => false,
             };
             button.Model.IsSelected = button.Action == activeCanvasTool ||
+                button.Action == ToolbarAction.DeskMenu && activeCanvasTool is (ToolbarAction.AddDesk or ToolbarAction.RemoveDesk) ||
                 button.Action == ToolbarAction.ParticipantDataMode && editorMode == EditorMode.ParticipantData ||
                 button.Action == ToolbarAction.ToggleEvaluationAnalysis && showEvaluationAnalysis ||
                 button.Action == ToolbarAction.DeskPlacementMode && editorMode == EditorMode.DeskPlacement ||
@@ -2414,7 +2428,8 @@ public sealed partial class VenueEditorGame : Game
                 button.Action == ToolbarAction.GenreDataMode && editorMode == EditorMode.GenreData;
             button.Model.UpdatePointer(pointer);
         }
-        var activeButton = toolbarButtons.SingleOrDefault(button => button.Action == activeCanvasTool);
+        var activeButton = toolbarButtons.SingleOrDefault(button => button.Action ==
+            (activeCanvasTool is ToolbarAction.AddDesk or ToolbarAction.RemoveDesk ? ToolbarAction.DeskMenu : activeCanvasTool));
         if (activeButton?.Model.IsEnabled != true)
             activeCanvasTool = editorMode == EditorMode.DeskPlacement
                 ? ToolbarAction.MoveDesk
@@ -2423,6 +2438,11 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
+        if (action == ToolbarAction.DeskMenu)
+        {
+            OpenDeskRing();
+            return (true, "desk_menu_opened");
+        }
         if (action == ToolbarAction.CaptureScreenshot)
         {
             screenshotRequested = true;
@@ -2793,6 +2813,8 @@ public sealed partial class VenueEditorGame : Game
                             ToolbarAction.SelectExportPlan => "配置決定案を選択する",
                             _ => "書き出す",
                         }, ToRectangle(bounds, 5), foreground, 16, true);
+                    else if (button.Action == ToolbarAction.DeskMenu)
+                        textRenderer?.Draw(DeskMenuLabel, ToRectangle(bounds, 5), foreground, 17, true);
                     else
                         DrawToolbarIcon(button.Action, bounds, foreground);
                 });
@@ -3046,6 +3068,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
+        ToolbarAction.DeskMenu => "机：追加・削除を選択",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
         ToolbarAction.DeskPlacementMode => "机配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
@@ -3584,6 +3607,7 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    DeskMenu,
     ParticipantDataMode,
     DeskPlacementMode,
     IslandDefinitionMode,
