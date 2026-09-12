@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Space definitions persist globally and reject broken references and stale saves", SpaceDefinitionsPersist),
             ("Export requires an explicit decision and preserves it independently of editor selection", ExportPlanDecision),
             ("Imported table survives remote import, save, undo and redo with ordered duplicate headers", ParticipantTableImportRoundTrip),
             ("Table viewport reaches the last cell of 10000 by 100 without copying values", LargeParticipantTableViewport),
@@ -810,6 +811,50 @@ internal static class Program
         AssertEqual(
             QuarterTurn.East,
             workspace.SelectedPlan.DeskPlacements.Single(item => item.Anchor == new GridPosition(3, 1)).Orientation);
+    }
+
+    private static void SpaceDefinitionsPersist()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "space-definitions-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "space-definitions.json");
+            var first = new SpaceDefinitionStore(path);
+            AssertEqual(6, first.Current.Types.Count);
+            AssertEqual(2, first.Current.Requests.Count);
+            AssertEqual(0, first.Current.Types.Single(t => t.Id == "desk-3-ends").Cells.Single(c => c.X == 1).Area);
+            AssertEqual(1, first.Current.Types.Single(t => t.Id == "booth").Cells.Select(c => c.Area).Distinct().Count());
+            first.Save(first.Current);
+            var second = new SpaceDefinitionStore(path);
+            var changed = first.Current with { Types = first.Current.Types.Select(t => t.Id == "desk-2-seats" ? t with { Name = "共通の机" } : t).ToArray() };
+            first.Save(changed);
+            AssertEqual("共通の机", new SpaceDefinitionStore(path).Current.Types[0].Name);
+            try { second.Save(second.Current); throw new Exception("Expected stale save rejection."); }
+            catch (IOException) { }
+            var persisted = File.ReadAllText(path);
+            try
+            {
+                first.Save(changed with { Types = changed.Types.Where(t => t.Id != "desk-2-seats").ToArray() });
+                throw new Exception("Expected reference validation.");
+            }
+            catch (InvalidDataException) { }
+            AssertEqual(persisted, File.ReadAllText(path));
+            try
+            {
+                first.Save(changed with { Requests = [.. changed.Requests, changed.Requests[0] with { Id = "duplicate-value" }] });
+                throw new Exception("Expected duplicate input validation.");
+            }
+            catch (InvalidDataException) { }
+            var emptyType = changed.Types[0] with { Cells = [new(0, 0, 0)] };
+            try { (changed with { Types = [emptyType] }).Validate(); throw new Exception("Expected missing area rejection."); }
+            catch (InvalidDataException) { }
+            File.WriteAllText(path, "broken");
+            try { _ = new SpaceDefinitionStore(path); throw new Exception("Expected corrupt file rejection."); }
+            catch (System.Text.Json.JsonException) { }
+            AssertEqual("broken", File.ReadAllText(path));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 
     private static void CommandsFillDesksAndResizeVenue()

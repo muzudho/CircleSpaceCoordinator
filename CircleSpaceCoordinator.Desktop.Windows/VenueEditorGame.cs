@@ -205,13 +205,22 @@ public sealed partial class VenueEditorGame : Game
 
         if (keyboard.IsKeyDown(Keys.Escape))
             Exit();
-        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.S))
+        if (editorMode != EditorMode.SpaceDefinitions && IsControlDown(keyboard) && IsPressed(keyboard, Keys.S))
             SaveProject();
-        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.O))
+        if (editorMode != EditorMode.SpaceDefinitions && IsControlDown(keyboard) && IsPressed(keyboard, Keys.O))
             LoadProject();
 
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         UpdateToolbar(pointer);
+        if (editorMode == EditorMode.SpaceDefinitions)
+        {
+            UpdateSpaceDefinitions(mouse, pointer);
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
         if (editorMode == EditorMode.ParticipantData)
         {
             UpdateParticipantDataInput(keyboard, mouse, pointer);
@@ -573,6 +582,9 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedSpaceButton?.CancelPress();
+        pressedSpaceButton = null;
+        foreach (var item in spaceButtons) item.Button.ClearPointerState();
         pressedToolRingButton?.CancelPress();
         pressedToolRingButton = null;
         foreach (var button in toolRingButtons) button.ClearPointerState();
@@ -608,7 +620,9 @@ public sealed partial class VenueEditorGame : Game
         spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
         if (ShowVenueAboveRingCover)
             DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
-        if (editorMode == EditorMode.ParticipantData)
+        if (editorMode == EditorMode.SpaceDefinitions)
+            DrawSpaceDefinitions();
+        else if (editorMode == EditorMode.ParticipantData)
             DrawParticipantData();
         else if (editorMode == EditorMode.GenreData)
             DrawGenreDataDashboard();
@@ -2291,6 +2305,7 @@ public sealed partial class VenueEditorGame : Game
         var modeActions = new[]
         {
             ToolbarAction.ParticipantDataMode,
+            ToolbarAction.SpaceDefinitionsMode,
             ToolbarAction.DeskPlacementMode,
             ToolbarAction.IslandDefinitionMode,
             ToolbarAction.GenrePlacementMode,
@@ -2359,9 +2374,9 @@ public sealed partial class VenueEditorGame : Game
             EditorMode.GenreData => [],
             _ => [],
         };
-        var actions = (editorMode == EditorMode.ParticipantData ? Array.Empty<ToolbarAction>() : commonStart)
+        var actions = (editorMode is EditorMode.ParticipantData or EditorMode.SpaceDefinitions ? Array.Empty<ToolbarAction>() : commonStart)
             .Concat(modeSpecificActions)
-            .Concat(commonEnd)
+            .Concat(editorMode == EditorMode.SpaceDefinitions ? [ToolbarAction.CaptureScreenshot] : commonEnd)
             .OrderBy(GetToolbarActionGroup)
             .ToArray();
         var actionX = 12d;
@@ -2402,6 +2417,7 @@ public sealed partial class VenueEditorGame : Game
         {
             button.Model.IsEnabled = button.Action switch
             {
+                ToolbarAction.SpaceDefinitionsMode => true,
                 ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu => workspace is not null,
                 ToolbarAction.PreviousPlan or ToolbarAction.NextPlan => GetDisplayedPlans().Count > 1,
                 ToolbarAction.Undo => workspace?.CanUndo == true,
@@ -2426,6 +2442,7 @@ public sealed partial class VenueEditorGame : Game
                 _ => false,
             };
             button.Model.IsSelected = button.Action == activeCanvasTool ||
+                button.Action == ToolbarAction.SpaceDefinitionsMode && editorMode == EditorMode.SpaceDefinitions ||
                 button.Action == GetToolMenu(activeCanvasTool) ||
                 button.Action == ToolbarAction.ParticipantDataMode && editorMode == EditorMode.ParticipantData ||
                 button.Action == ToolbarAction.ToggleEvaluationAnalysis && showEvaluationAnalysis ||
@@ -2446,6 +2463,11 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
+        if (action == ToolbarAction.SpaceDefinitionsMode)
+        {
+            OpenSpaceDefinitions();
+            return (editorMode == EditorMode.SpaceDefinitions, "space_definitions");
+        }
         if (ToolRings.Any(ring => ring.Menu == action))
         {
             OpenToolRing(action);
@@ -2816,7 +2838,7 @@ public sealed partial class VenueEditorGame : Game
                 (bounds, color) =>
                 {
                     var foreground = ToButtonColor(color);
-                    if (button.Action is ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode)
+                    if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
                     else if (editorMode == EditorMode.ParticipantData && button.Action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
@@ -3093,6 +3115,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
+        ToolbarAction.SpaceDefinitionsMode => "アプリ共通の配置物の型と申込スペースを編集する",
         ToolbarAction.DeskMenu => "机：追加・削除を選択",
         ToolbarAction.PillarMenu => "柱：追加・削除を選択",
         ToolbarAction.VenueSizeMenu => "会場サイズ：上下左右の辺を伸ばす・縮める",
@@ -3143,6 +3166,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetModeLabel(ToolbarAction action) => action switch
     {
+        ToolbarAction.SpaceDefinitionsMode => "スペース定義",
         ToolbarAction.ParticipantDataMode => "サークルデータ",
         ToolbarAction.DeskPlacementMode => "机配置",
         ToolbarAction.IslandDefinitionMode => "島定義",
@@ -3181,6 +3205,12 @@ public sealed partial class VenueEditorGame : Game
     private void UpdateWindowPresentation()
     {
         Window.Title = GetWindowTitle();
+        if (editorMode == EditorMode.SpaceDefinitions)
+        {
+            primaryStatusMessage = "スペース定義（アプリ共通）　変更は編集画面の［保存］で確定";
+            secondaryStatusMessage = spaceDefinitionStatus;
+            return;
+        }
         if (workspace is null)
         {
             primaryStatusMessage = "空の確認用グリッド";
@@ -3571,6 +3601,15 @@ public sealed partial class VenueEditorGame : Game
         editorMode = Enum.TryParse<EditorMode>(state.EditorMode, ignoreCase: true, out var restoredMode)
             ? restoredMode
             : EditorMode.DeskPlacement;
+        if (editorMode == EditorMode.SpaceDefinitions)
+        {
+            try { _ = SpaceDefinitions; }
+            catch (Exception ex)
+            {
+                editorMode = EditorMode.DeskPlacement;
+                ShowInAppMessage("スペース定義を復元できません", ex.Message);
+            }
+        }
         showEvaluationAnalysis = state.Switches?.GetValueOrDefault("evaluationAnalysis") == true;
         activeCanvasTool = editorMode == EditorMode.DeskPlacement
             ? ToolbarAction.MoveDesk
@@ -3649,6 +3688,7 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    SpaceDefinitionsMode,
     VenueSizeMenu,
     ExpandTop,
     ShrinkTop,
@@ -3702,6 +3742,7 @@ internal enum ToolbarAction
 
 internal enum EditorMode
 {
+    SpaceDefinitions,
     DeskPlacement,
     IslandDefinition,
     GenrePlacement,
