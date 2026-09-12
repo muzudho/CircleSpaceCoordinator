@@ -2,6 +2,20 @@
 
 記録日：2026-09-09／更新日：2026-09-12
 
+[現在の運用方針](README.md) ／ [試したこと・失敗したこと](試したこと・失敗したこと.md)
+
+以下には過去の調査計画も残しています。現在は開発中オフ／開発終了後オンの運用方針です。各試験で SAC がオンだったかを区別してください。
+
+## 2026-09-12 10:47 クリーン後も GUI EXE を拒否
+
+開発者から、ソリューション内の全プロジェクトの `bin`・`obj` を削除した後、Visual Studio の実行ボタンでビルド・起動しても SAC にブロックされたとの報告を受けた。添付画面は `CircleSpaceCoordinator.Desktop.Windows.exe` を開始できず、アプリケーション制御ポリシーによってブロックされたと表示している。
+
+10:47:05 の Code Integrity イベント 3033 / 3077 でも、`devenv.exe` が Debug の `CircleSpaceCoordinator.Desktop.Windows.exe` を読み込む際の拒否を確認した。ポリシー ID は `{0283ac0f-fff1-49ae-ada1-8a933130cad6}`。今回確認できた拒否対象は GUI EXE 自体であり、以前の `EditorClient.dll` 読み込み拒否とは異なる。
+
+報告後に出力 EXE を確認したところ、通常のユーザー環境では開発用自己署名の Authenticode 状態は `Valid` だった。これは確認時点の署名状態であり、起動成功を意味しない。クリーン後にも拒否されたため、過去のクリーン後の起動成功を再現性のある解決策とは扱わない。原因は引き続き未確定。
+
+該当時刻のイベント XML と確認時点の EXE の SHA-256・更新時刻を、ローカルの `artifacts/debug-startup-check/sac-block-20260912-104705.json` に保存した。この確認では再ビルドや署名の変更は行っていない。
+
 ## 2026-09-12 EditorClient.dll の再発調査
 
 **復旧報告：開発者がソリューションをクリーンし、ビルドし直して起動したところ、Smart App Control にブロックされず起動できた。** 以下に記載する調査時点では拒否が続いていたが、その後に起動成功の報告を受けた。
@@ -36,7 +50,7 @@ Microsoft の [Smart App Control 向けコード署名](https://learn.microsoft.
 
 署名付き Debug ビルド後に EXE を直接起動したところ、`MonoGame.Framework.dll` が `0x800711C7` で拒否されました。.NET Runtime の例外と Code Integrity イベント 3033 / 3077 で同じファイルのブロックを確認しました。
 
-使用中の MonoGame 3.8.5.1 の元の DLL は未署名でしたが、従来のスクリプトは外部 DLL も含む全 EXE/DLL に開発用自己署名を付けていました。開発者の指示により、署名対象をこのリポジトリで作成するファイルの明示的な許可リストに限定しました。**他人が作った DLL・EXE には自己署名を付けません。** 詳細は [署名対象の方針](../配布/コード署名.md#署名対象の方針) に記載しています。
+使用中の MonoGame 3.8.5.1 の元の DLL は未署名でしたが、従来のスクリプトは外部 DLL も含む全 EXE/DLL に開発用自己署名を付けていました。開発者の指示により、署名対象をこのリポジトリで作成するファイルの明示的な許可リストに限定しました。**他人が作った DLL・EXE には自己署名を付けません。** 詳細は [署名対象の方針](%E3%82%B3%E3%83%BC%E3%83%89%E7%BD%B2%E5%90%8D.md#署名対象の方針) に記載しています。
 
 変更後の再ビルドは成功し、Debug 出力の外部ファイルに開発用自己署名が残っていないことと、`MonoGame.Framework.dll` の SHA-256 が元の NuGet パッケージと一致することを確認しました。外部ファイルを変更しない回帰テストも成功しました。その後、開発者から「起動した」との報告がありました。
 
@@ -50,11 +64,25 @@ Windows 上の Visual Studio で開発中の `CircleSpaceCoordinator.Desktop.Win
 
 今回の問いは **開発用自己署名を行わないと F5 起動できないか** です。Visual Studio の再起動、PC の再起動、SAC の設定変更、証明書の再作成は比較対象にしません。
 
-既存の確認では、`CircleSpaceCoordinator.EditorClient.dll` の読み込みが `0x800711C7` で拒否され、Code Integrity イベント 3033 / 3077 のポリシー ID は `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` でした。拒否された DLL は Authenticode `Valid` で、開発用証明書も現在のユーザーの `My`、`Root`、`TrustedPublisher` に登録済みでした。[コード署名の調査記録](../配布/コード署名.md#2026-09-09-f5-起動失敗と既存の開発用署名の照合) を参照してください。
+既存の確認では、`CircleSpaceCoordinator.EditorClient.dll` の読み込みが `0x800711C7` で拒否され、Code Integrity イベント 3033 / 3077 のポリシー ID は `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` でした。拒否された DLL は Authenticode `Valid` で、開発用証明書も現在のユーザーの `My`、`Root`、`TrustedPublisher` に登録済みでした。[コード署名の調査記録](%E3%82%B3%E3%83%BC%E3%83%89%E7%BD%B2%E5%90%8D.md#2026-09-09-f5-起動失敗と既存の開発用署名の照合) を参照してください。
 
 自己署名の `Valid` はローカルの署名検証結果です。SAC が自己署名を信頼することは保証しません。
 
 ## 自動署名の切替
+
+### bin / obj を削除してビルドする
+
+古い出力が残る条件を除くには、アプリとエンジンを停止し、リポジトリーのルートで次を実行します。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build\Build.ps1
+```
+
+ソリューション内の全プロジェクトの `bin` と `obj` を削除してから、NuGet の復元と Debug ビルドを実行します。署名なしの比較には `-SmartAppControlSigningEnabled false` を付けます。削除に失敗した場合はビルドを中止します。
+
+この自動削除はスクリプト経由のビルドに適用されます。Visual Studio のビルド／F5 や直接の `dotnet build` には組み込んでいません。Visual Studio から起動する場合は、このスクリプトの完了後に F5 を実行してください。
+
+### 署名の指定
 
 `CircleSpaceCoordinator.Desktop.Windows` は Windows の Debug ビルドで `SmartAppControlSigningEnabled` が未指定なら `true` になります。ビルド出力に次のメッセージが表示され、実験条件を確認できます。
 
@@ -82,7 +110,7 @@ dotnet build CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Deskt
 ```powershell
 .\scripts\ForSmartAppControl\Save-SmartAppControlDiagnostic.ps1 `
   -Path '.\CircleSpaceCoordinator.Desktop.Windows\bin\Debug\net10.0-windows' `
-  -ReportDirectory '.\Docs\Dev\Troubleshooting\SmartAppControl' `
+  -ReportDirectory '.\artifacts\debug-startup-check' `
   -Signing Enabled `
   -F5Result Succeeded `
   -Attempt '署名あり-1' `
@@ -93,12 +121,12 @@ dotnet build CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Deskt
 
 ## 判定と横展開
 
-`Docs/Dev/Troubleshooting/SmartAppControl/結果テンプレート.md` に試行結果を転記します。署名ありで成功し、同一条件の署名なしで同じファイルが SAC によりブロックされた場合、その環境・そのコミットでは **自動署名が F5 起動に必要だった** と記録できます。
+`Docs/Dev/Troubleshooting/SmartAppControl/結果テンプレート.md` に試行結果を転記します。署名ありで成功し、同一条件の署名なしで同じファイルが SAC によりブロックされた場合、その環境・そのコミットでは **この試行では署名ありで成功し、署名なしで失敗した** と記録します。一度の比較だけで自己署名の因果的な効果を確定せず、クラウドの判定や生成物の変化も未確定要素として残します。
 
 両条件で成功、または両条件で失敗した場合は、自動署名の必要性は判定できません。条件が異なる、対象バイナリのハッシュが異なる、Code Integrity イベントを取得できない場合も判定不能です。別の PC、コミット、Windows 更新後では同じ手順を繰り返し、結果を一般化しません。
 
 ## 配布との区別
 
-この調査は開発時の Debug / F5 起動だけを対象にします。v1.0.0 の ZIP の起動報告は別の事例であり、自己署名の効果を示すものではありません。[v1.0.0 の ZIP 起動と Smart App Control](../配布/v1.0.0のZIP起動とSmart%20App%20Control.md) を参照してください。
+この調査は開発時の Debug / F5 起動だけを対象にします。v1.0.0 の ZIP の起動報告は別の事例であり、自己署名の効果を示すものではありません。[v1.0.0 の ZIP 起動と Smart App Control](v1.0.0%E3%81%AEZIP%E8%B5%B7%E5%8B%95%E3%81%A8Smart%20App%20Control.md) を参照してください。
 
-[トラブルシューティング一覧へ戻る](README.md) ／ [開発者向けガイド](../README.md)
+[トラブルシューティング一覧へ戻る](../README.md) ／ [開発者向けガイド](../../README.md)

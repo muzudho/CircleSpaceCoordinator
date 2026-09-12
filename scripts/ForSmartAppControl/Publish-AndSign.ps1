@@ -25,6 +25,8 @@ $projects = @(
 	@{ Name = 'CircleSpaceCoordinator.ProjectCli'; Path = 'tools\CircleSpaceCoordinator.ProjectCli\CircleSpaceCoordinator.ProjectCli.csproj' }
 )
 
+& (Join-Path $scriptsRoot 'Build\Clear-BuildOutput.ps1')
+
 foreach ($project in $projects) {
 	$projectPath = Join-Path $repositoryRoot $project.Path
 	$publishPath = Join-Path $OutputRoot $project.Name

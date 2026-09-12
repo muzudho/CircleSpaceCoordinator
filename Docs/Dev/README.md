@@ -7,11 +7,13 @@
 Windows と .NET 10 SDK が必要です。リポジトリーのルートで PowerShell を開き、次のコマンドを実行します。
 
 ```powershell
-dotnet build CircleSpaceCoordinator.slnx -c Release -p:SmartAppControlSigningEnabled=false
-dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release -p:SmartAppControlSigningEnabled=false
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build\Build.ps1 -Configuration Release -SmartAppControlSigningEnabled false
+dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release --no-build
 ```
 
-`SmartAppControlSigningEnabled=false` はプロジェクト独自のビルド後署名処理を止める指定です。Windows の Smart App Control を無効にする指定ではありません。利用環境での制限は [ソース配布と Smart App Control](配布/ソース配布とSmart%20App%20Control.md) を参照してください。
+署名設定と開発 PC の運用は [Smart App Control](Troubleshooting/SmartAppControl/README.md) にまとめています。
+
+`scripts/Build/Build.ps1` は、ソリューション内の全プロジェクトの `bin` と `obj` を削除してから、NuGet の復元を含むビルドを実行します。既定は Debug です。アプリとエンジンを停止し、ほかのビルドが走っていない状態で実行してください。削除に失敗した場合はビルドを中止します。配布用の `Publish-AndSign.ps1`（`New-ReleaseZip.ps1` 経由も含む）も、publish 開始前に同じ削除処理を実行します。
 
 テストの実行方法は [テスト手順](../../tests/README.md) にまとめています。
 

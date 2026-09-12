@@ -13,10 +13,9 @@ v1.0.0 の ZIP・展開フォルダー・EXE は `CircleSpaceCoordinator.Desktop
 | EXE が見つからない | Assets の `CircleSpaceCoordinator.Desktop-v番号-win-x64.zip` を取得してください。`Source code (zip)`・`Source code (tar.gz)` はソースコード、`.sha256` は確認用ファイルです。 |
 | DLL が見つからないと表示される | ZIP を新しい空フォルダーへ全体展開し、中の `CircleSpaceCoordinator.Desktop` フォルダーから起動してください。EXE だけを取り出したり、旧版へ上書きしたりしないでください。 |
 | 対応しない PC と表示される | 配布 ZIP は Windows x64 用です。PC の種類とリリースページの動作条件を確認してください。 |
-| Smart App Control がブロックする | 未署名ファイルがあるため、環境によってブロックされます。表示されたファイル名とアプリの版を記録してください。自分でビルドしても解消を保証できません。 |
+| Smart App Control がブロックする | [SAC にブロックされた場合](../Troubleshooting/SmartAppControl/README.md)の手順を確認してください。 |
 | その他の起動失敗 | エラー文、Windows のバージョン、アプリの版を開発者へ知らせてください。共有前に個人名・パス・業務データを伏せてください。 |
 
-SAC の仕組みと今回の起動報告は [v1.0.0 の ZIP 起動と Smart App Control](../../Dev/配布/v1.0.0のZIP起動とSmart%20App%20Control.md) を参照してください。Windows の保護設定の変更は必須手順にしていません。
 
 ウィンドウが開いたら、[配置の決定稿を作る手順](Start.md) へ進んでください。ZIP 版の更新時の設定引き継ぎは [リリース手順の「利用PCでツールを更新する」](../../Dev/配布/リリース手順.md) を参照してください。
 
@@ -24,7 +23,7 @@ SAC の仕組みと今回の起動報告は [v1.0.0 の ZIP 起動と Smart App 
 
 以下は、自分の PC でソースコードからアプリを作って起動する方法です。プログラムの編集や、有料の署名サービスへの契約は不要ですが、開発用ツールの準備が必要です。
 
-**自分でビルドしても、Smart App Control にアプリや依存 DLL がブロックされる場合があります。** ZIP 版の問題が必ず解決する手順ではありません。詳しくは [ソース配布と Smart App Control](../../Dev/配布/ソース配布とSmart%20App%20Control.md) を参照してください。
+起動がブロックされた場合は、[SAC の対処手順](../Troubleshooting/SmartAppControl/README.md)を参照してください。
 
 ## 1. 必要なものを準備する
 
@@ -82,7 +81,7 @@ dotnet build .\CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordinator.Des
 
 初回は必要なライブラリー（NuGet パッケージ）が自動的にダウンロードされます。完了まで待ち、ビルド成功と表示されたことを確認してください。失敗した場合は、下の「うまくいかないとき」を確認します。
 
-末尾の `SmartAppControlSigningEnabled=false` は、このプロジェクト独自の自己署名処理を止める指定です。Windows の Smart App Control の設定は変更しません。
+末尾の指定の意味は、開発者向けの [署名設定の説明](../../Dev/Troubleshooting/SmartAppControl/ソース配布とSmart%20App%20Control.md#ビルド起動方法)を参照してください。
 
 ## 5. アプリを起動する
 
@@ -118,7 +117,7 @@ dotnet run --project .\CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordin
 | プロジェクトファイルが見つからない | `Test-Path .\CircleSpaceCoordinator.slnx` が `True` になる場所でコマンドを実行してください。 |
 | NuGet パッケージの取得に失敗する | インターネット接続を確認し、手順4を実行し直してください。 |
 | 開発用証明書が見つからない | 手順4のコマンドを、省略せずに実行してください。証明書の作成は本手順には不要です。 |
-| Smart App Control が EXE・DLL をブロックする | ローカルビルドでも発生し得る制限です。ビルド成功や自己署名だけでは解消を保証できません。表示されたファイル名を記録し、[説明](../../Dev/配布/ソース配布とSmart%20App%20Control.md) を確認してください。 |
+| Smart App Control がブロックする | [SAC にブロックされた場合](../Troubleshooting/SmartAppControl/README.md)の手順を確認してください。 |
 | その他のビルドエラーや起動失敗 | エラー文、Windows のバージョン、`dotnet --list-sdks` の結果、取得したソースの版を開発者へ知らせてください。共有前に個人名・パス・業務データを伏せてください。 |
 
 この案内はリポジトリーの設定に基づいています。新規利用者の PC で、SDK のインストールから起動までの一連の手順は未検証です。
