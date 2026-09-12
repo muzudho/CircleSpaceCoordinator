@@ -64,6 +64,7 @@ public sealed partial class VenueEditorGame : Game
     private readonly ApplicationSettingsService? settings;
     private string? projectSavePath;
     private readonly List<ToolbarButton> toolbarButtons = [];
+    private readonly List<double> toolbarSeparators = [];
     private ToolbarButton? pressedToolbarButton;
     private EditorMode editorMode = EditorMode.DeskPlacement;
     private ToolbarAction activeCanvasTool = ToolbarAction.MoveDesk;
@@ -2226,6 +2227,7 @@ public sealed partial class VenueEditorGame : Game
     private void CreateToolbar()
     {
         toolbarButtons.Clear();
+        toolbarSeparators.Clear();
         var modeActions = new[]
         {
             ToolbarAction.ParticipantDataMode,
@@ -2310,19 +2312,39 @@ public sealed partial class VenueEditorGame : Game
         var actions = (editorMode == EditorMode.ParticipantData ? Array.Empty<ToolbarAction>() : commonStart)
             .Concat(modeSpecificActions)
             .Concat(commonEnd)
+            .OrderBy(GetToolbarActionGroup)
             .ToArray();
         var actionX = 12d;
         for (var index = 0; index < actions.Length; index++)
         {
             var action = actions[index];
+            if (index > 0 && GetToolbarActionGroup(action) != GetToolbarActionGroup(actions[index - 1]))
+            {
+                toolbarSeparators.Add(actionX + 4d);
+                actionX += 14d;
+            }
             var buttonWidth = action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
-                action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d : 44d;
+                action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d :
+                editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
                 action,
                 new IconButtonModel(new ScreenRectangle(actionX, 59d, buttonWidth, 44d), GetAccessibleName(action))));
             actionX += buttonWidth + 5d;
         }
     }
+
+    // Canvas tools share activeCanvasTool; the analysis toggle has independent state.
+    // Keep each state group together before commands that run once per click.
+    private static int GetToolbarActionGroup(ToolbarAction action) => action switch
+    {
+        ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or
+        ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or
+        ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
+        ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
+        ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => 0,
+        ToolbarAction.ToggleEvaluationAnalysis => 1,
+        _ => 2,
+    };
 
     private void UpdateToolbar(ScreenPoint pointer)
     {
@@ -2722,6 +2744,8 @@ public sealed partial class VenueEditorGame : Game
     private void DrawToolbar()
     {
         DrawRectangle(new ScreenRectangle(0d, 0d, GraphicsDevice.Viewport.Width, ToolbarHeight), new Color(18, 22, 28));
+        foreach (var separatorX in toolbarSeparators)
+            DrawRectangle(new ScreenRectangle(separatorX, 65d, 1d, 32d), new Color(80, 87, 98));
         foreach (var button in toolbarButtons)
         {
             StationeryButtonRenderer.Draw(button.Model,
