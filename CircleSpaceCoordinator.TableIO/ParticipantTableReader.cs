@@ -14,15 +14,23 @@ public sealed record ParticipantTableSheet(
     public IReadOnlyList<IReadOnlyList<string>>? ChannelRows { get; init; }
 }
 
+public enum ParticipantCsvEncoding
+{
+    Utf8,
+    ShiftJis,
+}
+
+public sealed record ParticipantCsvPreview(ParticipantTableSheet Sheet, bool HasDecodingErrors);
+
 public static class ParticipantTableReader
 {
-    public static IReadOnlyList<ParticipantTableSheet> Read(string path)
+    public static IReadOnlyList<ParticipantTableSheet> Read(string path, ParticipantCsvEncoding csvEncoding = ParticipantCsvEncoding.Utf8)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         return Path.GetExtension(path).ToLowerInvariant() switch
         {
             ".xlsx" or ".xlsm" => ReadWorkbook(path),
-            ".csv" => [ReadCsv(path)],
+            ".csv" => [ReadCsv(path, csvEncoding)],
             _ => throw new NotSupportedException("Only .xlsx, .xlsm and .csv participant lists are supported."),
         };
     }
@@ -64,9 +72,38 @@ public static class ParticipantTableReader
         { ChannelRows = rows.Select(row => row.Channel).ToArray() };
     }
 
-    private static ParticipantTableSheet ReadCsv(string path)
+    private static ParticipantTableSheet ReadCsv(string path, ParticipantCsvEncoding csvEncoding)
     {
-        using var parser = new TextFieldParser(path, Encoding.UTF8, detectEncoding: true)
+        if (TryReadCsv(path, csvEncoding, out var sheet))
+            return sheet!;
+        throw new DecoderFallbackException("The CSV contains bytes that cannot be decoded using the selected encoding.");
+    }
+
+    // Encoding mismatch is an ordinary preview result, not an exception that stops a debugger.
+    public static bool TryReadCsv(string path, ParticipantCsvEncoding csvEncoding, out ParticipantTableSheet? sheet)
+    {
+        var preview = ReadCsvPreview(path, csvEncoding);
+        sheet = preview.HasDecodingErrors ? null : preview.Sheet;
+        return !preview.HasDecodingErrors;
+    }
+
+    public static ParticipantCsvPreview ReadCsvPreview(string path, ParticipantCsvEncoding csvEncoding)
+    {
+        var encoding = csvEncoding switch
+        {
+            // Recognize the UTF-8 preamble while retaining strict decoding for BOM files too.
+            ParticipantCsvEncoding.Utf8 => new UTF8Encoding(encoderShouldEmitUTF8Identifier: true, throwOnInvalidBytes: true),
+            ParticipantCsvEncoding.ShiftJis => CodePagesEncodingProvider.Instance.GetEncoding(
+                932, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback)!,
+            _ => throw new ArgumentOutOfRangeException(nameof(csvEncoding)),
+        };
+        var fallback = new TrackingDecoderFallback();
+        encoding = (Encoding)encoding.Clone();
+        encoding.DecoderFallback = fallback;
+        string text;
+        using (var reader = new StreamReader(path, encoding, detectEncodingFromByteOrderMarks: false))
+            text = reader.ReadToEnd();
+        using var parser = new TextFieldParser(new StringReader(text))
         {
             TextFieldType = FieldType.Delimited,
             HasFieldsEnclosedInQuotes = true,
@@ -77,7 +114,10 @@ public static class ParticipantTableReader
         while (!parser.EndOfData)
             records.Add(parser.ReadFields() ?? []);
         if (records.Count == 0)
-            return new ParticipantTableSheet(Path.GetFileNameWithoutExtension(path), [], []);
+        {
+            return new ParticipantCsvPreview(
+                new ParticipantTableSheet(Path.GetFileNameWithoutExtension(path), [], []), fallback.HadInvalidBytes);
+        }
 
         var width = records.Max(row => row.Length);
         var headers = Pad(records[0], width);
@@ -85,7 +125,29 @@ public static class ParticipantTableReader
             .Select(row => (IReadOnlyList<string>)Pad(row, width))
             .Where(row => row.Any(value => !string.IsNullOrWhiteSpace(value)))
             .ToArray();
-        return new ParticipantTableSheet(Path.GetFileNameWithoutExtension(path), headers, rows);
+        return new ParticipantCsvPreview(
+            new ParticipantTableSheet(Path.GetFileNameWithoutExtension(path), headers, rows), fallback.HadInvalidBytes);
+    }
+
+    private sealed class TrackingDecoderFallback : DecoderFallback
+    {
+        public bool HadInvalidBytes { get; private set; }
+        public override int MaxCharCount => 1;
+        public override DecoderFallbackBuffer CreateFallbackBuffer() => new Buffer(this);
+
+        private sealed class Buffer(TrackingDecoderFallback owner) : DecoderFallbackBuffer
+        {
+            private readonly DecoderFallbackBuffer replacement = new DecoderReplacementFallback("\uFFFD").CreateFallbackBuffer();
+            public override bool Fallback(byte[] bytesUnknown, int index)
+            {
+                owner.HadInvalidBytes = true;
+                return replacement.Fallback(bytesUnknown, index);
+            }
+            public override char GetNextChar() => replacement.GetNextChar();
+            public override bool MovePrevious() => replacement.MovePrevious();
+            public override int Remaining => replacement.Remaining;
+            public override void Reset() => replacement.Reset();
+        }
     }
 
     private static string[] Pad(IReadOnlyList<string> source, int width) => Enumerable.Range(0, width)

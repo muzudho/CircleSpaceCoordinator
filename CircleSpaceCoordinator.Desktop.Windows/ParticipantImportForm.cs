@@ -10,7 +10,11 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
 {
     private readonly IEditorWorkspace workspace;
     private readonly string fileName;
-    private readonly IReadOnlyList<ParticipantTableSheet> sheets;
+    private readonly string sourcePath;
+    private IReadOnlyList<ParticipantTableSheet> sheets;
+    private readonly System.Windows.Forms.ComboBox encodingBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
+    private readonly System.Windows.Forms.Label encodingStatus = new() { Left = 540, Top = 45, Width = 805, Height = 38, AutoEllipsis = true };
+    private readonly System.Windows.Forms.Button importButton = new();
     private readonly System.Windows.Forms.ComboBox sheetBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
     private readonly System.Windows.Forms.ComboBox circleIdBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
     private readonly System.Windows.Forms.ComboBox nameBox = new() { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
@@ -31,7 +35,10 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
     {
         this.workspace = workspace;
         fileName = Path.GetFileName(path);
+        sourcePath = path;
         this.sheets = sheets;
+        var isCsv = Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase);
+        var encodingRowHeight = isCsv ? 40 : 0;
         Text = "参加サークル一覧の読込み";
         Width = 1380;
         Height = 650;
@@ -47,34 +54,44 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
             Width = 1330,
             AutoEllipsis = true,
         };
-        AddLabel("シート", 16, 48);
-        AddLabel("サークルID列", 235, 48);
-        AddLabel("サークル名列", 470, 48);
-        AddLabel("必要セル数列（任意）", 705, 48);
-        AddLabel("ジャンルID列（任意）", 900, 48);
-        AddLabel("合体先サークルID列（任意）", 1125, 48);
-        SetupCombo(sheetBox, 16);
-        SetupCombo(circleIdBox, 235);
-        SetupCombo(nameBox, 470);
-        SetupCombo(requiredCellCountBox, 705);
-        SetupCombo(genreIdBox, 900);
-        SetupCombo(combinedWithCircleIdBox, 1125);
+        if (isCsv)
+        {
+            AddLabel("CSV の文字コード", 16, 48);
+            encodingBox.Left = 235;
+            encodingBox.Top = 45;
+            encodingBox.Width = 290;
+            encodingBox.Items.AddRange(["UTF-8（BOM あり／なし）", "Shift-JIS（Windows / CP932）"]);
+            encodingBox.SelectedIndex = 0;
+            encodingBox.SelectedIndexChanged += (_, _) => ReloadCsv();
+            Controls.AddRange([encodingBox, encodingStatus]);
+            Shown += (_, _) => ReloadCsv();
+        }
+        AddLabel("シート", 16, 48 + encodingRowHeight);
+        AddLabel("サークルID列", 235, 48 + encodingRowHeight);
+        AddLabel("サークル名列", 470, 48 + encodingRowHeight);
+        AddLabel("必要セル数列（任意）", 705, 48 + encodingRowHeight);
+        AddLabel("ジャンルID列（任意）", 900, 48 + encodingRowHeight);
+        AddLabel("合体先サークルID列（任意）", 1125, 48 + encodingRowHeight);
+        SetupCombo(sheetBox, 16, encodingRowHeight);
+        SetupCombo(circleIdBox, 235, encodingRowHeight);
+        SetupCombo(nameBox, 470, encodingRowHeight);
+        SetupCombo(requiredCellCountBox, 705, encodingRowHeight);
+        SetupCombo(genreIdBox, 900, encodingRowHeight);
+        SetupCombo(combinedWithCircleIdBox, 1125, encodingRowHeight);
         preview.Left = 16;
-        preview.Top = 108;
+        preview.Top = 108 + encodingRowHeight;
         preview.Width = 1330;
-        preview.Height = 450;
+        preview.Height = 450 - encodingRowHeight;
         preview.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom |
                          System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
 
-        var importButton = new System.Windows.Forms.Button
-        {
-            Text = "この対応で取り込む",
-            Left = 1176,
-            Top = 570,
-            Width = 170,
-            Height = 34,
-            Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right,
-        };
+        importButton.Text = "この対応で取り込む";
+        importButton.Left = 1176;
+        importButton.Top = 570;
+        importButton.Width = 170;
+        importButton.Height = 34;
+        importButton.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
+        importButton.Enabled = sheets.Count > 0;
         var cancelButton = new System.Windows.Forms.Button
         {
             Text = "キャンセル",
@@ -103,7 +120,8 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
 
         foreach (var sheet in sheets)
             sheetBox.Items.Add(sheet.Name);
-        sheetBox.SelectedIndex = 0;
+        if (sheets.Count > 0)
+            sheetBox.SelectedIndex = 0;
     }
 
     public int ImportedCount { get; private set; }
@@ -122,8 +140,11 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
         try
         {
             settings?.RememberParticipantImportPath(dialog.FileName);
-            var sheets = LoadingSpinnerDialog.Run(owner, "ファイルを読み込んでいます…", () => ParticipantTableReader.Read(dialog.FileName));
-            if (sheets.Count == 0)
+            var isCsv = Path.GetExtension(dialog.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase);
+            // CSV must open the encoding selector even when the initial UTF-8 read fails.
+            var sheets = isCsv ? Array.Empty<ParticipantTableSheet>()
+                : LoadingSpinnerDialog.Run(owner, "ファイルを読み込んでいます…", () => ParticipantTableReader.Read(dialog.FileName));
+            if (!isCsv && sheets.Count == 0)
                 throw new InvalidDataException("列見出しのあるシートがありません。");
             using var form = new ParticipantImportForm(workspace, dialog.FileName, sheets);
             return form.ShowDialog(owner) == System.Windows.Forms.DialogResult.OK ? form.ImportedCount : null;
@@ -133,6 +154,51 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
             System.Windows.Forms.MessageBox.Show(owner, exception.Message, "参加サークル一覧の読込み",
                 System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
             return null;
+        }
+    }
+
+    private void ReloadCsv()
+    {
+        importButton.Enabled = false;
+        sheetBox.Items.Clear();
+        preview.RowCount = 0;
+        preview.Columns.Clear();
+        foreach (var combo in new[] { circleIdBox, nameBox, requiredCellCountBox, combinedWithCircleIdBox, genreIdBox })
+            combo.Items.Clear();
+        sheets = [];
+        encodingBox.Enabled = false;
+        try
+        {
+            var encoding = encodingBox.SelectedIndex == 1 ? ParticipantCsvEncoding.ShiftJis : ParticipantCsvEncoding.Utf8;
+            var result = LoadingSpinnerDialog.Run(this, "選択した文字コードで読み直しています…",
+                () => ParticipantTableReader.ReadCsvPreview(sourcePath, encoding));
+            sheets = [result.Sheet];
+            if (sheets.Count == 0 || sheets[0].Headers.Count == 0)
+                throw new InvalidDataException("列見出しのある CSV ではありません。");
+            foreach (var sheet in sheets)
+                sheetBox.Items.Add(sheet.Name);
+            sheetBox.SelectedIndex = 0;
+            if (result.HasDecodingErrors)
+            {
+                encodingStatus.ForeColor = System.Drawing.Color.Firebrick;
+                encodingStatus.Text = "読み取れない文字を � で表示しています。文字コードを切り替え、表を確認してください。";
+                return;
+            }
+            encodingStatus.ForeColor = System.Drawing.SystemColors.ControlText;
+            encodingStatus.Text = "文字化けする場合は文字コードを切り替えてください。列の対応とプレビューを確認して取り込みます。";
+            importButton.Enabled = true;
+        }
+        catch (Exception exception)
+        {
+            encodingStatus.ForeColor = System.Drawing.Color.Firebrick;
+            var failure = exception.GetBaseException();
+            encodingStatus.Text = failure is System.Text.DecoderFallbackException
+                ? "この文字コードでは読み込めません。UTF-8／Shift-JIS を切り替えてください。"
+                : $"読込みに失敗しました: {failure.Message}";
+        }
+        finally
+        {
+            encodingBox.Enabled = true;
         }
     }
 
@@ -195,10 +261,10 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
         Width = 210,
     });
 
-    private static void SetupCombo(System.Windows.Forms.ComboBox combo, int left)
+    private static void SetupCombo(System.Windows.Forms.ComboBox combo, int left, int encodingRowHeight)
     {
         combo.Left = left;
-        combo.Top = 69;
+        combo.Top = 69 + encodingRowHeight;
         combo.Width = 195;
     }
 

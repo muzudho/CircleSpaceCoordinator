@@ -35,6 +35,9 @@ internal static class Program
             ("Unknown JSON properties are rejected", UnknownPropertyIsRejected),
             ("Legacy participants use their internal ID as circle ID", LegacyParticipantGetsCircleId),
             ("Participant CSV headers are guessed and mapped", ParticipantCsvIsMapped),
+            ("CSV encoding can be corrected from UTF-8 to CP932 without changing the source", ParticipantCsvEncodingCanBeCorrected),
+            ("CSV preview encoding mismatch never throws a decoder exception", ParticipantCsvPreviewDoesNotThrow),
+            ("UTF-8 CSV supports BOM and no BOM with quoted Japanese fields", ParticipantUtf8CsvVariants),
             ("Participant XLSX sheets are read without Microsoft Excel", ParticipantXlsxIsRead),
             ("Confidential flag and genre survive JSON round trip", ConfidentialGenreRoundTrip),
             ("Island topology survives JSON round trip", IslandTopologyRoundTrip),
@@ -233,6 +236,109 @@ internal static class Program
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static void ParticipantCsvEncodingCanBeCorrected()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"circle-cp932-{Guid.NewGuid():N}.csv");
+        // CP932 fixture: ID, name / 001, "日本,①". Includes a Windows extension character.
+        byte[] original = [0x49, 0x44, 0x2C, 0x6E, 0x61, 0x6D, 0x65, 0x0D, 0x0A,
+            0x30, 0x30, 0x31, 0x2C, 0x22, 0x93, 0xFA, 0x96, 0x7B, 0x2C, 0x87, 0x40, 0x22, 0x0D, 0x0A];
+        try
+        {
+            File.WriteAllBytes(path, original);
+            var rejected = false;
+            try { ParticipantTableReader.Read(path); }
+            catch (System.Text.DecoderFallbackException) { rejected = true; }
+            AssertEqual(true, rejected);
+            var sheet = ParticipantTableReader.Read(path, ParticipantCsvEncoding.ShiftJis).Single();
+            var rows = ParticipantTableMapper.Map(sheet, new(0, 1));
+            AssertEqual(1, rows.Count);
+            AssertEqual("001", rows[0].CircleId);
+            AssertEqual("日本,①", rows[0].DisplayName);
+            AssertEqual(true, original.SequenceEqual(File.ReadAllBytes(path)));
+            // An incomplete CP932 lead byte must not silently become a replacement character.
+            File.WriteAllBytes(path, [0x49, 0x44, 0x2C, 0x6E, 0x61, 0x6D, 0x65, 0x0A, 0x31, 0x2C, 0x81]);
+            rejected = false;
+            try { ParticipantTableReader.Read(path, ParticipantCsvEncoding.ShiftJis); }
+            catch (System.Text.DecoderFallbackException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
+        finally { File.Delete(path); }
+    }
+
+    private static void ParticipantCsvPreviewDoesNotThrow()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"circle-preview-{Guid.NewGuid():N}.csv");
+        var decoderExceptions = 0;
+        void OnException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs args)
+        {
+            if (args.Exception is System.Text.DecoderFallbackException)
+                decoderExceptions++;
+        }
+        AppDomain.CurrentDomain.FirstChanceException += OnException;
+        try
+        {
+            // The reported 0x8B byte must become an ordinary mismatch result.
+            File.WriteAllBytes(path, [0x8B]);
+            AssertEqual(false, ParticipantTableReader.TryReadCsv(path, ParticipantCsvEncoding.Utf8, out var invalid));
+            AssertEqual(true, invalid is null);
+            AssertEqual(false, ParticipantTableReader.TryReadCsv(path, ParticipantCsvEncoding.ShiftJis, out invalid));
+            AssertEqual(true, invalid is null);
+
+            byte[] original = [0x49, 0x44, 0x2C, 0x6E, 0x61, 0x6D, 0x65, 0x0A,
+                0x31, 0x2C, 0x93, 0xFA, 0x96, 0x7B, 0x0A];
+            File.WriteAllBytes(path, original);
+            var garbled = ParticipantTableReader.ReadCsvPreview(path, ParticipantCsvEncoding.Utf8);
+            AssertEqual(true, garbled.HasDecodingErrors);
+            AssertEqual("ID", garbled.Sheet.Headers[0]);
+            AssertEqual("1", garbled.Sheet.Rows[0][0]);
+            AssertEqual(true, garbled.Sheet.Rows[0][1].Contains('\uFFFD'));
+            var readable = ParticipantTableReader.ReadCsvPreview(path, ParticipantCsvEncoding.ShiftJis);
+            AssertEqual(false, readable.HasDecodingErrors);
+            AssertEqual("日本", readable.Sheet.Rows[0][1]);
+            AssertEqual(false, ParticipantTableReader.TryReadCsv(path, ParticipantCsvEncoding.Utf8, out _));
+            AssertEqual(true, ParticipantTableReader.TryReadCsv(path, ParticipantCsvEncoding.ShiftJis, out var corrected));
+            AssertEqual("日本", corrected!.Rows[0][1]);
+            AssertEqual(true, original.SequenceEqual(File.ReadAllBytes(path)));
+
+            // A literal replacement character in a valid UTF-8 file is not a decode failure.
+            File.WriteAllText(path, "ID,name\n1,日本\uFFFD\n", new System.Text.UTF8Encoding(true));
+            AssertEqual(true, ParticipantTableReader.TryReadCsv(path, ParticipantCsvEncoding.Utf8, out var valid));
+            AssertEqual("日本\uFFFD", valid!.Rows[0][1]);
+            AssertEqual(0, decoderExceptions);
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.FirstChanceException -= OnException;
+            File.Delete(path);
+        }
+    }
+
+    private static void ParticipantUtf8CsvVariants()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"circle-utf8-{Guid.NewGuid():N}.csv");
+        try
+        {
+            foreach (var bom in new[] { false, true })
+            {
+                File.WriteAllText(path, "サークルID,サークル名,備考\r\n001,\"日本,①\",\"一行目\r\n二行目\"\r\n",
+                    new System.Text.UTF8Encoding(bom));
+                var sheet = ParticipantTableReader.Read(path, ParticipantCsvEncoding.Utf8).Single();
+                AssertEqual("サークルID", sheet.Headers[0]);
+                var rows = ParticipantTableMapper.Map(sheet, ParticipantTableMapper.Guess(sheet.Headers));
+                AssertEqual("001", rows.Single().CircleId);
+                AssertEqual("日本,①", rows.Single().DisplayName);
+                AssertEqual("一行目\r\n二行目", sheet.Rows[0][2]);
+                var bytes = File.ReadAllBytes(path).Concat(new byte[] { 0xFF }).ToArray();
+                File.WriteAllBytes(path, bytes);
+                var rejected = false;
+                try { ParticipantTableReader.Read(path); }
+                catch (System.Text.DecoderFallbackException) { rejected = true; }
+                AssertEqual(true, rejected);
+            }
+        }
+        finally { File.Delete(path); }
     }
 
     private static void ParticipantXlsxIsRead()

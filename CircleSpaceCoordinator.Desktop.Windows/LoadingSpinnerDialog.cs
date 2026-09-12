@@ -54,28 +54,26 @@ internal sealed class LoadingSpinnerDialog : System.Windows.Forms.Form
         ArgumentNullException.ThrowIfNull(operation);
 
         using var dialog = new LoadingSpinnerDialog(message);
-        var ownerForm = owner as System.Windows.Forms.Form;
-        try
+        T result = default!;
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo? failure = null;
+        dialog.Shown += async (_, _) =>
         {
-            if (ownerForm is not null)
-                ownerForm.Enabled = false;
-            if (owner is null)
-                dialog.Show();
-            else
-                dialog.Show(owner);
             dialog.animationTimer.Start();
-
-            var task = Task.Run(operation);
-            while (!task.Wait(50))
-                System.Windows.Forms.Application.DoEvents();
-            return task.GetAwaiter().GetResult();
-        }
-        finally
-        {
-            dialog.animationTimer.Stop();
-            dialog.Close();
-            if (ownerForm is not null && !ownerForm.IsDisposed)
-                ownerForm.Enabled = true;
-        }
+            try { result = await Task.Run(operation); }
+            catch (Exception exception) { failure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(exception); }
+            finally
+            {
+                dialog.animationTimer.Stop();
+                dialog.Close();
+            }
+        };
+        // Native modal ownership restores the owner before closing the progress window.
+        // Closing a modeless window while its owner is disabled can activate another app.
+        if (owner is null)
+            dialog.ShowDialog();
+        else
+            dialog.ShowDialog(owner);
+        failure?.Throw();
+        return result;
     }
 }
