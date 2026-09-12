@@ -16,13 +16,6 @@ public sealed partial class VenueEditorGame
     private int deskRingHeight;
     private ScreenPoint deskRingCenter;
 
-    private string DeskMenuLabel => activeCanvasTool switch
-    {
-        ToolbarAction.AddDesk => "机追加",
-        ToolbarAction.RemoveDesk => "机削除",
-        _ => "机",
-    };
-
     private void OpenDeskRing()
     {
         CancelInProgressPointerInteraction();
@@ -45,9 +38,9 @@ public sealed partial class VenueEditorGame
         deskRingButtons.Clear();
         var anchor = toolbarButtons.Single(button => button.Action == ToolbarAction.DeskMenu).Model.Bounds;
         // Shift the whole ring into the window when its toolbar anchor is near an edge.
-        var radius = Math.Max(0d, Math.Min(105d, Math.Min((width - 128d) / 2d, (height - 68d) / 2d)));
-        var halfWidth = Math.Min(56d, width / 2d);
-        var halfHeight = Math.Min(26d, height / 2d);
+        var radius = Math.Max(0d, Math.Min(72d, Math.Min((width - 60d) / 2d, (height - 60d) / 2d)));
+        var halfWidth = Math.Min(22d, Math.Min(width, height) / 2d);
+        var halfHeight = halfWidth;
         var extentX = radius + halfWidth;
         var extentY = radius + halfHeight;
         deskRingCenter = new ScreenPoint(
@@ -62,6 +55,9 @@ public sealed partial class VenueEditorGame
                 deskRingCenter.Y + Math.Sin(angle) * radius - halfHeight,
                 halfWidth * 2d, halfHeight * 2d), labels[index]));
         }
+        deskRingButtons.Add(new IconButtonModel(new ScreenRectangle(
+            deskRingCenter.X - halfWidth, deskRingCenter.Y - halfHeight,
+            halfWidth * 2d, halfHeight * 2d), "机（メニューを閉じる）"));
     }
 
     private bool UpdateDeskRing(KeyboardState keyboard, MouseState mouse)
@@ -84,9 +80,9 @@ public sealed partial class VenueEditorGame
             return true;
         }
         if (IsPressed(keyboard, Keys.Tab) || IsPressed(keyboard, Keys.Right) || IsPressed(keyboard, Keys.Down))
-            deskRingFocus = (deskRingFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? 2 : 1)) % 3;
+            deskRingFocus = (deskRingFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? deskRingButtons.Count - 1 : 1)) % deskRingButtons.Count;
         if (IsPressed(keyboard, Keys.Left) || IsPressed(keyboard, Keys.Up))
-            deskRingFocus = (deskRingFocus + 2) % 3;
+            deskRingFocus = (deskRingFocus + deskRingButtons.Count - 1) % deskRingButtons.Count;
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
             CloseDeskRing(deskRingFocus);
@@ -125,7 +121,6 @@ public sealed partial class VenueEditorGame
         if (!deskRingOpen) return;
         EnsureDeskRingButtons();
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
-        textRenderer?.Draw("机", ToRectangle(new ScreenRectangle(deskRingCenter.X - 25, deskRingCenter.Y - 18, 50, 36)), Color.White, 21, true);
         for (var index = 0; index < deskRingButtons.Count; index++)
         {
             var button = deskRingButtons[index];
@@ -133,7 +128,22 @@ public sealed partial class VenueEditorGame
             StationeryButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
-                (area, color) => textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 5), ToButtonColor(color), 17, true));
+                (area, color) =>
+                {
+                    if (index == 2)
+                    {
+                        var center = new ScreenPoint(area.X + area.Width / 2d, area.Y + area.Height / 2d);
+                        DrawLine(new ScreenPoint(center.X - 8, center.Y - 8), new ScreenPoint(center.X + 8, center.Y + 8), 3, ToButtonColor(color));
+                        DrawLine(new ScreenPoint(center.X + 8, center.Y - 8), new ScreenPoint(center.X - 8, center.Y + 8), 3, ToButtonColor(color));
+                    }
+                    else
+                        DrawToolbarIcon(index switch
+                        {
+                            0 => ToolbarAction.AddDesk,
+                            1 => ToolbarAction.RemoveDesk,
+                            _ => ToolbarAction.DeskMenu,
+                        }, area, ToButtonColor(color));
+                });
         }
     }
 }

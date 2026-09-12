@@ -180,6 +180,9 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
+        // Screen capture remains available while either overlay owns input.
+        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
+            screenshotRequested = true;
         if (UpdateDeskRing(keyboard, mouse))
         {
             previousMouse = mouse;
@@ -189,9 +192,6 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
-        // Capturing the current screen is available even while a modal owns input.
-        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
-            screenshotRequested = true;
         PollOptimization();
         if (UpdateModalDialog(keyboard, mouse))
         {
@@ -2365,7 +2365,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action == ToolbarAction.DeskMenu ? 90d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
+            var buttonWidth = action == ToolbarAction.DeskMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
                 action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
@@ -2814,7 +2814,8 @@ public sealed partial class VenueEditorGame : Game
                             _ => "書き出す",
                         }, ToRectangle(bounds, 5), foreground, 16, true);
                     else if (button.Action == ToolbarAction.DeskMenu)
-                        textRenderer?.Draw(DeskMenuLabel, ToRectangle(bounds, 5), foreground, 17, true);
+                        DrawToolbarIcon(activeCanvasTool is ToolbarAction.AddDesk or ToolbarAction.RemoveDesk
+                            ? activeCanvasTool : ToolbarAction.DeskMenu, bounds, foreground);
                     else
                         DrawToolbarIcon(button.Action, bounds, foreground);
                 });
@@ -2827,6 +2828,7 @@ public sealed partial class VenueEditorGame : Game
         var center = new ScreenPoint(bounds.X + bounds.Width / 2d, bounds.Y + bounds.Height / 2d);
         switch (action)
         {
+            case ToolbarAction.DeskMenu:
             case ToolbarAction.DeskPlacementMode:
                 DrawOutline(new ScreenRectangle(center.X - 13d, center.Y - 7d, 26d, 14d), 3d, color);
                 DrawLine(new ScreenPoint(center.X - 9d, center.Y + 7d), new ScreenPoint(center.X - 9d, center.Y + 13d), 3d, color);
