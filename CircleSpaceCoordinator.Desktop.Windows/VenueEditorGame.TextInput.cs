@@ -17,6 +17,7 @@ public sealed partial class VenueEditorGame
     private UnderlineTextEditor? underlineEditor;
     private string compositionText = "";
     private bool suppressTextConfirmation;
+    private bool selectingUnderlineText;
 
     private void OpenUnderlineInput(string title, string initial, Action<string> accepted)
     {
@@ -56,7 +57,7 @@ public sealed partial class VenueEditorGame
             "キーボード操作　Ctrl+A：全選択　Ctrl+C：コピー　Ctrl+V：貼り付け　Ctrl+X：切り取り",
             "Ctrl+Z：元に戻す　Ctrl+Y：やり直し　←／→・Home／End：移動　Shift 併用：範囲選択",
             "Tab：入力欄・ボタンを移動　Enter：確定／選択中のボタンを実行　Esc：キャンセル（IME 変換中を除く）",
-            "Ctrl+P：画面を撮影　余白をクリック：入力フォーカスを外す（変換中の文字は取り消します）",
+            "ドラッグ：範囲選択　Ctrl+P：画面を撮影　余白をクリック：入力を離れる（未確定の変換は取消）",
         ];
         for (var index = 0; index < lines.Length; index++)
             textRenderer?.Draw(lines[index], new Rectangle(16, top + 8 + index * 25, Math.Max(1, width - 32), 23),
@@ -70,6 +71,7 @@ public sealed partial class VenueEditorGame
         var updates = textInputService.DrainUpdates();
         foreach (var update in updates)
         {
+            selectingUnderlineText = false;
             if (update.IsComposition) compositionText = update.Text;
             else
             {
@@ -85,6 +87,7 @@ public sealed partial class VenueEditorGame
         {
             // Leave the modal open, but stop editing. Uncommitted IME text is cancelled.
             modalFocus = NoModalFocus;
+            selectingUnderlineText = false;
             textInputService.Stop();
             compositionText = "";
             pressedModalButton?.CancelPress();
@@ -99,6 +102,7 @@ public sealed partial class VenueEditorGame
         }
         if (IsPressed(keyboard, Keys.Tab))
         {
+            selectingUnderlineText = false;
             modalFocus = modalFocus >= modalButtons.Count - 1 ? -1 : modalFocus + 1;
             if (modalFocus == TextInputFocus) textInputService.Start(); else textInputService.Stop();
         }
@@ -125,7 +129,7 @@ public sealed partial class VenueEditorGame
                 if (IsPressed(keyboard, Keys.Y)) editor.Redo();
                 try
                 {
-                    if (IsPressed(keyboard, Keys.C) || IsPressed(keyboard, Keys.X))
+                    if (editor.SelectionLength > 0 && (IsPressed(keyboard, Keys.C) || IsPressed(keyboard, Keys.X)))
                     {
                         textInputService.WriteClipboard(editor.SelectedText);
                         if (IsPressed(keyboard, Keys.X) && editor.SelectionLength > 0) editor.Delete(false);
@@ -145,10 +149,9 @@ public sealed partial class VenueEditorGame
             {
                 modalFocus = TextInputFocus;
                 textInputService.Start();
-                var boundaries = StringInfo.ParseCombiningCharacters(editor.Text).Append(editor.Text.Length);
-                var scale = UnderlineScale(editor.Text);
-                var position = boundaries.MinBy(index => Math.Abs(UnderlineBounds().X + MeasureInput(editor.Text[..index]) * scale - mouse.X));
-                editor.MoveTo(position, keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift));
+                editor.MoveTo(UnderlineCaretIndex(editor.Text, mouse.X),
+                    keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift));
+                selectingUnderlineText = true;
             }
             else
             {
@@ -159,6 +162,14 @@ public sealed partial class VenueEditorGame
                     textInputService.Stop();
                 }
             }
+        }
+        // Keep the initial anchor while dragging, including outside the field and on release.
+        // MoveTo belongs to StationeryUI and preserves complete Unicode text elements.
+        if (selectingUnderlineText && previousMouse.LeftButton == ButtonState.Pressed)
+        {
+            if (mouse.X != previousMouse.X || mouse.Y != previousMouse.Y)
+                editor.MoveTo(UnderlineCaretIndex(editor.Text, mouse.X), extend: true);
+            if (mouse.LeftButton == ButtonState.Released) selectingUnderlineText = false;
         }
         if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed)
         {
@@ -183,6 +194,13 @@ public sealed partial class VenueEditorGame
     }
 
     private int MeasureInput(string text) => textRenderer?.Measure(text, 22).X ?? 0;
+
+    private int UnderlineCaretIndex(string text, int pointerX)
+    {
+        var boundaries = StringInfo.ParseCombiningCharacters(text).Append(text.Length);
+        var scale = UnderlineScale(text);
+        return boundaries.MinBy(index => Math.Abs(UnderlineBounds().X + MeasureInput(text[..index]) * scale - pointerX));
+    }
 
     private Rectangle UnderlineTextBounds()
     {

@@ -97,6 +97,7 @@ public sealed partial class VenueEditorGame
             return;
         }
         if (!modalDialog.IsClosed) return;
+        selectingUnderlineText = false;
         textInputService?.Stop();
         var completed = modalCompleted;
         modalDialog = null;

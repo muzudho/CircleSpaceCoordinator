@@ -557,6 +557,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        selectingUnderlineText = false;
         tableScrollDragVertical = null;
         draggingPlanScrollbar = false;
         foreach (var button in toolbarButtons) button.Model.ClearPointerState();
