@@ -1492,7 +1492,7 @@ public sealed partial class VenueEditorGame : Game
         foreach (var placement in CircleSeatExportBuilder.FindMissingDeskNumbers(plan))
         {
             var type = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
-            var seats = placement.GetSeatCells(type);
+            var seats = placement.GetFrameNumberCells(type);
             foreach (var cell in seats)
             {
                 var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
@@ -1511,7 +1511,8 @@ public sealed partial class VenueEditorGame : Game
         if (workspace is null) return false;
         var placement = workspace.SelectedPlan.DeskPlacements.Single(item => item.Id == placementId);
         var type = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
-        return placement.GetSeatCells(type).Contains(cell);
+        return (selectedNumberChannel == 1 || activeCanvasTool == ToolbarAction.EditDeskNumber
+            ? placement.GetFrameNumberCells(type) : placement.GetSeatCells(type)).Contains(cell);
     }
 
     private int VenueTextSize(int basePixelHeight) =>

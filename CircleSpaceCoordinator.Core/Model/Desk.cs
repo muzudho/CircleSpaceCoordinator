@@ -35,4 +35,10 @@ public sealed record DeskPlacement(
             : deskType.Footprint)
         .Select(relative => Anchor + relative.Rotate(Orientation))
         .ToHashSet();
+
+    public IReadOnlySet<GridPosition> GetFrameNumberCells(DeskType deskType)
+    {
+        var seats = GetSeatCells(deskType);
+        return seats.Count == 0 ? GetOccupiedCells(deskType) : seats;
+    }
 }

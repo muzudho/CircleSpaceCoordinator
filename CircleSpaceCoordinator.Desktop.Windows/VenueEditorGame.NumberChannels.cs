@@ -54,7 +54,8 @@ public sealed partial class VenueEditorGame
             .GroupBy(label => (label.BlockName, label.SeatName)).Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet();
         foreach (var placement in plan.DeskPlacements)
         {
-            var seats = placement.GetSeatCells(types[placement.DeskTypeId]);
+            var seats = selectedNumberChannel == 1
+                ? placement.GetFrameNumberCells(types[placement.DeskTypeId]) : placement.GetSeatCells(types[placement.DeskTypeId]);
             foreach (var cell in seats)
             {
                 var relative = new GridPosition(cell.X - placement.Anchor.X, cell.Y - placement.Anchor.Y)

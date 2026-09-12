@@ -91,7 +91,7 @@ internal static class SpaceDefinitionDialog
             Label(form, edgeNames[i], 565, 170 + i * 65);
             edges[i] = Combo(form, ["開放", "壁", "入口", "正面"], source.Edges[i], 635, 165 + i * 65, 195);
         }
-        Label(form, "灰色（—）：占有するが席ではない\n色＋番号：割当区画\n暗い空欄：占有しない", 560, 445, 270);
+        Label(form, "灰色（—）：セル区画なし\n色＋番号：割当区画（位置は自由）\n暗い空欄：占有しない\nブロックを入力するために、フレームを代表するセルが１つは必要です", 560, 425, 270);
         Buttons(form, () => save(source with
         {
             Name = name.Text.Trim(), Kind = kind.Text, Width = (int)width.Value, Height = (int)height.Value,

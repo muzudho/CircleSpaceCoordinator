@@ -40,7 +40,7 @@ public sealed partial class VenueEditorGame
             if (!ReferenceEquals(definition, cachedNextDefinition))
             {
                 cachedNextDefinition = definition;
-                cachedNextType = definition is null ? null : SpaceTypeFactory.Create(definition);
+                cachedNextType = definition is null || !definition.Cells.Any(cell => cell.Area > 0) ? null : SpaceTypeFactory.Create(definition);
             }
             return cachedNextType;
         }
@@ -250,6 +250,16 @@ public sealed partial class VenueEditorGame
         DrawRectangle(bounds, ghost ? (ghostColor ?? Color.LightBlue) * 0.22f : fill * (space.Kind == "場所" ? 0.55f : 1f));
         DrawOutline(bounds, 2, outline);
         DrawDeskOrientationMarker(bounds, orientation, ghost ? ghostColor ?? Color.LightBlue : disabled ? Color.Gray : new Color(145, 98, 38));
+
+        foreach (var seat in space.Cells.Where(cell => cell.Area > 0))
+        {
+            var at = anchor + new GridPosition(seat.X, seat.Y).Rotate(orientation);
+            var cellBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(at));
+            // Offset from the label's center so numbers do not hide the placement marker.
+            var dot = new ScreenPoint(cellBounds.X + cellBounds.Width / 2, cellBounds.Y + cellBounds.Height * 0.72);
+            DrawCircle(dot, Math.Clamp(cellBounds.Width * 0.045, 1.5, 3),
+                ghost ? ghostColor ?? Color.LightBlue : disabled ? Color.Gray : new Color(55, 39, 19));
+        }
 
         // Walls and entrances belong to the whole space, not to each underlying cell.
         for (var edge = 0; edge < 4; edge++)

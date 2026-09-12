@@ -841,7 +841,10 @@ internal static class Program
 
     private static void CatalogSpacesRoundTrip()
     {
-        foreach (var definition in SpaceDefinitionCatalog.CreateDefault().Types)
+        var defaults = SpaceDefinitionCatalog.CreateDefault().Types;
+        var booth = defaults.Single(type => type.Id == "booth");
+        var frameOnly = booth with { Id = "representative-booth", Cells = booth.Cells.Select(cell => cell with { Area = cell.X == 2 && cell.Y == 1 ? 1 : 0 }).ToArray() };
+        foreach (var definition in defaults.Append(frameOnly))
         foreach (var orientation in Enum.GetValues<QuarterTurn>())
         {
             var workspace = new ProjectWorkspace(CreateProject() with
@@ -854,6 +857,7 @@ internal static class Program
             AssertEqual(true, commands.AddDeskAt(new GridPosition(10, 10), orientation, type).Applied);
             var placed = workspace.SelectedPlan.DeskPlacements.Single(p => p.DeskTypeId == type.Id);
             var seats = placed.GetSeatCells(type);
+            AssertEqual(true, placed.GetFrameNumberCells(type).SetEquals(seats.Count == 0 ? placed.GetOccupiedCells(type) : seats));
             foreach (var cell in definition.Cells)
                 AssertEqual(cell.Area > 0, seats.Contains(placed.Anchor + new GridPosition(cell.X, cell.Y).Rotate(orientation)));
             var legacyType = type with { Space = null };
@@ -917,7 +921,12 @@ internal static class Program
             }
             catch (InvalidDataException) { }
             var emptyType = changed.Types[0] with { Cells = [new(0, 0, 0)] };
-            try { (changed with { Types = [emptyType] }).Validate(); throw new Exception("Expected missing area rejection."); }
+            var frameOnlyCatalog = new SpaceDefinitionCatalog([emptyType], []);
+            try { first.Save(frameOnlyCatalog); throw new Exception("Expected representative cell rejection."); }
+            catch (InvalidDataException ex) { AssertEqual("ブロックを入力するために、フレームを代表するセルが１つは必要です", ex.Message); }
+            File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(frameOnlyCatalog, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+            AssertEqual(0, new SpaceDefinitionStore(path).Current.Types.Single().Cells.Single().Area);
+            try { new SpaceDefinitionCatalog([emptyType with { Cells = [] }], []).Validate(); throw new Exception("Expected empty footprint rejection."); }
             catch (InvalidDataException) { }
             File.WriteAllText(path, "broken");
             try { _ = new SpaceDefinitionStore(path); throw new Exception("Expected corrupt file rejection."); }

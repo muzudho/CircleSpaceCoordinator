@@ -74,7 +74,6 @@ public static class ProjectValidator
                  space.Cells is null || space.Edges is null || space.Edges.Count != 4 ||
                  space.Edges.Any(edge => edge is not ("開放" or "壁" or "入口" or "正面")) ||
                  space.Cells.Any(cell => cell is null || cell.X < 0 || cell.Y < 0 || cell.X >= space.Width || cell.Y >= space.Height || cell.Area is < 0 or > 9) ||
-                 !space.Cells.Any(cell => cell.Area > 0) ||
                  space.Cells.Count != deskType.Footprint.Count ||
                  !space.Cells.Select(cell => new GridPosition(cell.X, cell.Y)).ToHashSet().SetEquals(deskType.Footprint)))
                 Add("deskType.space.invalid", $"deskTypes[{deskType.Id}].space", "Space details must describe the footprint, allocation areas and four edges.");

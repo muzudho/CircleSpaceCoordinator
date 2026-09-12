@@ -31,7 +31,7 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
         ]);
     }
 
-    public void Validate()
+    public void Validate(bool requireRepresentativeCell = true)
     {
         if (SchemaVersion != 1) throw new InvalidDataException("未対応のフレーム定義形式です。");
         if (Types is null || Requests is null) throw new InvalidDataException("型と申込スペースの一覧が必要です。");
@@ -46,10 +46,12 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
             if (type.Kind is not ("机" or "場所" or "ブース") || type.Edges is null || type.Edges.Count != 4 ||
                 type.Edges.Any(e => e is not ("開放" or "壁" or "入口" or "正面")))
                 throw new InvalidDataException("種類と各辺の情報を指定してください。");
-            if (type.Cells is null || type.Cells.Count == 0 || !type.Cells.Any(c => c.Area > 0) ||
+            if (type.Cells is null || type.Cells.Count == 0 ||
                 type.Cells.Any(c => c.X < 0 || c.X >= type.Width || c.Y < 0 || c.Y >= type.Height || c.Area is < 0 or > 9) ||
                 type.Cells.Select(c => (c.X, c.Y)).Distinct().Count() != type.Cells.Count)
-                throw new InvalidDataException("占有範囲内に少なくとも1つの割当区画を作ってください。区画番号は1～9です。");
+                throw new InvalidDataException("占有セルを1つ以上指定してください。区画番号は0～9で、0はセル区画なしです。");
+            if (requireRepresentativeCell && !type.Cells.Any(cell => cell.Area > 0))
+                throw new InvalidDataException("ブロックを入力するために、フレームを代表するセルが１つは必要です");
         }
         foreach (var request in Requests)
         {
@@ -79,7 +81,8 @@ public sealed class SpaceDefinitionStore
             Current = JsonSerializer.Deserialize<SpaceDefinitionCatalog>(savedJson, Options) ?? throw new InvalidDataException("フレーム定義を読み込めません。");
         }
         else Current = SpaceDefinitionCatalog.CreateDefault();
-        Current.Validate();
+        // Earlier versions allowed no representative cell. Keep those definitions editable.
+        Current.Validate(requireRepresentativeCell: false);
     }
 
     public void Save(SpaceDefinitionCatalog catalog)
