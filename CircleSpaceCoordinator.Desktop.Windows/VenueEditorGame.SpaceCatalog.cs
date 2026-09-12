@@ -225,31 +225,33 @@ public sealed partial class VenueEditorGame
 
     private void DrawSpaceOnCanvas(SpaceTypeDetails space, GridPosition anchor, QuarterTurn orientation, bool ghost, bool disabled, Color? ghostColor = null)
     {
-        foreach (var cell in space.Cells)
+        var cells = space.Cells.Select(cell => anchor + new GridPosition(cell.X, cell.Y).Rotate(orientation)).ToArray();
+        if (cells.Length == 0) return;
+        var topLeft = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(new GridPosition(cells.Min(cell => cell.X), cells.Min(cell => cell.Y))));
+        var bottomRight = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(new GridPosition(cells.Max(cell => cell.X) + 1, cells.Max(cell => cell.Y) + 1)));
+        var bounds = new ScreenRectangle(topLeft.X + 2, topLeft.Y + 2,
+            Math.Max(1, bottomRight.X - topLeft.X - 4), Math.Max(1, bottomRight.Y - topLeft.Y - 4));
+        var outline = ghostColor ?? (disabled ? Color.Gray : new Color(92, 60, 23));
+        var fill = disabled ? new Color(104, 108, 112) : new Color(198, 145, 54);
+        DrawRectangle(bounds, ghost ? (ghostColor ?? Color.LightBlue) * 0.22f : fill * (space.Kind == "場所" ? 0.55f : 1f));
+        DrawOutline(bounds, 2, outline);
+        DrawDeskOrientationMarker(bounds, orientation, ghost ? ghostColor ?? Color.LightBlue : disabled ? Color.Gray : new Color(145, 98, 38));
+
+        // Walls and entrances belong to the whole space, not to each underlying cell.
+        for (var edge = 0; edge < 4; edge++)
         {
-            var at = anchor + new GridPosition(cell.X, cell.Y).Rotate(orientation);
-            var rect = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(at));
-            var area = new ScreenRectangle(rect.X + 1, rect.Y + 1, Math.Max(1, rect.Width - 2), Math.Max(1, rect.Height - 2));
-            var palette = SpaceDefinitionDialog.AreaColor(cell.Area);
-            var color = disabled ? new Color(90, 94, 100) : new Color(palette.R, palette.G, palette.B);
-            DrawRectangle(area, ghost ? (ghostColor ?? Color.LightBlue) * 0.22f : color * (space.Kind == "場所" ? 0.55f : 1f));
-            DrawOutline(area, ghost ? 2 : 1, ghostColor ?? Color.LightGray);
-            for (var edge = 0; edge < 4; edge++)
+            var side = (edge + (int)orientation) % 4;
+            var kind = space.Edges[edge];
+            if (kind is not ("壁" or "入口")) continue;
+            var start = side switch { 0 => new ScreenPoint(bounds.X, bounds.Y), 1 => new ScreenPoint(bounds.X + bounds.Width, bounds.Y), 2 => new ScreenPoint(bounds.X + bounds.Width, bounds.Y + bounds.Height), _ => new ScreenPoint(bounds.X, bounds.Y + bounds.Height) };
+            var end = side switch { 0 => new ScreenPoint(bounds.X + bounds.Width, bounds.Y), 1 => new ScreenPoint(bounds.X + bounds.Width, bounds.Y + bounds.Height), 2 => new ScreenPoint(bounds.X, bounds.Y + bounds.Height), _ => new ScreenPoint(bounds.X, bounds.Y) };
+            var edgeColor = ghostColor ?? (disabled ? Color.Gray : kind == "壁" ? Color.Orange : Color.LightGreen);
+            if (kind == "入口")
             {
-                if (!(edge switch { 0 => cell.Y == 0, 1 => cell.X == space.Width - 1, 2 => cell.Y == space.Height - 1, _ => cell.X == 0 })) continue;
-                var side = (edge + (int)orientation) % 4;
-                var kind = space.Edges[edge];
-                if (kind == "開放") continue;
-                var start = side switch { 0 => new ScreenPoint(rect.X, rect.Y), 1 => new ScreenPoint(rect.X + rect.Width, rect.Y), 2 => new ScreenPoint(rect.X + rect.Width, rect.Y + rect.Height), _ => new ScreenPoint(rect.X, rect.Y + rect.Height) };
-                var end = side switch { 0 => new ScreenPoint(rect.X + rect.Width, rect.Y), 1 => new ScreenPoint(rect.X + rect.Width, rect.Y + rect.Height), 2 => new ScreenPoint(rect.X, rect.Y + rect.Height), _ => new ScreenPoint(rect.X, rect.Y) };
-                var edgeColor = ghostColor ?? (disabled ? Color.Gray : kind == "壁" ? Color.Orange : kind == "入口" ? Color.LightGreen : Color.LightBlue);
-                if (kind == "入口")
-                {
-                    DrawLine(start, new ScreenPoint(start.X + (end.X - start.X) * 0.25, start.Y + (end.Y - start.Y) * 0.25), 3, edgeColor);
-                    DrawLine(new ScreenPoint(start.X + (end.X - start.X) * 0.75, start.Y + (end.Y - start.Y) * 0.75), end, 3, edgeColor);
-                }
-                else DrawLine(start, end, kind == "壁" ? 4 : 2, edgeColor);
+                DrawLine(start, new ScreenPoint(start.X + (end.X - start.X) * 0.25, start.Y + (end.Y - start.Y) * 0.25), 3, edgeColor);
+                DrawLine(new ScreenPoint(start.X + (end.X - start.X) * 0.75, start.Y + (end.Y - start.Y) * 0.75), end, 3, edgeColor);
             }
+            else DrawLine(start, end, 4, edgeColor);
         }
     }
 }
