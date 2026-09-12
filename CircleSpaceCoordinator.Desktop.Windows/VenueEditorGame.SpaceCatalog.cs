@@ -21,6 +21,10 @@ public sealed partial class VenueEditorGame
     private readonly List<(IconButtonModel Model, Action Run)> catalogButtons = [];
     private IconButtonModel? pressedCatalogButton;
     private bool pressedNextSpace;
+    private bool pressedNextDirection;
+    private IconButtonModel? nextDirectionButton;
+    private ScreenRectangle NextDirectionBounds => new(NextSpaceBounds.X + 164, NextSpaceBounds.Y + 124, 44, 44);
+    private IconButtonModel NextDirectionButton => nextDirectionButton ??= new(NextDirectionBounds, "向き");
     private int catalogWidth;
     private int catalogHeight;
 
@@ -41,7 +45,7 @@ public sealed partial class VenueEditorGame
             return cachedNextType;
         }
     }
-    private ScreenRectangle NextSpaceBounds => new(12, ToolbarHeight + 12, 220, 156);
+    private ScreenRectangle NextSpaceBounds => new(12, ToolbarHeight + 12, 220, 200);
 
     private void OpenSpaceCatalog()
     {
@@ -149,7 +153,17 @@ public sealed partial class VenueEditorGame
         DrawSpaceTypePreview(type, nextDeskOrientation, new ScreenRectangle(bounds.X + 12, bounds.Y + 35, 90, 80));
         textRenderer?.Draw(type.Name, ToRectangle(new ScreenRectangle(bounds.X + 108, bounds.Y + 40, 104, 50)), Color.White, 15);
         textRenderer?.Draw(FormatOrientation(nextDeskOrientation), ToRectangle(new ScreenRectangle(bounds.X + 110, bounds.Y + 94, 100, 22)), Color.LightGray, 15);
-        textRenderer?.Draw("クリックで型・方向を選ぶ", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 128, 204, 22)), Color.LightGray, 14);
+        var button = NextDirectionButton;
+        button.UpdatePointer(CanShowEditorHover ? new ScreenPoint(Mouse.GetState().X, Mouse.GetState().Y) : new ScreenPoint(-1, -1));
+        StationeryButtonRenderer.Draw(button,
+            (area, color) => DrawRectangle(area, ToButtonColor(color)),
+            (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
+            (area, color) =>
+            {
+                textRenderer?.Draw("向き", ToRectangle(area, 4), ToButtonColor(color), 16, true);
+                DrawCircle(new ScreenPoint(area.X + area.Width - 6, area.Y + area.Height - 6), 3.5, ToButtonColor(color));
+            });
+        textRenderer?.Draw("クリックで型を選ぶ", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 174, 204, 22)), Color.LightGray, 14);
     }
 
     private void DrawSpaceCatalog()

@@ -220,12 +220,17 @@ public sealed partial class VenueEditorGame : Game
             {
                 CancelInProgressPointerInteraction();
                 pressedNextSpace = Contains(NextSpaceBounds, pointer);
+                pressedNextDirection = NextSpace is not null && NextDirectionButton.Press(pointer);
             }
             if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed)
             {
                 var open = pressedNextSpace && Contains(NextSpaceBounds, pointer);
+                var direction = pressedNextDirection;
+                var openDirection = NextDirectionButton.Release(pointer);
                 pressedNextSpace = false;
-                if (open) OpenSpaceCatalog();
+                pressedNextDirection = false;
+                if (direction && openDirection) OpenToolRing(ToolbarAction.NextDirectionMenu);
+                else if (open && !direction && !Contains(NextDirectionBounds, pointer)) OpenSpaceCatalog();
                 else CancelInProgressPointerInteraction();
             }
             previousMouse = mouse;
@@ -605,6 +610,8 @@ public sealed partial class VenueEditorGame : Game
     private void CancelInProgressPointerInteraction()
     {
         pressedNextSpace = false;
+        pressedNextDirection = false;
+        nextDirectionButton?.CancelPress();
         pressedCatalogButton?.CancelPress();
         pressedCatalogButton = null;
         foreach (var item in catalogButtons) item.Model.ClearPointerState();
@@ -2510,6 +2517,17 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
+        if (action is ToolbarAction.FaceNorth or ToolbarAction.FaceEast or ToolbarAction.FaceSouth or ToolbarAction.FaceWest)
+        {
+            nextDeskOrientation = action switch
+            {
+                ToolbarAction.FaceNorth => QuarterTurn.North,
+                ToolbarAction.FaceEast => QuarterTurn.East,
+                ToolbarAction.FaceSouth => QuarterTurn.South,
+                _ => QuarterTurn.West,
+            };
+            return (true, $"next_orientation={nextDeskOrientation}");
+        }
         if (action == ToolbarAction.SpaceDefinitionsMode)
         {
             OpenSpaceDefinitions();
@@ -2908,6 +2926,23 @@ public sealed partial class VenueEditorGame : Game
     private static Color ToButtonColor(ButtonColor color) => new(color.R, color.G, color.B, color.A);
     private void DrawToolbarIcon(ToolbarAction action, ScreenRectangle bounds, Color color)
     {
+        if (action is ToolbarAction.FaceNorth or ToolbarAction.FaceEast or ToolbarAction.FaceSouth or ToolbarAction.FaceWest)
+        {
+            var orientation = action switch
+            {
+                ToolbarAction.FaceNorth => QuarterTurn.North,
+                ToolbarAction.FaceEast => QuarterTurn.East,
+                ToolbarAction.FaceSouth => QuarterTurn.South,
+                _ => QuarterTurn.West,
+            };
+            var vertical = orientation is QuarterTurn.East or QuarterTurn.West;
+            var width = vertical ? 18d : 30d;
+            var height = vertical ? 30d : 18d;
+            var spaceBounds = new ScreenRectangle(bounds.X + (bounds.Width - width) / 2, bounds.Y + (bounds.Height - height) / 2, width, height);
+            DrawOutline(spaceBounds, 2, color);
+            DrawDeskOrientationMarker(spaceBounds, orientation, color);
+            return;
+        }
         if (action is ToolbarAction.VenueSizeMenu or ToolbarAction.ExpandTop or ToolbarAction.ShrinkTop or
             ToolbarAction.ExpandLeft or ToolbarAction.ShrinkLeft or ToolbarAction.IncreaseWidth or ToolbarAction.DecreaseWidth or
             ToolbarAction.IncreaseHeight or ToolbarAction.DecreaseHeight)
@@ -3743,6 +3778,11 @@ internal enum ToolbarAction
     ShrinkLeft,
     PillarMenu,
     DeskMenu,
+    NextDirectionMenu,
+    FaceNorth,
+    FaceEast,
+    FaceSouth,
+    FaceWest,
     ParticipantDataMode,
     DeskPlacementMode,
     IslandDefinitionMode,

@@ -12,6 +12,14 @@ public sealed partial class VenueEditorGame
     private static readonly ToolRingEntry CancelRingEntry = new(null, "キャンセル", "キャンセル：ツールの選択を変えずにリングを閉じます");
     private static readonly ToolRingDefinition[] ToolRings =
     [
+        new(ToolbarAction.NextDirectionMenu,
+        [
+            new(ToolbarAction.FaceNorth, "上向き", "上向き：次に配置するスペースを上向きにします"),
+            new(ToolbarAction.FaceEast, "右向き", "右向き：次に配置するスペースを右向きにします"),
+            new(ToolbarAction.FaceSouth, "下向き", "下向き：次に配置するスペースを下向きにします"),
+            new(ToolbarAction.FaceWest, "左向き", "左向き：次に配置するスペースを左向きにします"),
+            new(null, "キャンセル", "キャンセル：向きを変えずにリングを閉じます"),
+        ]),
         new(ToolbarAction.DeskMenu,
         [
             new(ToolbarAction.AddDesk, "スペース追加", "スペース追加：選択後、会場のセルをクリックしてスペースを追加します"),
@@ -76,7 +84,8 @@ public sealed partial class VenueEditorGame
         pressedToolRingButton?.CancelPress();
         pressedToolRingButton = null;
         toolRingButtons.Clear();
-        var anchor = toolbarButtons.Single(button => button.Action == toolRingDefinition.Menu).Model.Bounds;
+        var anchor = toolRingDefinition.Menu == ToolbarAction.NextDirectionMenu
+            ? NextDirectionBounds : toolbarButtons.Single(button => button.Action == toolRingDefinition.Menu).Model.Bounds;
         var layout = CircleSpaceCoordinator.ReusableControls.RingMenuLayout.Create(
             anchor, width, Math.Max(1, height - StatusBarHeight), toolRingDefinition.Entries.Count);
         toolRingCenter = layout.Center;
