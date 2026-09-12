@@ -38,7 +38,7 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
         sourcePath = path;
         this.sheets = sheets;
         var isCsv = Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase);
-        var encodingRowHeight = isCsv ? 40 : 0;
+        var encodingRowHeight = isCsv ? 84 : 0;
         Text = "参加サークル一覧の読込み";
         Width = 1380;
         Height = 650;
@@ -64,6 +64,15 @@ internal sealed class ParticipantImportForm : System.Windows.Forms.Form
             encodingBox.SelectedIndex = 0;
             encodingBox.SelectedIndexChanged += (_, _) => ReloadCsv();
             Controls.AddRange([encodingBox, encodingStatus]);
+            Controls.Add(new System.Windows.Forms.Label
+            {
+                Text = "Excel から CSV に書き出した時点で欠損した文字は、文字コードを切り替えても復元できません。\n元の Excel ファイル（.xlsx）から読み込み直してください。",
+                Left = 16,
+                Top = 85,
+                Width = 1330,
+                Height = 40,
+                Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right,
+            });
             Shown += (_, _) => ReloadCsv();
         }
         AddLabel("シート", 16, 48 + encodingRowHeight);
