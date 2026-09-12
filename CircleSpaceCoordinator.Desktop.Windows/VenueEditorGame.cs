@@ -443,13 +443,13 @@ public sealed partial class VenueEditorGame : Game
                      seatRange.Contains(VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer))) &&
                      IsPointerInEditorCanvas(pointer))
             {
-                var result = EditSeatNamesInRange(seatRange);
+                var result = EditNumberCells(seatRange.Contains);
                 rangeSwapStatus = result.Applied
-                    ? "席名をまとめて変更しました"
+                    ? "選択チャンネルの番号をまとめて変更しました"
                     : result.Issues.Any(issue => issue.Code == "seatLabel.pair.duplicate")
-                        ? "同じブロック名と席名の組が重複するため、変更をキャンセルしました"
+                        ? "同じブロック名とセル番の組が重複するため、変更をキャンセルしました"
                         : result.Issues.Count > 0
-                            ? "席名をまとめて変更できませんでした"
+                            ? "選択チャンネルの番号をまとめて変更できませんでした"
                             : null;
                 LogPointer("seat_label_bulk_edit", pointer, result.Applied, $"issues={FormatIssues(result.Issues)}");
             }
@@ -664,9 +664,9 @@ public sealed partial class VenueEditorGame : Game
             DrawGrid();
             DrawBlockedCells();
             DrawDesks();
-            DrawMissingDeskNumbers();
+            if (!IsWeightChannelSelected && selectedNumberChannel == 1) DrawMissingDeskNumbers();
             if (IsWeightChannelSelected) DrawChannelWeights();
-            else DrawSeatLabels();
+            else DrawNumberLabels();
             DrawDeskPlacementGhost();
             DrawPillarGhost();
             if (editorMode == EditorMode.IslandDefinition)
@@ -1483,38 +1483,6 @@ public sealed partial class VenueEditorGame : Game
         }
     }
 
-    private void DrawSeatLabels()
-    {
-        if (workspace is null || editorMode != EditorMode.DeskPlacement)
-            return;
-
-        var plan = workspace.SelectedPlan;
-        var duplicatePairs = plan.SeatLabels
-            .Where(label => !string.IsNullOrWhiteSpace(label.BlockName) && !string.IsNullOrWhiteSpace(label.SeatName))
-            .GroupBy(label => (label.BlockName, label.SeatName))
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToHashSet();
-        foreach (var label in plan.SeatLabels)
-        {
-            var placement = plan.DeskPlacements.SingleOrDefault(item => item.Id == label.DeskPlacementId);
-            if (placement is null)
-                continue;
-            var cell = placement.Anchor + label.RelativeCell.Rotate(placement.Orientation);
-            var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
-            var tag = new ScreenRectangle(bounds.X + 4d, bounds.Y + 4d, Math.Max(1d, bounds.Width - 8d), Math.Max(1d, bounds.Height - 8d));
-            var duplicated = duplicatePairs.Contains((label.BlockName, label.SeatName));
-            // Write directly on the desk surface without covering its shape.
-            var ink = new Color(24, 20, 14);
-            var seatInk = duplicated ? new Color(96, 0, 12) : ink;
-            var rowHeight = tag.Height / 3d;
-            var deskNumber = label.RelativeCell == new GridPosition(0, 0) ? placement.DeskNumber ?? "" : "";
-            textRenderer?.Draw(label.BlockName, ToRectangle(new ScreenRectangle(tag.X + 2d, tag.Y + 1d, tag.Width - 4d, rowHeight - 1d)), seatInk, VenueTextSize(10), true);
-            textRenderer?.Draw(deskNumber, ToRectangle(new ScreenRectangle(tag.X + 2d, tag.Y + rowHeight, tag.Width - 4d, rowHeight - 1d)), ink, VenueTextSize(10), true);
-            textRenderer?.Draw(label.SeatName, ToRectangle(new ScreenRectangle(tag.X + 2d, tag.Y + rowHeight * 2d, tag.Width - 4d, rowHeight - 2d)), seatInk, VenueTextSize(10), true);
-        }
-    }
-
     private void DrawMissingDeskNumbers()
     {
         if (workspace is null || editorMode != EditorMode.DeskPlacement)
@@ -1586,10 +1554,11 @@ public sealed partial class VenueEditorGame : Game
         if (desk is null)
             return;
 
-        if (activeCanvasTool == ToolbarAction.EditDeskNumber && !IsSpaceNumberTarget(desk.Id, cell))
+        if ((activeCanvasTool == ToolbarAction.EditDeskNumber || activeCanvasTool == ToolbarAction.EditSeatName && !IsWeightChannelSelected) &&
+            !IsSpaceNumberTarget(desk.Id, cell))
             return;
 
-        DrawOutline(TargetBounds(activeCanvasTool == ToolbarAction.EditSeatName ? [cell] : desk.OccupiedCells),
+        DrawOutline(TargetBounds(activeCanvasTool == ToolbarAction.EditSeatName && (IsWeightChannelSelected || selectedNumberChannel != 1) ? [cell] : desk.OccupiedCells),
             3d, OperationTargetColor);
 
         ScreenRectangle TargetBounds(IEnumerable<GridPosition> cells)
@@ -2390,7 +2359,6 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.MoveDesk,
             ToolbarAction.DeskMenu,
             ToolbarAction.EditSeatName,
-            ToolbarAction.EditDeskNumber,
             ToolbarAction.PillarMenu,
             ToolbarAction.FillDesks,
             ToolbarAction.RotateLeft,
@@ -2684,79 +2652,11 @@ public sealed partial class VenueEditorGame : Game
                 : (false, $"issues={FormatIssues(result.Issues)}");
 
     private bool IsSeatNameRangeEditing =>
-        editorMode == EditorMode.DeskPlacement && activeCanvasTool == ToolbarAction.EditSeatName;
+        editorMode == EditorMode.DeskPlacement && activeCanvasTool == ToolbarAction.EditSeatName &&
+        (IsWeightChannelSelected || selectedNumberChannel != 1);
 
     private bool CanSelectCellRange =>
         editorMode is EditorMode.DeskPlacement or EditorMode.GenrePlacement or EditorMode.CirclePlacement;
-
-    private EditorCommandResult EditSeatNamesInRange(CellRange range)
-    {
-        if (workspace is null || commandController is null)
-            return EditorCommandResult.NoTarget;
-
-        var plan = workspace.SelectedPlan;
-        var deskTypes = workspace.Project.DeskTypes.ToDictionary(item => item.Id, StringComparer.Ordinal);
-        var targets = plan.DeskPlacements
-            .Where(placement => deskTypes.ContainsKey(placement.DeskTypeId))
-            .SelectMany(placement => deskTypes[placement.DeskTypeId].Footprint.Select(relative =>
-                new SeatLabelTarget(
-                    placement.Id,
-                    relative,
-                    placement.Anchor + relative.Rotate(placement.Orientation))))
-            .Where(target => range.Contains(target.Cell))
-            .ToArray();
-        if (targets.Length == 0)
-            return EditorCommandResult.NoTarget;
-
-        var labels = plan.SeatLabels.ToDictionary(item => (item.DeskPlacementId, item.RelativeCell));
-        var blockNames = targets
-            .Select(target => labels.TryGetValue((target.DeskPlacementId, target.RelativeCell), out var label) ? label.BlockName : null)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        var seatNames = targets
-            .Select(target => labels.TryGetValue((target.DeskPlacementId, target.RelativeCell), out var label) ? label.SeatName : null)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        var hasMixedExistingValues = blockNames.Length > 1 || seatNames.Length > 1;
-        if (hasMixedExistingValues)
-        {
-            var answer = System.Windows.Forms.MessageBox.Show(
-                "選択範囲には、異なるブロック名または席名が既に入っています。\n入力した項目で上書きしますか？",
-                "席名をまとめて変更",
-                System.Windows.Forms.MessageBoxButtons.YesNo,
-                System.Windows.Forms.MessageBoxIcon.Warning,
-                System.Windows.Forms.MessageBoxDefaultButton.Button2);
-            if (answer != System.Windows.Forms.DialogResult.Yes)
-                return EditorCommandResult.NoTarget;
-        }
-
-        var edit = BulkSeatNameDialog.Show(
-            blockNames.Length == 1 ? blockNames[0] : null,
-            seatNames.Length == 1 ? seatNames[0] : null,
-            targets.Length);
-        if (edit is null)
-            return EditorCommandResult.NoTarget;
-
-        foreach (var target in targets)
-        {
-            var key = (target.DeskPlacementId, target.RelativeCell);
-            if (labels.TryGetValue(key, out var existing))
-            {
-                labels[key] = existing with
-                {
-                    BlockName = edit.BlockName ?? existing.BlockName,
-                    SeatName = edit.SeatName ?? existing.SeatName,
-                };
-            }
-            else if (edit.BlockName is not null || edit.SeatName is not null)
-            {
-                labels[key] = new DeskSeatLabel(target.DeskPlacementId, target.RelativeCell, edit.BlockName ?? "", edit.SeatName ?? "");
-            }
-        }
-
-        var result = commandController.ReplaceSeatLabels(labels.Values.ToArray());
-        return result;
-    }
 
     private (bool Success, string Detail) ExecuteCanvasTool(ScreenPoint pointer)
     {
@@ -2769,7 +2669,7 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.RotateRight => commandController.RotateDeskAt(cell, clockwise: true),
             ToolbarAction.AddDesk => NextSpaceType is { } type ? commandController.AddDeskAt(cell, nextDeskOrientation, type) : EditorCommandResult.NoTarget,
             ToolbarAction.RemoveDesk => commandController.RemoveDeskAt(cell),
-            ToolbarAction.EditSeatName => EditSeatNameAt(cell),
+            ToolbarAction.EditSeatName => selectedNumberChannel == 1 ? EditDeskNumberAt(cell) : EditSeatNameAt(cell),
             ToolbarAction.EditDeskNumber => EditDeskNumberAt(cell),
             ToolbarAction.AddPillar => commandController.AddPillarAt(cell),
             ToolbarAction.RemovePillar => commandController.RemovePillarAt(cell),
@@ -2804,25 +2704,7 @@ public sealed partial class VenueEditorGame : Game
             return commandController.AddIslandConnector(first, desk.Id, firstCell, position);
         }
 
-        EditorCommandResult EditSeatNameAt(GridPosition position)
-        {
-            var desk = workspace!.GetSelectedPlanSnapshot().Desks.LastOrDefault(item => item.OccupiedCells.Contains(position));
-            if (desk is null)
-                return EditorCommandResult.NoTarget;
-            var placement = workspace.SelectedPlan.DeskPlacements.Single(item => item.Id == desk.Id);
-            var offset = new GridPosition(position.X - placement.Anchor.X, position.Y - placement.Anchor.Y);
-            var inverseOrientation = (QuarterTurn)((4 - (int)placement.Orientation) % 4);
-            var relativeCell = offset.Rotate(inverseOrientation);
-            var existing = workspace.SelectedPlan.SeatLabels.LastOrDefault(item =>
-                item.DeskPlacementId == desk.Id && item.RelativeCell == relativeCell);
-            var edit = SeatNameDialog.Show(existing?.BlockName, existing?.SeatName);
-            if (edit is null)
-                return EditorCommandResult.NoTarget;
-            var result = edit.Remove
-                ? commandController.RemoveSeatLabel(desk.Id, relativeCell)
-                : commandController.SetSeatLabel(desk.Id, relativeCell, edit.BlockName, edit.SeatName);
-            return result;
-        }
+        EditorCommandResult EditSeatNameAt(GridPosition position) => EditNumberCells(cell => cell == position);
 
         EditorCommandResult EditDeskNumberAt(GridPosition position)
         {
@@ -3070,7 +2952,7 @@ public sealed partial class VenueEditorGame : Game
                 break;
             case ToolbarAction.EditSeatName:
                 DrawOutline(new ScreenRectangle(center.X - 12d, center.Y - 10d, 24d, 20d), 2d, color);
-                textRenderer?.Draw("席", new Rectangle((int)center.X - 9, (int)center.Y - 8, 18, 16), color, 14, true);
+                textRenderer?.Draw("番号", new Rectangle((int)center.X - 11, (int)center.Y - 8, 22, 16), color, 11, true);
                 DrawLine(new ScreenPoint(center.X + 5d, center.Y + 7d), new ScreenPoint(center.X + 12d, center.Y + 14d), 3d, color);
                 DrawLine(new ScreenPoint(center.X + 8d, center.Y + 4d), new ScreenPoint(center.X + 12d, center.Y + 8d), 3d, color);
                 break;
@@ -3223,7 +3105,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.FitVenueToWindow => "会場全体を画面内に収める",
         ToolbarAction.ImportParticipants => "参加サークル一覧をExcelまたはCSVから読み込む",
         ToolbarAction.SelectExportPlan => "書出しに使う配置決定案を選択する（未決定にも戻せます）",
-        ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・席番号をExcelへ書き出す（未決定の場合はサークルデータで選択）",
+        ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・セル番をExcelへ書き出す（未決定の場合はサークルデータで選択）",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",
         ToolbarAction.EditGenreStyles => "ジャンルと色・網掛けパターンの対応を編集する",
         ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（フレーム上のセルを2回選択）",
@@ -3239,7 +3121,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.MoveDesk => "フレームを移動する",
         ToolbarAction.AddDesk => "フレームを追加する",
         ToolbarAction.RemoveDesk => "フレームを削除する",
-        ToolbarAction.EditSeatName => "選択チャンネルの番地または重みを変更する（フレーム上のセルをクリック）",
+        ToolbarAction.EditSeatName => "番号入力：選択チャンネルの番号を変更する（重みチャンネルでは重みを入力）",
         ToolbarAction.EditDeskNumber => "フレーム番号を変更する（全てのフレームに設定が必要）",
         ToolbarAction.AddPillar => "柱を置く",
         ToolbarAction.RemovePillar => "柱を消す",

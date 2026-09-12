@@ -37,7 +37,7 @@ internal static class PlanCopyDialog
         method.SelectedIndex = 0;
         using var note = new System.Windows.Forms.Label
         {
-            Text = "フレーム・席名・島定義をコピーします。コピー先のサークル配置は維持します。\n新しいフレーム配置に収まらない場合は、コピーせずに中止します。",
+            Text = "フレーム・セル番・島定義をコピーします。コピー先のサークル配置は維持します。\n新しいフレーム配置に収まらない場合は、コピーせずに中止します。",
             Left = 14,
             Top = 185,
             Width = 472,

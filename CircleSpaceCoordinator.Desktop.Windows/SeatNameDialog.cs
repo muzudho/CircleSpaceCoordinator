@@ -8,7 +8,7 @@ internal static class SeatNameDialog
     {
         using var form = new System.Windows.Forms.Form
         {
-            Text = "席名を変更",
+            Text = "セル番を変更",
             Width = 460,
             Height = 225,
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
@@ -19,9 +19,9 @@ internal static class SeatNameDialog
         };
         using var blockLabel = new System.Windows.Forms.Label { Text = "ブロック名", Left = 14, Top = 15, AutoSize = true };
         using var block = new System.Windows.Forms.TextBox { Text = initialBlockName ?? "", Left = 14, Top = 38, Width = 416, MaxLength = 40 };
-        using var seatLabel = new System.Windows.Forms.Label { Text = "席名", Left = 14, Top = 71, AutoSize = true };
+        using var seatLabel = new System.Windows.Forms.Label { Text = "セル番", Left = 14, Top = 71, AutoSize = true };
         using var seat = new System.Windows.Forms.TextBox { Text = initialSeatName ?? "", Left = 14, Top = 94, Width = 416, MaxLength = 80 };
-        using var remove = new System.Windows.Forms.Button { Text = "席名を削除", Left = 14, Top = 137, Width = 94, Enabled = initialBlockName is not null };
+        using var remove = new System.Windows.Forms.Button { Text = "セル番を削除", Left = 14, Top = 137, Width = 94, Enabled = initialBlockName is not null };
         using var ok = new System.Windows.Forms.Button { Text = "OK", Left = 274, Top = 137, Width = 75 };
         using var cancel = new System.Windows.Forms.Button { Text = "キャンセル", DialogResult = System.Windows.Forms.DialogResult.Cancel, Left = 355, Top = 137, Width = 75 };
         SeatNameEdit? result = null;
@@ -30,7 +30,7 @@ internal static class SeatNameDialog
         {
             if (string.IsNullOrWhiteSpace(block.Text) || string.IsNullOrWhiteSpace(seat.Text))
             {
-                System.Windows.Forms.MessageBox.Show(form, "ブロック名と席名を両方入力してください。", "席名を変更",
+                System.Windows.Forms.MessageBox.Show(form, "ブロック名とセル番を両方入力してください。", "セル番を変更",
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
                 return;
             }

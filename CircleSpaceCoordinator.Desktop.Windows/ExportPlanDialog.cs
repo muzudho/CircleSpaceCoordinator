@@ -21,7 +21,7 @@ internal static class ExportPlanDialog
         };
         using var note = new System.Windows.Forms.Label
         {
-            Text = "Excel に席番地を書き出す配置案を選択してください。\n作業中の配置案を切り替えても、この選択は変わりません。",
+            Text = "Excel にセル番地を書き出す配置案を選択してください。\n作業中の配置案を切り替えても、この選択は変わりません。",
             Left = 16, Top = 16, Width = 488, Height = 42,
         };
         using var choices = new System.Windows.Forms.ComboBox

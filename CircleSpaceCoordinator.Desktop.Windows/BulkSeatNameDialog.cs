@@ -8,7 +8,7 @@ internal static class BulkSeatNameDialog
     {
         using var form = new System.Windows.Forms.Form
         {
-            Text = "席名をまとめて変更",
+            Text = "セル番をまとめて変更",
             Width = 500,
             Height = 260,
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
@@ -27,11 +27,11 @@ internal static class BulkSeatNameDialog
         };
         using var blockLabel = new System.Windows.Forms.Label { Text = "ブロック名（上書き）", Left = 14, Top = 48, AutoSize = true };
         using var block = new System.Windows.Forms.TextBox { Text = initialBlockName ?? "", Left = 14, Top = 70, Width = 452, MaxLength = 40 };
-        using var seatLabel = new System.Windows.Forms.Label { Text = "席名（上書き）", Left = 14, Top = 104, AutoSize = true };
+        using var seatLabel = new System.Windows.Forms.Label { Text = "セル番（上書き）", Left = 14, Top = 104, AutoSize = true };
         using var seat = new System.Windows.Forms.TextBox { Text = initialSeatName ?? "", Left = 14, Top = 126, Width = 452, MaxLength = 80 };
         using var note = new System.Windows.Forms.Label
         {
-            Text = "ブロック名だけ、または席名だけでも入力できます。空欄の項目は変更しません。",
+            Text = "ブロック名だけ、またはセル番だけでも入力できます。空欄の項目は変更しません。",
             Left = 14,
             Top = 160,
             Width = 452,
@@ -46,7 +46,7 @@ internal static class BulkSeatNameDialog
             var seatName = string.IsNullOrWhiteSpace(seat.Text) ? null : seat.Text.Trim();
             if (blockName is null && seatName is null)
             {
-                System.Windows.Forms.MessageBox.Show(form, "ブロック名または席名を入力してください。", "席名をまとめて変更",
+                System.Windows.Forms.MessageBox.Show(form, "ブロック名またはセル番を入力してください。", "セル番をまとめて変更",
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
                 return;
             }

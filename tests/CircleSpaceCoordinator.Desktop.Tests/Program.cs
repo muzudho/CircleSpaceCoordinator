@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
             ("Catalog spaces place in all directions and preserve snapshots through history and JSON", CatalogSpacesRoundTrip),
             ("Space definitions persist globally and reject broken references and stale saves", SpaceDefinitionsPersist),
             ("Export requires an explicit decision and preserves it independently of editor selection", ExportPlanDecision),
@@ -812,6 +813,30 @@ internal static class Program
         AssertEqual(
             QuarterTurn.East,
             workspace.SelectedPlan.DeskPlacements.Single(item => item.Anchor == new GridPosition(3, 1)).Orientation);
+    }
+
+    private static void IndependentNumberChannels()
+    {
+        var workspace = new ProjectWorkspace(CreateProject());
+        var commands = new EditorCommandController(workspace);
+        var relative = new GridPosition(0, 0);
+        AssertEqual(true, commands.ReplaceSeatLabels([new DeskSeatLabel("desk-1", relative, "A", "")]).Applied);
+        AssertEqual(true, commands.ReplaceSeatLabels([workspace.SelectedPlan.SeatLabels.Single() with { SeatName = "1" }]).Applied);
+        AssertEqual(true, commands.SetDeskNumber("desk-1", "10").Applied);
+        var before = ProjectJsonSerializer.Save(workspace.Project);
+        AssertEqual(true, commands.ReplaceSeatLabels([workspace.SelectedPlan.SeatLabels.Single() with { BlockName = "" }]).Applied);
+        AssertEqual("1", workspace.SelectedPlan.SeatLabels.Single().SeatName);
+        AssertEqual("10", workspace.SelectedPlan.DeskPlacements.Single().DeskNumber);
+        var cleared = ProjectJsonSerializer.Save(workspace.Project);
+        AssertEqual(true, commands.Undo());
+        AssertEqual(before, ProjectJsonSerializer.Save(workspace.Project));
+        AssertEqual(true, commands.Redo());
+        var loaded = ProjectJsonSerializer.Load(cleared);
+        AssertEqual("", loaded.Plans.Single().SeatLabels.Single().BlockName);
+        AssertEqual("1", loaded.Plans.Single().SeatLabels.Single().SeatName);
+        AssertEqual(cleared, ProjectJsonSerializer.Save(workspace.Project));
+        AssertEqual(true, commands.ReplaceSeatLabels([]).Applied);
+        AssertEqual("10", workspace.SelectedPlan.DeskPlacements.Single().DeskNumber);
     }
 
     private static void CatalogSpacesRoundTrip()

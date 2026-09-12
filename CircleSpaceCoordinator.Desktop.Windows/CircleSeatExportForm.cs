@@ -27,9 +27,9 @@ internal sealed class CircleSeatExportForm : System.Windows.Forms.Form
         StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
         Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
         Controls.Add(new System.Windows.Forms.Label { Text = path, Left = 14, Top = 14, Width = 710, AutoEllipsis = true });
-        AddLabel("シート", 14); AddLabel("ブロック番号列", 195); AddLabel("席番号列", 376); AddLabel("サークルID列", 557);
+        AddLabel("シート", 14); AddLabel("ブロック番号列", 195); AddLabel("セル番列", 376); AddLabel("サークルID列", 557);
         Setup(sheetBox, 14); Setup(blockBox, 195); Setup(seatBox, 376); Setup(circleIdBox, 557);
-        var note = new System.Windows.Forms.Label { Text = "配置済みで席名のあるサークルだけを書き出します。該当しない行は変更しません。", Left = 14, Top = 111, Width = 710 };
+        var note = new System.Windows.Forms.Label { Text = "配置済みでセル番のあるサークルだけを書き出します。該当しない行は変更しません。", Left = 14, Top = 111, Width = 710 };
         var export = new System.Windows.Forms.Button { Text = "この対応で書き出す", Left = 540, Top = 155, Width = 184, Height = 34 };
         var cancel = new System.Windows.Forms.Button { Text = "キャンセル", Left = 428, Top = 155, Width = 100, Height = 34, DialogResult = System.Windows.Forms.DialogResult.Cancel };
         export.Click += (_, _) => Export();
