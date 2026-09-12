@@ -1452,7 +1452,7 @@ public sealed partial class VenueEditorGame : Game
             var definition = workspace.Project.DeskTypes.Single(t => t.Id == placed.DeskTypeId);
             if (definition.Space is { } space)
             {
-                DrawSpaceOnCanvas(space, placed.Anchor, placed.Orientation, false, deletionDisabled, placementId: placed.Id);
+                DrawSpaceOnCanvas(space, placed.Anchor, placed.Orientation, false, deletionDisabled);
                 continue;
             }
             DrawDesk(
@@ -1469,7 +1469,7 @@ public sealed partial class VenueEditorGame : Game
             var deskType = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
             if (deskType.Space is { } space)
             {
-                DrawSpaceOnCanvas(space, previewAnchor, placement.Orientation, true, false, placementId: placement.Id);
+                DrawSpaceOnCanvas(space, previewAnchor, placement.Orientation, true, false);
                 return;
             }
             var previewCells = deskType.Footprint
@@ -1498,9 +1498,7 @@ public sealed partial class VenueEditorGame : Game
             var bottomRight = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(new GridPosition(cells.Max(cell => cell.X) + 1, cells.Max(cell => cell.Y) + 1)));
             var warning = new ScreenRectangle(topLeft.X + 2, topLeft.Y + 2,
                 Math.Max(1, bottomRight.X - topLeft.X - 4), Math.Max(1, bottomRight.Y - topLeft.Y - 4));
-            DrawRectangle(warning, new Color(204, 38, 48, 92));
-            DrawOutline(warning, 2d, new Color(255, 72, 80));
-            textRenderer?.Draw("フレーム番号 未設定", ToRectangle(warning), new Color(255, 235, 235), VenueTextSize(10), true);
+            DrawMissingNumber(warning);
         }
     }
 

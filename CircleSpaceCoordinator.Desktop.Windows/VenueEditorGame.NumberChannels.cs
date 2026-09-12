@@ -64,11 +64,25 @@ public sealed partial class VenueEditorGame
                 var value = selectedNumberChannel switch { 0 => label?.BlockName, 1 => placement.DeskNumber, _ => label?.SeatName };
                 // The frame number is one shared value, shown once on a seat of that frame.
                 if (selectedNumberChannel == 1 && cell != (seats.Contains(placement.Anchor) ? placement.Anchor : seats.First())) continue;
-                if (string.IsNullOrEmpty(value)) continue;
                 var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    // Missing frame numbers are drawn once across the entire frame.
+                    if (selectedNumberChannel != 1)
+                        DrawMissingNumber(new ScreenRectangle(bounds.X + 2, bounds.Y + 2,
+                            Math.Max(1, bounds.Width - 4), Math.Max(1, bounds.Height - 4)));
+                    continue;
+                }
                 var duplicate = selectedNumberChannel != 1 && label is not null && duplicates.Contains((label.BlockName, label.SeatName));
                 textRenderer?.Draw(value, ToRectangle(bounds, 4), duplicate ? new Color(96, 0, 12) : new Color(24, 20, 14), VenueTextSize(14), true);
             }
         }
+    }
+
+    private void DrawMissingNumber(ScreenRectangle bounds)
+    {
+        DrawRectangle(bounds, new Color(204, 38, 48, 92));
+        DrawOutline(bounds, 2, new Color(255, 72, 80));
+        textRenderer?.Draw("？", ToRectangle(bounds), new Color(255, 235, 235), VenueTextSize(14), true);
     }
 }
