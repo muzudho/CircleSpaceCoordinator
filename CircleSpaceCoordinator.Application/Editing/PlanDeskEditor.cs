@@ -9,11 +9,19 @@ public static class PlanDeskEditor
     public static CircleSpaceProject AddDesk(
         CircleSpaceProject project,
         string planId,
-        DeskPlacement placement)
+        DeskPlacement placement, DeskType? type = null)
     {
         ArgumentNullException.ThrowIfNull(project);
         ArgumentException.ThrowIfNullOrWhiteSpace(planId);
         ArgumentNullException.ThrowIfNull(placement);
+        if (type is not null)
+        {
+            if (type.Id != placement.DeskTypeId) throw new InvalidOperationException("Space type does not match placement.");
+            var existing = project.DeskTypes.SingleOrDefault(t => t.Id == type.Id);
+            if (existing is null) project = project with { DeskTypes = [.. project.DeskTypes, type] };
+            else if (System.Text.Json.JsonSerializer.Serialize(existing) != System.Text.Json.JsonSerializer.Serialize(type))
+                throw new InvalidOperationException("Existing space type cannot be overwritten.");
+        }
 
         var planIndex = FindUniqueIndex(project.Plans, planId, plan => plan.Id, "plan");
         var plan = project.Plans[planIndex];

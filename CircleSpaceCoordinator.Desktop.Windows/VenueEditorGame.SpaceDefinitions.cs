@@ -168,7 +168,7 @@ public sealed partial class VenueEditorGame
         void Text(string value, int y, int size = 18) => textRenderer?.Draw(value,
             new Rectangle(370, y, Math.Max(1, GraphicsDevice.Viewport.Width - 390), 30), Color.White, size);
         Text("アプリ共通のスペース定義", 124, 23);
-        Text("すべてのイベント・机配置・サークル配置案で同じ定義を使います", 162, 16);
+        Text("すべてのイベント・スペース配置・サークル配置案で同じ定義を使います", 162, 16);
         if (SpaceCount == 0) { Text("［追加］から定義を作成してください", 222); return; }
         if (spaceRequestsTab)
         {

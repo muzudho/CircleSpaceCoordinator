@@ -17,10 +17,10 @@ public static class CircleSeatExportBuilder
     public static IReadOnlyList<CircleSeatExportRow> Build(CircleSpaceProject project, Plan plan)
     {
         if (plan.TemporaryPlacements.Count != 0)
-            throw new InvalidOperationException($"仮置きのサークルが {plan.TemporaryPlacements.Count} 件あります。机へ戻してから書き出してください。");
+            throw new InvalidOperationException($"仮置きのサークルが {plan.TemporaryPlacements.Count} 件あります。スペースへ戻してから書き出してください。");
         var missing = FindMissingDeskNumbers(plan);
         if (missing.Count != 0)
-            throw new InvalidOperationException($"机番号が未設定の机が {missing.Count} 台あります。［机配置］モードで全ての机に机番号を設定してから書き出してください。\n{string.Join("、", missing.Select(desk => desk.Id))}");
+            throw new InvalidOperationException($"スペース番号が未設定のスペースが {missing.Count} 個あります。［スペース配置］モードで全てのスペースに番号を設定してから書き出してください。\n{string.Join("、", missing.Select(desk => desk.Id))}");
 
         var deskTypes = project.DeskTypes.ToDictionary(item => item.Id, StringComparer.Ordinal);
         var placements = plan.DeskPlacements.ToDictionary(item => item.Id, StringComparer.Ordinal);

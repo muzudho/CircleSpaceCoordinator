@@ -138,6 +138,8 @@ public sealed partial class VenueEditorGame : Game
     {
         SdlWindowIcon.TrySet(Window, Path.Combine(AppContext.BaseDirectory, "Assets", "long-table-app-icon.png"));
         RestoreWorkingState();
+        try { _ = SpaceDefinitions; }
+        catch (Exception ex) { ShowInAppMessage("スペース定義", ex.Message); }
         CreateToolbar();
         previousMouse = Mouse.GetState();
         previousKeyboard = Keyboard.GetState();
@@ -184,7 +186,7 @@ public sealed partial class VenueEditorGame : Game
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
-        if (UpdateToolRing(keyboard, mouse))
+        if (UpdateSpaceCatalog(keyboard, mouse) || UpdateToolRing(keyboard, mouse))
         {
             previousMouse = mouse;
             previousKeyboard = keyboard;
@@ -212,6 +214,26 @@ public sealed partial class VenueEditorGame : Game
 
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         UpdateToolbar(pointer);
+        if (editorMode == EditorMode.DeskPlacement && (Contains(NextSpaceBounds, pointer) || pressedNextSpace))
+        {
+            if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
+            {
+                CancelInProgressPointerInteraction();
+                pressedNextSpace = Contains(NextSpaceBounds, pointer);
+            }
+            if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed)
+            {
+                var open = pressedNextSpace && Contains(NextSpaceBounds, pointer);
+                pressedNextSpace = false;
+                if (open) OpenSpaceCatalog();
+                else CancelInProgressPointerInteraction();
+            }
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
         if (editorMode == EditorMode.SpaceDefinitions)
         {
             UpdateSpaceDefinitions(mouse, pointer);
@@ -355,7 +377,7 @@ public sealed partial class VenueEditorGame : Game
             else if (hoveredDeskLayoutParent)
             {
                 var target = LayoutBindingDialog.Show(workspace!.Project.DeskLayouts, workspace.SelectedDeskLayoutId,
-                    "表示する机配置");
+                    "表示するスペース配置");
                 if (target is not null && target != workspace.SelectedDeskLayoutId)
                 {
                     dragController?.Cancel();
@@ -582,6 +604,10 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedNextSpace = false;
+        pressedCatalogButton?.CancelPress();
+        pressedCatalogButton = null;
+        foreach (var item in catalogButtons) item.Model.ClearPointerState();
         pressedSpaceButton?.CancelPress();
         pressedSpaceButton = null;
         foreach (var item in spaceButtons) item.Button.ClearPointerState();
@@ -665,11 +691,13 @@ public sealed partial class VenueEditorGame : Game
             DrawOffscreenParticipants();
         }
         DrawToolbar();
+        DrawNextSpace();
         DrawConfidentialBadge();
         if (ShowVenueAboveRingCover) DrawVenueRingPanelCover();
         if (!toolRingOpen) DrawStatusBar();
         DrawModalDialog();
         DrawToolRing();
+        DrawSpaceCatalog();
         spriteBatch.End();
 
         if (screenshotRequested)
@@ -816,9 +844,9 @@ public sealed partial class VenueEditorGame : Game
         if (UsesSeparatedLayouts)
         {
             if (hasDeskParent)
-                DrawLayoutButton(GetDeskLayoutParentBounds(), $"机配置: {CurrentDeskLayoutName()} ▾", hoveredDeskLayoutParent);
+                DrawLayoutButton(GetDeskLayoutParentBounds(), $"スペース配置: {CurrentDeskLayoutName()} ▾", hoveredDeskLayoutParent);
             textRenderer?.Draw(
-                showsDeskLayouts ? "机配置" : "└ 配置案",
+                showsDeskLayouts ? "スペース配置" : "└ 配置案",
                 new Rectangle((int)listPanel.X + 10, (int)listPanel.Y + 2, (int)listPanel.Width - 20, hasDeskParent ? 22 : 32),
                 Color.White,
                 hasDeskParent ? 18 : 22,
@@ -1413,6 +1441,13 @@ public sealed partial class VenueEditorGame : Game
         {
             var deletionDisabled = activeCanvasTool == ToolbarAction.RemoveDesk &&
                 desk.OccupiedCells.Any(assignedCells.Contains);
+            var placed = workspace.SelectedPlan.DeskPlacements.Single(p => p.Id == desk.Id);
+            var definition = workspace.Project.DeskTypes.Single(t => t.Id == placed.DeskTypeId);
+            if (definition.Space is { } space)
+            {
+                DrawSpaceOnCanvas(space, placed.Anchor, placed.Orientation, false, deletionDisabled);
+                continue;
+            }
             DrawDesk(
                 desk.OccupiedCells,
                 desk.Orientation,
@@ -1425,6 +1460,11 @@ public sealed partial class VenueEditorGame : Game
         {
             var placement = workspace.SelectedPlan.DeskPlacements.Single(item => item.Id == deskId);
             var deskType = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
+            if (deskType.Space is { } space)
+            {
+                DrawSpaceOnCanvas(space, previewAnchor, placement.Orientation, true, false);
+                return;
+            }
             var previewCells = deskType.Footprint
                 .Select(relative => previewAnchor + relative.Rotate(placement.Orientation));
             DrawDesk(
@@ -1486,7 +1526,7 @@ public sealed partial class VenueEditorGame : Game
                 DrawOutline(warning, 2d, new Color(255, 72, 80));
             }
             var anchorBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(placement.Anchor));
-            textRenderer?.Draw("机番号 未設定", ToRectangle(anchorBounds), new Color(255, 235, 235), VenueTextSize(10), true);
+            textRenderer?.Draw("スペース番号 未設定", ToRectangle(anchorBounds), new Color(255, 235, 235), VenueTextSize(10), true);
         }
     }
 
@@ -1612,7 +1652,7 @@ public sealed partial class VenueEditorGame : Game
         if (pointer is null)
             return;
 
-        var deskType = workspace.Project.DeskTypes.FirstOrDefault();
+        var deskType = NextSpaceType;
         if (deskType is null)
             return;
 
@@ -1624,6 +1664,12 @@ public sealed partial class VenueEditorGame : Game
             .SelectMany(desk => desk.OccupiedCells)
             .ToHashSet();
         var canPlace = cells.All(cell => workspace.Project.Venue.CanPlaceAt(cell) && !occupied.Contains(cell));
+        if (deskType.Space is { } space)
+        {
+            DrawSpaceOnCanvas(space, anchor, nextDeskOrientation, true, false,
+                canPlace ? new Color(178, 232, 255) : new Color(236, 135, 145));
+            return;
+        }
         DrawDeskWireframe(
             cells,
             nextDeskOrientation,
@@ -1658,6 +1704,7 @@ public sealed partial class VenueEditorGame : Game
 
     private bool IsPointerInEditorCanvas(ScreenPoint pointer)
     {
+        if (editorMode == EditorMode.DeskPlacement && Contains(NextSpaceBounds, pointer)) return false;
         var height = GraphicsDevice.PresentationParameters.BackBufferHeight;
         if (pointer.Y < ToolbarHeight || pointer.Y >= height - StatusBarHeight)
             return false;
@@ -1676,7 +1723,7 @@ public sealed partial class VenueEditorGame : Game
 
     private bool IsDeskGhostClearOfToolbar(ScreenPoint pointer)
     {
-        var deskType = workspace?.Project.DeskTypes.FirstOrDefault();
+        var deskType = NextSpaceType;
         if (deskType is null)
             return false;
 
@@ -2690,7 +2737,7 @@ public sealed partial class VenueEditorGame : Game
         {
             ToolbarAction.RotateLeft => commandController.RotateDeskAt(cell, clockwise: false),
             ToolbarAction.RotateRight => commandController.RotateDeskAt(cell, clockwise: true),
-            ToolbarAction.AddDesk => commandController.AddDeskAt(cell, nextDeskOrientation),
+            ToolbarAction.AddDesk => NextSpaceType is { } type ? commandController.AddDeskAt(cell, nextDeskOrientation, type) : EditorCommandResult.NoTarget,
             ToolbarAction.RemoveDesk => commandController.RemoveDeskAt(cell),
             ToolbarAction.EditSeatName => EditSeatNameAt(cell),
             ToolbarAction.EditDeskNumber => EditDeskNumberAt(cell),
@@ -2982,7 +3029,7 @@ public sealed partial class VenueEditorGame : Game
                 break;
             case ToolbarAction.EditDeskNumber:
                 DrawOutline(new ScreenRectangle(center.X - 12d, center.Y - 10d, 24d, 20d), 2d, color);
-                textRenderer?.Draw("机", new Rectangle((int)center.X - 9, (int)center.Y - 8, 18, 16), color, 14, true);
+                textRenderer?.Draw("番", new Rectangle((int)center.X - 9, (int)center.Y - 8, 18, 16), color, 14, true);
                 DrawLine(new ScreenPoint(center.X + 5d, center.Y + 7d), new ScreenPoint(center.X + 12d, center.Y + 14d), 3d, color);
                 break;
             case ToolbarAction.PillarMenu:
@@ -3116,11 +3163,11 @@ public sealed partial class VenueEditorGame : Game
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
         ToolbarAction.SpaceDefinitionsMode => "アプリ共通の配置物の型と申込スペースを編集する",
-        ToolbarAction.DeskMenu => "机：追加・削除を選択",
+        ToolbarAction.DeskMenu => "スペース：追加・削除を選択",
         ToolbarAction.PillarMenu => "柱：追加・削除を選択",
         ToolbarAction.VenueSizeMenu => "会場サイズ：上下左右の辺を伸ばす・縮める",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
-        ToolbarAction.DeskPlacementMode => "机配置モードへ切り替える",
+        ToolbarAction.DeskPlacementMode => "スペース配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
         ToolbarAction.GenrePlacementMode => "ジャンル配置モードへ切り替える",
         ToolbarAction.CirclePlacementMode => "サークル配置モードへ切り替える",
@@ -3132,7 +3179,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・席番号をExcelへ書き出す（未決定の場合はサークルデータで選択）",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",
         ToolbarAction.EditGenreStyles => "ジャンルと色・網掛けパターンの対応を編集する",
-        ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（机上のセルを2回選択）",
+        ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（スペース上のセルを2回選択）",
         ToolbarAction.ToggleAutomaticIslandConnection => "自動島接続を有効・無効に切り替える（線をクリック）",
         ToolbarAction.AddFacingRegion => "向かい合わせ領域矩形を追加する（対角を2回選択）",
         ToolbarAction.RemoveTopology => "島接続補助直線または向かい合わせ領域を削除する",
@@ -3142,16 +3189,16 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.Undo => "元に戻す",
         ToolbarAction.Redo => "やり直す",
         ToolbarAction.DuplicatePlan => "現在の配置案を配置修正版として複製する",
-        ToolbarAction.MoveDesk => "机を移動する",
-        ToolbarAction.AddDesk => "机を追加する",
-        ToolbarAction.RemoveDesk => "机を削除する",
-        ToolbarAction.EditSeatName => "選択チャンネルの番地または重みを変更する（机上のセルをクリック）",
-        ToolbarAction.EditDeskNumber => "机番号を変更する（全ての机に設定が必要）",
+        ToolbarAction.MoveDesk => "スペースを移動する",
+        ToolbarAction.AddDesk => "スペースを追加する",
+        ToolbarAction.RemoveDesk => "スペースを削除する",
+        ToolbarAction.EditSeatName => "選択チャンネルの番地または重みを変更する（スペース上のセルをクリック）",
+        ToolbarAction.EditDeskNumber => "スペース番号を変更する（全てのスペースに設定が必要）",
         ToolbarAction.AddPillar => "柱を置く",
         ToolbarAction.RemovePillar => "柱を消す",
-        ToolbarAction.FillDesks => "空き領域へ机を自動配置する",
-        ToolbarAction.RotateLeft => "机を左回転",
-        ToolbarAction.RotateRight => "机を右回転",
+        ToolbarAction.FillDesks => "空き領域へスペースを自動配置する",
+        ToolbarAction.RotateLeft => "スペースを左回転",
+        ToolbarAction.RotateRight => "スペースを右回転",
         ToolbarAction.AssignParticipant => "サークルを割り当てる",
         ToolbarAction.UnassignParticipant => "サークル割当てを解除する",
         ToolbarAction.DecreaseWidth => "会場を横に1セル縮める",
@@ -3168,7 +3215,7 @@ public sealed partial class VenueEditorGame : Game
     {
         ToolbarAction.SpaceDefinitionsMode => "スペース定義",
         ToolbarAction.ParticipantDataMode => "サークルデータ",
-        ToolbarAction.DeskPlacementMode => "机配置",
+        ToolbarAction.DeskPlacementMode => "スペース配置",
         ToolbarAction.IslandDefinitionMode => "島定義",
         ToolbarAction.GenrePlacementMode => "ジャンル配置",
         ToolbarAction.CirclePlacementMode => "サークル配置",
@@ -3232,20 +3279,20 @@ public sealed partial class VenueEditorGame : Game
             activeCanvasTool == ToolbarAction.AddDesk &&
             hoveredToolbarButton.Action is ToolbarAction.RotateLeft or ToolbarAction.RotateRight
                 ? hoveredToolbarButton.Action == ToolbarAction.RotateLeft
-                    ? "次の机を左へ90度回転"
-                    : "次の机を右へ90度回転"
+                    ? "次のスペースを左へ90度回転"
+                    : "次のスペースを右へ90度回転"
                 : hoveredToolbarButton?.Model.AccessibleName;
         var hoveredPlan = hoveredPlanId is null
             ? null
             : GetDisplayedPlans().FirstOrDefault(plan => plan.PlanId == hoveredPlanId);
         primaryStatusMessage = ShowsDeskLayouts
-            ? $"机配置: {CurrentDeskLayoutName()}"
+            ? $"スペース配置: {CurrentDeskLayoutName()}"
             : $"配置案: {snapshot.PlanName}　一般参加者評価値: {snapshot.AudienceEvaluation.GeneralAttendeeScore:0.##}　サークル参加者評価値: {snapshot.AudienceEvaluation.CircleParticipantScore:0.##}";
         if (editorMode != EditorMode.DeskPlacement && !snapshot.AudienceEvaluation.CombinedSpaceRequirementsSatisfied)
-            primaryStatusMessage += "　⚠ 合体サークルが同じ机にありません";
+            primaryStatusMessage += "　⚠ 合体サークルが同じスペースにありません";
         primaryStatusMessage += editorMode switch
         {
-            EditorMode.DeskPlacement => $"　モード: 机配置　次の机: {FormatOrientation(nextDeskOrientation)}",
+            EditorMode.DeskPlacement => $"　モード: スペース配置　次のスペース: {FormatOrientation(nextDeskOrientation)}",
             EditorMode.IslandDefinition => "　モード: 島定義",
             EditorMode.GenrePlacement => "　モード: ジャンル配置",
             EditorMode.CirclePlacement => $"　モード: サークル配置　選択中: {participant}",
@@ -3256,21 +3303,21 @@ public sealed partial class VenueEditorGame : Game
             details.Add(hoveredButton);
         if (hoveredLayoutAdd)
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
-                ? "机配置を追加する"
-                : "選択中の机配置にサークル配置を追加する");
+                ? "スペース配置を追加する"
+                : "選択中のスペース配置にサークル配置を追加する");
         if (hoveredLayoutDuplicate)
-            details.Add(ShowsDeskLayouts ? "選択中の机配置を独立した机配置として複製する" : "選択中のサークル配置案を複製する");
+            details.Add(ShowsDeskLayouts ? "選択中のスペース配置を独立したスペース配置として複製する" : "選択中のサークル配置案を複製する");
         if (hoveredLayoutDelete)
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
-                ? "未使用の机配置を削除する"
+                ? "未使用のスペース配置を削除する"
                 : "選択中のサークル配置を削除する");
         if (hoveredDeskLayoutParent)
-            details.Add("机配置を選択して、その机配置の配置案を表示する");
+            details.Add("スペース配置を選択して、そのスペース配置の配置案を表示する");
         if (hoveredLayoutBind)
-            details.Add("選択中のサークル配置の机配置を変更する");
+            details.Add("選択中のサークル配置のスペース配置を変更する");
         if (hoveredLayoutRename)
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
-                ? "選択中の机配置の名前を変更する"
+                ? "選択中のスペース配置の名前を変更する"
                 : "選択中のサークル配置の名前を変更する");
         if (hoveredPlan is not null)
             details.Add(editorMode == EditorMode.DeskPlacement
@@ -3382,8 +3429,8 @@ public sealed partial class VenueEditorGame : Game
     {
         if (workspace is null) return (false, "workspace_unavailable");
         var isDesk = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
-        var name = PlanNameDialog.Show(isDesk ? "机配置を追加" : "サークル配置を追加",
-            isDesk ? $"机配置{workspace.Project.DeskLayouts.Count + 1}" : $"サークル配置{workspace.Project.CircleLayouts.Count + 1}");
+        var name = PlanNameDialog.Show(isDesk ? "スペース配置を追加" : "サークル配置を追加",
+            isDesk ? $"スペース配置{workspace.Project.DeskLayouts.Count + 1}" : $"サークル配置{workspace.Project.CircleLayouts.Count + 1}");
         if (name is null) return (false, "cancelled");
         var id = $"{(isDesk ? "desk-layout" : "circle-layout")}-{Guid.NewGuid():N}";
         try
@@ -3415,7 +3462,7 @@ public sealed partial class VenueEditorGame : Game
         var id = isDesk ? SelectedDeskLayoutId() : workspace.SelectedPlanId;
         if (isDesk && workspace.Project.CircleLayouts.Any(item => item.DeskLayoutId == id))
         {
-            ShowInAppMessage("机配置を削除", "この机配置はサークル配置で使用中です。\n先にサークル配置を削除または紐付け変更してください。");
+            ShowInAppMessage("スペース配置を削除", "このスペース配置はサークル配置で使用中です。\n先にサークル配置を削除または紐付け変更してください。");
             return (false, "desk_layout_referenced");
         }
         if (!isDesk && workspace.Project.CircleLayouts.Count <= 1)
@@ -3424,7 +3471,7 @@ public sealed partial class VenueEditorGame : Game
             return (false, "last_circle_layout");
         }
         OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "配置を削除",
-            isDesk ? $"机配置「{CurrentDeskLayoutName()}」を削除しますか？" : "このサークル配置を削除しますか？"), action =>
+            isDesk ? $"スペース配置「{CurrentDeskLayoutName()}」を削除しますか？" : "このサークル配置を削除しますか？"), action =>
         {
             if (action != ModalDialogAction.Accept) return;
             try
@@ -3456,7 +3503,7 @@ public sealed partial class VenueEditorGame : Game
         }
         catch (Exception exception)
         {
-            System.Windows.Forms.MessageBox.Show("このサークル配置は選択した机配置へ収まりません。\n" + exception.Message,
+            System.Windows.Forms.MessageBox.Show("このサークル配置は選択したスペース配置へ収まりません。\n" + exception.Message,
                 "紐付けを変更", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
             return (false, $"error={exception.GetType().Name}");
         }
@@ -3472,7 +3519,7 @@ public sealed partial class VenueEditorGame : Game
         var currentName = isDesk
             ? workspace.Project.DeskLayouts.Single(item => item.Id == id).Name
             : workspace.Project.CircleLayouts.Single(item => item.Id == id).Name;
-        OpenUnderlineInput(isDesk ? "机配置の名前を変更" : "サークル配置の名前を変更", currentName, name =>
+        OpenUnderlineInput(isDesk ? "スペース配置の名前を変更" : "サークル配置の名前を変更", currentName, name =>
         {
             workspace.Execute(isDesk
                 ? new LayoutCatalogServiceRenameDeskLayout( id, name)
@@ -3485,7 +3532,7 @@ public sealed partial class VenueEditorGame : Game
         if (workspace is null) return (false, "workspace_unavailable");
         if (!ShowsDeskLayouts) return PromptDuplicateSelectedPlan();
         var sourceId = workspace.SelectedDeskLayoutId;
-        var name = PlanNameDialog.Show("机配置を複製", $"{CurrentDeskLayoutName()}2");
+        var name = PlanNameDialog.Show("スペース配置を複製", $"{CurrentDeskLayoutName()}2");
         if (name is null) return (false, "cancelled");
         var id = $"desk-layout-{Guid.NewGuid():N}";
         workspace.Execute(new LayoutCatalogServiceDuplicateDeskLayout(sourceId!, id, name), selectedPlanEdit: false);
@@ -3520,8 +3567,8 @@ public sealed partial class VenueEditorGame : Game
             if (!result.Applied)
             {
                 var message = result.Issues.Any(issue => issue.Code == "assignment.cell.withoutDesk")
-                    ? "コピー先のサークル配置が、コピー元の机配置に収まりません。\nサークルを先に移動または解除してからコピーしてください。"
-                    : "机配置をコピーできませんでした。\nコピー元・コピー先の内容を確認してください。";
+                    ? "コピー先のサークル配置が、コピー元のスペース配置に収まりません。\nサークルを先に移動または解除してからコピーしてください。"
+                    : "スペース配置をコピーできませんでした。\nコピー元・コピー先の内容を確認してください。";
                 System.Windows.Forms.MessageBox.Show(message, "色んなコピー",
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
             }
@@ -3644,7 +3691,7 @@ public sealed partial class VenueEditorGame : Game
             "rangeSwap.overlap" => "移動元と移動先が重なっているため、範囲スワップをキャンセルしました",
             "rangeSwap.source.protrudes" => "選択範囲からはみ出すサークルがあるため、範囲スワップをキャンセルしました",
             "rangeSwap.destination.protrudes" => "移動先範囲からはみ出すサークルがあるため、範囲スワップをキャンセルしました",
-            "rangeSwap.destination.invalid" or "rangeSwap.destination.noDesk" => "移動先に机以外のセルがあるため、範囲スワップをキャンセルしました",
+            "rangeSwap.destination.invalid" or "rangeSwap.destination.noDesk" => "移動先にスペース以外のセルがあるため、範囲スワップをキャンセルしました",
             _ => "範囲スワップをキャンセルしました",
         };
 

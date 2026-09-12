@@ -33,11 +33,11 @@ internal static class PlanCopyDialog
         destination.SelectedIndex = 1;
         using var methodLabel = new System.Windows.Forms.Label { Text = "コピー方法", Left = 14, Top = 132, AutoSize = true };
         using var method = new System.Windows.Forms.ComboBox { Left = 14, Top = 154, Width = 220, DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList };
-        method.Items.Add("机配置だけコピー");
+        method.Items.Add("スペース配置だけコピー");
         method.SelectedIndex = 0;
         using var note = new System.Windows.Forms.Label
         {
-            Text = "机・席名・島定義をコピーします。コピー先のサークル配置は維持します。\n新しい机配置に収まらない場合は、コピーせずに中止します。",
+            Text = "スペース・席名・島定義をコピーします。コピー先のサークル配置は維持します。\n新しいスペース配置に収まらない場合は、コピーせずに中止します。",
             Left = 14,
             Top = 185,
             Width = 472,

@@ -122,9 +122,9 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
         }
     }
 
-    public EditorCommandResult AddDeskAt(GridPosition anchor, QuarterTurn orientation = QuarterTurn.North)
+    public EditorCommandResult AddDeskAt(GridPosition anchor, QuarterTurn orientation = QuarterTurn.North, DeskType? selectedType = null)
     {
-        var deskType = workspace.Project.DeskTypes.FirstOrDefault();
+        var deskType = selectedType ?? workspace.Project.DeskTypes.FirstOrDefault();
         if (deskType is null)
             return EditorCommandResult.NoTarget;
         var usedIds = workspace.SelectedPlan.DeskPlacements.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
@@ -138,7 +138,7 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
 
         var result = Apply( new PlanDeskEditorAddDesk(
             workspace.SelectedPlanId,
-            new DeskPlacement(id, deskType.Id, anchor, orientation)));
+            new DeskPlacement(id, deskType.Id, anchor, orientation), selectedType));
         return result.Applied ? result with { AffectedOrientation = orientation } : result;
     }
 

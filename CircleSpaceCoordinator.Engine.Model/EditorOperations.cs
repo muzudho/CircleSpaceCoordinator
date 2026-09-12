@@ -64,7 +64,7 @@ public sealed record ParticipantAssignmentEditorReassign(string planId, string p
 public sealed record ParticipantAssignmentEditorUnassign(string planId, string participantId) : EditorOperation, IPlanOperation;
 public sealed record ParticipantAssignmentEditorSwap(string planId, string firstParticipantId, string secondParticipantId) : EditorOperation, IPlanOperation;
 public sealed record ParticipantAssignmentEditorSwapGroups(string planId, IReadOnlyCollection<string> firstParticipantIds, IReadOnlyCollection<string> secondParticipantIds) : EditorOperation, IPlanOperation;
-public sealed record PlanDeskEditorAddDesk(string planId, DeskPlacement placement) : EditorOperation, IPlanOperation;
+public sealed record PlanDeskEditorAddDesk(string planId, DeskPlacement placement, DeskType? type = null) : EditorOperation, IPlanOperation;
 public sealed record PlanDeskEditorRemoveDesk(string planId, string deskPlacementId) : EditorOperation, IPlanOperation;
 public sealed record PlanDeskEditorMoveDesk(string planId, string deskPlacementId, GridPosition newAnchor) : EditorOperation, IPlanOperation;
 public sealed record PlanDeskEditorRotateDesk(string planId, string deskPlacementId, QuarterTurn newOrientation) : EditorOperation, IPlanOperation;

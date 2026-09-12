@@ -5,7 +5,14 @@ using CircleSpaceCoordinator.Core.Geometry;
 public sealed record DeskType(
     string Id,
     string Name,
-    IReadOnlyList<GridPosition> Footprint);
+    IReadOnlyList<GridPosition> Footprint)
+{
+    public SpaceTypeDetails? Space { get; init; }
+}
+
+public sealed record SpaceAreaCell(int X, int Y, int Area);
+public sealed record SpaceTypeDetails(string DefinitionId, string Kind, int Width, int Height,
+    IReadOnlyList<SpaceAreaCell> Cells, IReadOnlyList<string> Edges);
 
 public sealed record DeskPlacement(
     string Id,

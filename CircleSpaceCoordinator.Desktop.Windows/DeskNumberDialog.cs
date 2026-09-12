@@ -8,7 +8,7 @@ internal static class DeskNumberDialog
     {
         using var form = new System.Windows.Forms.Form
         {
-            Text = "机番号を変更",
+            Text = "スペース番号を変更",
             Width = 430,
             Height = 165,
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
@@ -17,7 +17,7 @@ internal static class DeskNumberDialog
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
             ShowInTaskbar = false,
         };
-        using var label = new System.Windows.Forms.Label { Text = "机番号（空欄で削除）", Left = 14, Top = 15, AutoSize = true };
+        using var label = new System.Windows.Forms.Label { Text = "スペース番号（空欄で削除）", Left = 14, Top = 15, AutoSize = true };
         using var number = new System.Windows.Forms.TextBox { Text = initialDeskNumber ?? "", Left = 14, Top = 38, Width = 386, MaxLength = 80 };
         using var ok = new System.Windows.Forms.Button { Text = "OK", Left = 244, Top = 78, Width = 75 };
         using var cancel = new System.Windows.Forms.Button { Text = "キャンセル", DialogResult = System.Windows.Forms.DialogResult.Cancel, Left = 325, Top = 78, Width = 75 };

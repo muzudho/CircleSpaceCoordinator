@@ -58,7 +58,7 @@ public static class ProjectJsonSerializer
         var deskTypes = source.DeskTypes.Select(item => new DeskType(
             item.Id,
             item.Name,
-            item.Footprint.Select(ToCore).ToArray())).ToArray();
+            item.Footprint.Select(ToCore).ToArray()) { Space = item.Space }).ToArray();
         var participants = source.Participants.Select(item => new Participant(
             item.Id,
             item.DisplayName,
@@ -233,6 +233,7 @@ public static class ProjectJsonSerializer
             Id = item.Id,
             Name = item.Name,
             Footprint = item.Footprint.Select(FromCore).ToList(),
+            Space = item.Space,
         }).ToList(),
         Participants = source.Participants.Select(item => new ParticipantDocument
         {
@@ -466,6 +467,7 @@ public static class ProjectJsonSerializer
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public List<PositionDocument> Footprint { get; set; } = [];
+        public SpaceTypeDetails? Space { get; set; }
     }
 
     private sealed class ParticipantDocument

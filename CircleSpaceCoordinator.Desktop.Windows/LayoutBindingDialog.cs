@@ -5,11 +5,11 @@ using CircleSpaceCoordinator.Core.Model;
 internal static class LayoutBindingDialog
 {
     public static string? Show(IReadOnlyList<DeskLayout> deskLayouts, string currentDeskLayoutId,
-        string prompt = "紐付け先の机配置")
+        string prompt = "紐付け先のスペース配置")
     {
         using var form = new System.Windows.Forms.Form
         {
-            Text = "机配置を選択",
+            Text = "スペース配置を選択",
             Width = 430,
             Height = 160,
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,

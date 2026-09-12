@@ -21,7 +21,7 @@ public static class EditorOperationHandler
         ParticipantAssignmentEditorUnassign op => ParticipantAssignmentEditor.Unassign(project, op.planId, op.participantId),
         ParticipantAssignmentEditorSwap op => ParticipantAssignmentEditor.Swap(project, op.planId, op.firstParticipantId, op.secondParticipantId),
         ParticipantAssignmentEditorSwapGroups op => ParticipantAssignmentEditor.SwapGroups(project, op.planId, op.firstParticipantIds, op.secondParticipantIds),
-        PlanDeskEditorAddDesk op => PlanDeskEditor.AddDesk(project, op.planId, op.placement),
+        PlanDeskEditorAddDesk op => PlanDeskEditor.AddDesk(project, op.planId, op.placement, op.type),
         PlanDeskEditorRemoveDesk op => PlanDeskEditor.RemoveDesk(project, op.planId, op.deskPlacementId),
         PlanDeskEditorMoveDesk op => PlanDeskEditor.MoveDesk(project, op.planId, op.deskPlacementId, op.newAnchor),
         PlanDeskEditorRotateDesk op => PlanDeskEditor.RotateDesk(project, op.planId, op.deskPlacementId, op.newOrientation),

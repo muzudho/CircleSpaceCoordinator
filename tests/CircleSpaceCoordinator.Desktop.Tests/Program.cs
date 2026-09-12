@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Catalog spaces place in all directions and preserve snapshots through history and JSON", CatalogSpacesRoundTrip),
             ("Space definitions persist globally and reject broken references and stale saves", SpaceDefinitionsPersist),
             ("Export requires an explicit decision and preserves it independently of editor selection", ExportPlanDecision),
             ("Imported table survives remote import, save, undo and redo with ordered duplicate headers", ParticipantTableImportRoundTrip),
@@ -813,6 +814,45 @@ internal static class Program
             workspace.SelectedPlan.DeskPlacements.Single(item => item.Anchor == new GridPosition(3, 1)).Orientation);
     }
 
+    private static void CatalogSpacesRoundTrip()
+    {
+        foreach (var definition in SpaceDefinitionCatalog.CreateDefault().Types)
+        foreach (var orientation in Enum.GetValues<QuarterTurn>())
+        {
+            var workspace = new ProjectWorkspace(CreateProject() with
+            {
+                Venue = new Venue("venue", "Venue", 24, 24, new HashSet<GridPosition>()),
+            });
+            var commands = new EditorCommandController(workspace);
+            var type = SpaceTypeFactory.Create(definition);
+            var before = ProjectJsonSerializer.Save(workspace.Project);
+            AssertEqual(true, commands.AddDeskAt(new GridPosition(10, 10), orientation, type).Applied);
+            var placed = workspace.SelectedPlan.DeskPlacements.Single(p => p.DeskTypeId == type.Id);
+            AssertEqual(true, placed.GetOccupiedCells(type).SetEquals(definition.Cells.Select(c => new GridPosition(10, 10) + new GridPosition(c.X, c.Y).Rotate(orientation))));
+            var saved = ProjectJsonSerializer.Save(workspace.Project);
+            var loaded = ProjectJsonSerializer.Load(saved);
+            var details = loaded.DeskTypes.Single(t => t.Id == type.Id).Space!;
+            AssertEqual(definition.Id, details.DefinitionId);
+            AssertEqual(true, details.Cells.SequenceEqual(type.Space!.Cells));
+            AssertEqual(true, details.Edges.SequenceEqual(definition.Edges));
+            AssertEqual(true, commands.Undo());
+            AssertEqual(before, ProjectJsonSerializer.Save(workspace.Project));
+            AssertEqual(true, commands.Redo());
+            AssertEqual(saved, ProjectJsonSerializer.Save(workspace.Project));
+            var changed = SpaceTypeFactory.Create(definition with { Name = "Changed" });
+            AssertEqual(false, changed.Id == type.Id);
+            AssertEqual(false, commands.AddDeskAt(placed.Anchor, orientation, changed).Applied);
+            AssertEqual(saved, ProjectJsonSerializer.Save(workspace.Project));
+            AssertEqual(true, commands.AddDeskAt(new GridPosition(18, 18), orientation, changed).Applied);
+            AssertEqual(definition.Name, workspace.Project.DeskTypes.Single(t => t.Id == type.Id).Name);
+            var malformed = type with { Space = type.Space! with { Edges = [] } };
+            AssertEqual(true, CircleSpaceCoordinator.Core.Validation.ProjectValidator.Validate(loaded with
+            {
+                DeskTypes = loaded.DeskTypes.Select(t => t.Id == type.Id ? malformed : t).ToArray(),
+            }).Any(issue => issue.Code == "deskType.space.invalid"));
+        }
+    }
+
     private static void SpaceDefinitionsPersist()
     {
         var directory = Path.Combine(Path.GetTempPath(), "space-definitions-test-" + Guid.NewGuid().ToString("N"));
@@ -967,7 +1007,7 @@ internal static class Program
             {
                 CircleSeatExportBuilder.Build(workspace.Project, workspace.SelectedPlan);
             }
-            catch (InvalidOperationException exception) when (exception.Message.Contains("机番号"))
+            catch (InvalidOperationException exception) when (exception.Message.Contains("スペース番号"))
             {
                 return;
             }

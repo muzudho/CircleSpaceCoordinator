@@ -19,7 +19,7 @@ internal static class BulkSeatNameDialog
         };
         using var explanation = new System.Windows.Forms.Label
         {
-            Text = $"選択した机セル {targetCount} 個を変更します。空欄の項目は変更しません。",
+            Text = $"選択したスペースのセル {targetCount} 個を変更します。空欄の項目は変更しません。",
             Left = 14,
             Top = 14,
             Width = 452,
