@@ -33,6 +33,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(VenueTopologyEditorRemoveAt), "VenueTopologyEditor.RemoveAt")]
 [JsonDerivedType(typeof(VenueTopologyEditorRemoveConnector), "VenueTopologyEditor.RemoveConnector")]
 [JsonDerivedType(typeof(LayoutCatalogServiceCreateDeskLayout), "LayoutCatalogService.CreateDeskLayout")]
+[JsonDerivedType(typeof(LayoutCatalogServiceDuplicateDeskLayout), "LayoutCatalogService.DuplicateDeskLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceCreateCircleLayout), "LayoutCatalogService.CreateCircleLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceRemoveCircleLayout), "LayoutCatalogService.RemoveCircleLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceRemoveDeskLayout), "LayoutCatalogService.RemoveDeskLayout")]
@@ -80,6 +81,7 @@ public sealed record VenueTopologyEditorToggleAutomaticConnection(string planId,
 public sealed record VenueTopologyEditorRemoveAt(string planId, GridPosition cell, string? deskId) : EditorOperation, IPlanOperation;
 public sealed record VenueTopologyEditorRemoveConnector(string planId, string connectorId) : EditorOperation, IPlanOperation;
 public sealed record LayoutCatalogServiceCreateDeskLayout(string id, string name, string? description = null) : EditorOperation;
+public sealed record LayoutCatalogServiceDuplicateDeskLayout(string sourceId, string id, string name) : EditorOperation;
 public sealed record LayoutCatalogServiceCreateCircleLayout(string id, string name, string deskLayoutId, string? description = null) : EditorOperation;
 public sealed record LayoutCatalogServiceRemoveCircleLayout(string circleLayoutId) : EditorOperation;
 public sealed record LayoutCatalogServiceRemoveDeskLayout(string deskLayoutId) : EditorOperation;

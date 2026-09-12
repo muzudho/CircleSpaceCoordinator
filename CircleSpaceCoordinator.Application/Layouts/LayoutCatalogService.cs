@@ -6,6 +6,20 @@ using CircleSpaceCoordinator.Core.Validation;
 /// <summary>Lifecycle operations for the separated physical and circle layouts.</summary>
 public static class LayoutCatalogService
 {
+    public static CircleSpaceProject DuplicateDeskLayout(CircleSpaceProject project, string sourceId, string id, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        project = LayoutProjection.MigrateLegacyPlans(project);
+        if (project.DeskLayouts.Any(item => item.Id == id))
+            throw new InvalidOperationException($"Desk layout ID '{id}' already exists.");
+        var source = project.DeskLayouts.Single(item => item.Id == sourceId);
+        // Layout records are edited by replacement. Preserve desk IDs inside the new
+        // independent layout so seat labels and topology keep their references.
+        var copy = source with { Id = id, Name = name.Trim() };
+        return ValidateProjected(project with { DeskLayouts = [.. project.DeskLayouts, copy] });
+    }
+
     public static CircleSpaceProject CreateDeskLayout(CircleSpaceProject project, string id, string name, string? description = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);

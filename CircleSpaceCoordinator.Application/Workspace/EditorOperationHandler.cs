@@ -38,6 +38,7 @@ public static class EditorOperationHandler
         VenueTopologyEditorRemoveAt op => VenueTopologyEditor.RemoveAt(project, op.planId, op.cell, op.deskId),
         VenueTopologyEditorRemoveConnector op => VenueTopologyEditor.RemoveConnector(project, op.planId, op.connectorId),
         LayoutCatalogServiceCreateDeskLayout op => LayoutCatalogService.CreateDeskLayout(project, op.id, op.name, op.description),
+        LayoutCatalogServiceDuplicateDeskLayout op => LayoutCatalogService.DuplicateDeskLayout(project, op.sourceId, op.id, op.name),
         LayoutCatalogServiceCreateCircleLayout op => LayoutCatalogService.CreateCircleLayout(project, op.id, op.name, op.deskLayoutId, op.description),
         LayoutCatalogServiceRemoveCircleLayout op => LayoutCatalogService.RemoveCircleLayout(project, op.circleLayoutId),
         LayoutCatalogServiceRemoveDeskLayout op => LayoutCatalogService.RemoveDeskLayout(project, op.deskLayoutId),

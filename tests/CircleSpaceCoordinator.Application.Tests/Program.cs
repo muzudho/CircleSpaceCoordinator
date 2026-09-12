@@ -51,6 +51,7 @@ internal static class Program
             ("A plan snapshot contains desks assignments and unassigned participants", PlanSnapshotContainsViewData),
             ("A workspace exposes its selected plan snapshot", WorkspaceExposesSelectedSnapshot),
             ("A venue can be expanded", VenueCanBeExpanded),
+            ("Duplicated desk layouts are independent and do not duplicate circles", DeskLayoutDuplicateIsIndependent),
             ("Top and left resizing preserve all layout coordinates and weights", VenueEdgesShiftCoordinates),
             ("A venue cannot shrink across an existing desk", VenueCannotShrinkAcrossDesk),
             ("A pillar blocks and frees a venue cell", PillarBlocksAndFreesVenueCell),
@@ -649,6 +650,28 @@ internal static class Program
         var edited = VenueEditor.Resize(CreateProject(), 8, 6);
         AssertEqual(8, edited.Venue.Width);
         AssertEqual(6, edited.Venue.Height);
+    }
+
+    private static void DeskLayoutDuplicateIsIndependent()
+    {
+        var workspace = new ProjectWorkspace(CreateProject());
+        var original = workspace.Project.DeskLayouts[0];
+        var circles = workspace.Project.CircleLayouts.Count;
+        var operation = new CircleSpaceCoordinator.Engine.Model.LayoutCatalogServiceDuplicateDeskLayout(original.Id, "desk-copy", "机の複製");
+        var json = System.Text.Json.JsonSerializer.Serialize<CircleSpaceCoordinator.Engine.Model.EditorOperation>(operation);
+        workspace.Execute(System.Text.Json.JsonSerializer.Deserialize<CircleSpaceCoordinator.Engine.Model.EditorOperation>(json)!);
+        AssertEqual(circles, workspace.Project.CircleLayouts.Count);
+        AssertEqual(original.DeskPlacements[0], workspace.Project.DeskLayouts.Single(item => item.Id == "desk-copy").DeskPlacements[0]);
+        workspace.SelectDeskLayout("desk-copy");
+        var desk = original.DeskPlacements[0];
+        workspace.Execute(new CircleSpaceCoordinator.Engine.Model.PlanDeskEditorMoveDesk(workspace.SelectedPlanId, desk.Id, new GridPosition(2, 1)));
+        AssertEqual(desk.Anchor, workspace.Project.DeskLayouts.Single(item => item.Id == original.Id).DeskPlacements[0].Anchor);
+        AssertEqual(new GridPosition(2, 1), workspace.Project.DeskLayouts.Single(item => item.Id == "desk-copy").DeskPlacements[0].Anchor);
+        workspace.Undo();
+        workspace.Undo();
+        AssertEqual(false, workspace.Project.DeskLayouts.Any(item => item.Id == "desk-copy"));
+        workspace.Redo();
+        AssertEqual(true, workspace.Project.DeskLayouts.Any(item => item.Id == "desk-copy"));
     }
 
     private static void VenueEdgesShiftCoordinates()

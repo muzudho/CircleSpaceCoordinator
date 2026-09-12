@@ -82,6 +82,7 @@ public sealed partial class VenueEditorGame : Game
     private bool hoveredPlanCopy;
     private bool hoveredPlanRename;
     private bool hoveredLayoutAdd;
+    private bool hoveredLayoutDuplicate;
     private bool hoveredLayoutDelete;
     private bool hoveredLayoutBind;
     private bool hoveredDeskLayoutParent;
@@ -233,6 +234,7 @@ public sealed partial class VenueEditorGame : Game
         hoveredPlanCopy = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanCopyBounds(), pointer);
         hoveredPlanRename = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanRenameBounds(), pointer);
         hoveredLayoutAdd = UsesSeparatedLayouts && Contains(GetLayoutAddBounds(), pointer);
+        hoveredLayoutDuplicate = UsesSeparatedLayouts && (ShowsDeskLayouts || workspace!.HasSelectedCircleLayout) && Contains(GetLayoutDuplicateBounds(), pointer);
         hoveredLayoutDelete = UsesSeparatedLayouts && Contains(GetLayoutDeleteBounds(), pointer);
         hoveredLayoutBind = UsesSeparatedLayouts && workspace!.HasSelectedCircleLayout && (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement) && Contains(GetLayoutBindBounds(), pointer);
         hoveredDeskLayoutParent = UsesSeparatedLayouts && (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement) && Contains(GetDeskLayoutParentBounds(), pointer);
@@ -330,6 +332,11 @@ public sealed partial class VenueEditorGame : Game
             {
                 var outcome = PromptCreateLayout();
                 LogPointer("layout_create", pointer, outcome.Success, outcome.Detail);
+            }
+            else if (hoveredLayoutDuplicate)
+            {
+                var outcome = PromptDuplicateLayout();
+                LogPointer("layout_duplicate", pointer, outcome.Success, outcome.Detail);
             }
             else if (hoveredLayoutDelete)
             {
@@ -576,6 +583,7 @@ public sealed partial class VenueEditorGame : Game
         hoveredPlanId = null;
         hoveredPlanCopy = hoveredPlanRename = false;
         hoveredLayoutAdd = hoveredLayoutDelete = hoveredLayoutBind = hoveredLayoutRename = false;
+        hoveredLayoutDuplicate = false;
         hoveredDeskLayoutParent = false;
         lastDeskGhostPointer = null;
         pressedModalButton?.CancelPress();
@@ -803,6 +811,7 @@ public sealed partial class VenueEditorGame : Game
                 true);
 
             DrawLayoutButton(GetLayoutAddBounds(), "+", hoveredLayoutAdd);
+            DrawLayoutButton(GetLayoutDuplicateBounds(), "複製", hoveredLayoutDuplicate, showsDeskLayouts || workspace.HasSelectedCircleLayout);
             DrawLayoutButton(GetLayoutDeleteBounds(), "Remove", hoveredLayoutDelete, CanRemoveLayout);
             if (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement)
                 DrawLayoutButton(GetLayoutBindBounds(), "Link", hoveredLayoutBind, workspace.HasSelectedCircleLayout);
@@ -914,7 +923,10 @@ public sealed partial class VenueEditorGame : Game
         GraphicsDevice.PresentationParameters.BackBufferWidth - 264d, ToolbarHeight + 68d, 34d, 26d);
 
     private ScreenRectangle GetLayoutDeleteBounds() => new(
-        GraphicsDevice.PresentationParameters.BackBufferWidth - 224d, ToolbarHeight + 68d, 66d, 26d);
+        GraphicsDevice.PresentationParameters.BackBufferWidth - 174d, ToolbarHeight + 68d, 54d, 26d);
+
+    private ScreenRectangle GetLayoutDuplicateBounds() => new(
+        GraphicsDevice.PresentationParameters.BackBufferWidth - 224d, ToolbarHeight + 68d, 46d, 26d);
 
     private ScreenRectangle GetLayoutBindBounds() => new(
         GraphicsDevice.PresentationParameters.BackBufferWidth - 116d, ToolbarHeight + 68d, 42d, 26d);
@@ -2291,7 +2303,6 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.FitVenueToWindow,
             ToolbarAction.Undo,
             ToolbarAction.Redo,
-            ToolbarAction.DuplicatePlan,
         };
         var deskActions = new[]
         {
@@ -3215,6 +3226,8 @@ public sealed partial class VenueEditorGame : Game
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
                 ? "机配置を追加する"
                 : "選択中の机配置にサークル配置を追加する");
+        if (hoveredLayoutDuplicate)
+            details.Add(ShowsDeskLayouts ? "選択中の机配置を独立した机配置として複製する" : "選択中のサークル配置案を複製する");
         if (hoveredLayoutDelete)
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
                 ? "未使用の机配置を削除する"
@@ -3435,6 +3448,19 @@ public sealed partial class VenueEditorGame : Game
         });
         return (true, "dialog_opened");
     }
+    private (bool Success, string Detail) PromptDuplicateLayout()
+    {
+        if (workspace is null) return (false, "workspace_unavailable");
+        if (!ShowsDeskLayouts) return PromptDuplicateSelectedPlan();
+        var sourceId = workspace.SelectedDeskLayoutId;
+        var name = PlanNameDialog.Show("机配置を複製", $"{CurrentDeskLayoutName()}2");
+        if (name is null) return (false, "cancelled");
+        var id = $"desk-layout-{Guid.NewGuid():N}";
+        workspace.Execute(new LayoutCatalogServiceDuplicateDeskLayout(sourceId!, id, name), selectedPlanEdit: false);
+        workspace.SelectDeskLayout(id);
+        return (true, $"id={id}");
+    }
+
     private (bool Success, string Detail) PromptDuplicateSelectedPlan()
     {
         if (workspace is null || commandController is null)
