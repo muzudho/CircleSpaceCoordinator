@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Input;
 public sealed partial class VenueEditorGame
 {
     private sealed record ToolRingEntry(ToolbarAction? Action, string Label, string Description);
-    private sealed record ToolRingDefinition(ToolbarAction Menu, IReadOnlyList<ToolRingEntry> Entries);
+    private sealed record ToolRingDefinition(ToolbarAction Menu, IReadOnlyList<ToolRingEntry> Entries, bool CloseAfterAction = true);
     private static readonly ToolRingEntry CancelRingEntry = new(null, "キャンセル", "キャンセル：ツールの選択を変えずにリングを閉じます");
     private static readonly ToolRingDefinition[] ToolRings =
     [
@@ -35,7 +35,7 @@ public sealed partial class VenueEditorGame
             new(ToolbarAction.ExpandLeft, "左側を伸ばす", "会場の左側を１セル伸ばします"),
             new(ToolbarAction.ShrinkLeft, "左側を縮める", "会場の左側を１セル縮めます（机・柱などがはみ出す場合は変更しません）"),
             CancelRingEntry,
-        ]),
+        ], CloseAfterAction: false),
     ];
     private ToolRingDefinition toolRingDefinition = ToolRings[0];
 
@@ -43,6 +43,7 @@ public sealed partial class VenueEditorGame
         ToolRings.FirstOrDefault(ring => ring.Entries.Any(entry => entry.Action == action))?.Menu ?? action;
 
     private bool toolRingOpen;
+    private string? toolRingResult;
     private bool ShowVenueAboveRingCover => toolRingOpen && toolRingDefinition.Menu == ToolbarAction.VenueSizeMenu;
     private bool toolRingInputDrain;
     private readonly List<IconButtonModel> toolRingButtons = [];
@@ -57,6 +58,7 @@ public sealed partial class VenueEditorGame
     {
         CancelInProgressPointerInteraction();
         toolRingDefinition = ToolRings.Single(ring => ring.Menu == menu);
+        toolRingResult = null;
         toolRingOpen = true;
         toolRingInputDrain = true;
         toolRingFocus = Math.Max(0, toolRingDefinition.Entries.ToList().FindIndex(entry => entry.Action == activeCanvasTool));
@@ -98,7 +100,7 @@ public sealed partial class VenueEditorGame
         foreach (var button in toolRingButtons) button.UpdatePointer(pointer);
         if (IsPressed(keyboard, Keys.Escape))
         {
-            CloseToolRing(-1);
+            ActivateToolRingEntry(-1);
             return true;
         }
         if (IsPressed(keyboard, Keys.Tab) || IsPressed(keyboard, Keys.Right) || IsPressed(keyboard, Keys.Down))
@@ -107,7 +109,7 @@ public sealed partial class VenueEditorGame
             toolRingFocus = (toolRingFocus + toolRingButtons.Count - 1) % toolRingButtons.Count;
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
-            CloseToolRing(toolRingFocus);
+            ActivateToolRingEntry(toolRingFocus);
             return true;
         }
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
@@ -119,20 +121,28 @@ public sealed partial class VenueEditorGame
         {
             var pressed = pressedToolRingButton;
             pressedToolRingButton = null;
-            if (pressed?.Release(pointer) == true) CloseToolRing(toolRingButtons.IndexOf(pressed));
+            if (pressed?.Release(pointer) == true) ActivateToolRingEntry(toolRingButtons.IndexOf(pressed));
         }
         return true;
     }
 
-    private void CloseToolRing(int index)
+    private void ActivateToolRingEntry(int index)
     {
         if (index >= 0 && toolRingDefinition.Entries[index].Action is { } action)
         {
             var outcome = ExecuteToolbarAction(action, toolRingCenter);
             Log("toolbar_action", success: outcome.Success, detail: $"action={action};{outcome.Detail}");
             if (toolRingDefinition.Menu == ToolbarAction.VenueSizeMenu)
-                rangeSwapStatus = outcome.Success ? "会場サイズを変更しました（Ctrl+Zで元に戻す）"
+                toolRingResult = rangeSwapStatus = outcome.Success ? "会場サイズを変更しました（リングを閉じてCtrl+Zで元に戻す）"
                     : "会場サイズを変更できません。机・柱などが会場外に出ないか、サイズが１セル未満にならないか確認してください";
+            if (!toolRingDefinition.CloseAfterAction)
+            {
+                // Keep the same layout and hover target for repeated clicks. Key input
+                // uses press edges, so holding Enter does not repeat the operation.
+                pressedToolRingButton?.CancelPress();
+                pressedToolRingButton = null;
+                return;
+            }
         }
         toolRingOpen = false;
         toolRingInputDrain = true;
@@ -148,8 +158,9 @@ public sealed partial class VenueEditorGame
             DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
         DrawToolRingBand();
         var hoveredIndex = toolRingButtons.FindIndex(button => button.IsPointerOver);
-        DrawStatusBar(hoveredIndex >= 0 ? toolRingDefinition.Entries[hoveredIndex].Description
-            : "リングのボタンにマウスを合わせると操作説明を表示します　｜　Esc：キャンセル　Ctrl+P：撮影");
+        var description = hoveredIndex >= 0 ? toolRingDefinition.Entries[hoveredIndex].Description
+            : "リングのボタンにマウスを合わせると操作説明を表示します　｜　Esc：キャンセル　Ctrl+P：撮影";
+        DrawStatusBar(toolRingResult is null ? description : $"{description}　｜　{toolRingResult}");
         for (var index = 0; index < toolRingButtons.Count; index++)
         {
             var button = toolRingButtons[index];
