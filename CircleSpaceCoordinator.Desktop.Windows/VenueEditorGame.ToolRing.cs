@@ -43,6 +43,7 @@ public sealed partial class VenueEditorGame
         ToolRings.FirstOrDefault(ring => ring.Entries.Any(entry => entry.Action == action))?.Menu ?? action;
 
     private bool toolRingOpen;
+    private bool ShowVenueAboveRingCover => toolRingOpen && toolRingDefinition.Menu == ToolbarAction.VenueSizeMenu;
     private bool toolRingInputDrain;
     private readonly List<IconButtonModel> toolRingButtons = [];
     private IconButtonModel? pressedToolRingButton;
@@ -143,7 +144,8 @@ public sealed partial class VenueEditorGame
     {
         if (!toolRingOpen) return;
         EnsureToolRingButtons();
-        DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
+        if (!ShowVenueAboveRingCover)
+            DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
         DrawToolRingBand();
         var hoveredIndex = toolRingButtons.FindIndex(button => button.IsPointerOver);
         DrawStatusBar(hoveredIndex >= 0 ? toolRingDefinition.Entries[hoveredIndex].Description
@@ -168,6 +170,16 @@ public sealed partial class VenueEditorGame
                         DrawToolbarIcon(action, area, ToButtonColor(color));
                 });
         }
+    }
+
+    private void DrawVenueRingPanelCover()
+    {
+        // The canvas was drawn above its cover. Keep editor panels dimmed and inert.
+        var cover = new Color(0, 0, 0, 170);
+        DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, ToolbarHeight), cover);
+        var visiblePlans = Math.Min(GetDisplayedPlans().Count, GetVisiblePlanRowCount());
+        DrawRectangle(GetPlanListBounds(visiblePlans), cover);
+        if (ShowsChannels) DrawRectangle(GetChannelPanelBounds(), cover);
     }
 
     private void DrawVenueSizeIcon(ToolbarAction action, ScreenRectangle bounds, Color color)

@@ -598,6 +598,8 @@ public sealed partial class VenueEditorGame : Game
 
         // Preserve antialiased text strokes when labels are scaled to fit their bounds.
         spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
+        if (ShowVenueAboveRingCover)
+            DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
         if (editorMode == EditorMode.ParticipantData)
             DrawParticipantData();
         else if (editorMode == EditorMode.GenreData)
@@ -642,6 +644,7 @@ public sealed partial class VenueEditorGame : Game
         }
         DrawToolbar();
         DrawConfidentialBadge();
+        if (ShowVenueAboveRingCover) DrawVenueRingPanelCover();
         if (!toolRingOpen) DrawStatusBar();
         DrawModalDialog();
         DrawToolRing();
