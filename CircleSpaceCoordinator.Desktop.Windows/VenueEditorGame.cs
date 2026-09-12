@@ -183,7 +183,7 @@ public sealed partial class VenueEditorGame : Game
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
-        if (UpdateDeskRing(keyboard, mouse))
+        if (UpdateToolRing(keyboard, mouse))
         {
             previousMouse = mouse;
             previousKeyboard = keyboard;
@@ -566,9 +566,9 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
-        pressedDeskRingButton?.CancelPress();
-        pressedDeskRingButton = null;
-        foreach (var button in deskRingButtons) button.ClearPointerState();
+        pressedToolRingButton?.CancelPress();
+        pressedToolRingButton = null;
+        foreach (var button in toolRingButtons) button.ClearPointerState();
         selectingUnderlineText = false;
         tableScrollDragVertical = null;
         draggingPlanScrollbar = false;
@@ -642,9 +642,9 @@ public sealed partial class VenueEditorGame : Game
         }
         DrawToolbar();
         DrawConfidentialBadge();
-        if (!deskRingOpen) DrawStatusBar();
+        if (!toolRingOpen) DrawStatusBar();
         DrawModalDialog();
-        DrawDeskRing();
+        DrawToolRing();
         spriteBatch.End();
 
         if (screenshotRequested)
@@ -2296,8 +2296,7 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.DeskMenu,
             ToolbarAction.EditSeatName,
             ToolbarAction.EditDeskNumber,
-            ToolbarAction.AddPillar,
-            ToolbarAction.RemovePillar,
+            ToolbarAction.PillarMenu,
             ToolbarAction.FillDesks,
             ToolbarAction.RotateLeft,
             ToolbarAction.RotateRight,
@@ -2365,7 +2364,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action == ToolbarAction.DeskMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
+            var buttonWidth = action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
                 action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
@@ -2379,7 +2378,7 @@ public sealed partial class VenueEditorGame : Game
     // Keep each state group together before commands that run once per click.
     private static int GetToolbarActionGroup(ToolbarAction action) => action switch
     {
-        ToolbarAction.DeskMenu or ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or
+        ToolbarAction.PillarMenu or ToolbarAction.DeskMenu or ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or
         ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or
         ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
         ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
@@ -2394,7 +2393,7 @@ public sealed partial class VenueEditorGame : Game
         {
             button.Model.IsEnabled = button.Action switch
             {
-                ToolbarAction.DeskMenu => workspace is not null,
+                ToolbarAction.DeskMenu or ToolbarAction.PillarMenu => workspace is not null,
                 ToolbarAction.PreviousPlan or ToolbarAction.NextPlan => GetDisplayedPlans().Count > 1,
                 ToolbarAction.Undo => workspace?.CanUndo == true,
                 ToolbarAction.Redo => workspace?.CanRedo == true,
@@ -2418,7 +2417,7 @@ public sealed partial class VenueEditorGame : Game
                 _ => false,
             };
             button.Model.IsSelected = button.Action == activeCanvasTool ||
-                button.Action == ToolbarAction.DeskMenu && activeCanvasTool is (ToolbarAction.AddDesk or ToolbarAction.RemoveDesk) ||
+                button.Action == GetToolMenu(activeCanvasTool) ||
                 button.Action == ToolbarAction.ParticipantDataMode && editorMode == EditorMode.ParticipantData ||
                 button.Action == ToolbarAction.ToggleEvaluationAnalysis && showEvaluationAnalysis ||
                 button.Action == ToolbarAction.DeskPlacementMode && editorMode == EditorMode.DeskPlacement ||
@@ -2429,7 +2428,7 @@ public sealed partial class VenueEditorGame : Game
             button.Model.UpdatePointer(pointer);
         }
         var activeButton = toolbarButtons.SingleOrDefault(button => button.Action ==
-            (activeCanvasTool is ToolbarAction.AddDesk or ToolbarAction.RemoveDesk ? ToolbarAction.DeskMenu : activeCanvasTool));
+            GetToolMenu(activeCanvasTool));
         if (activeButton?.Model.IsEnabled != true)
             activeCanvasTool = editorMode == EditorMode.DeskPlacement
                 ? ToolbarAction.MoveDesk
@@ -2438,10 +2437,10 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
-        if (action == ToolbarAction.DeskMenu)
+        if (ToolRings.Any(ring => ring.Menu == action))
         {
-            OpenDeskRing();
-            return (true, "desk_menu_opened");
+            OpenToolRing(action);
+            return (true, "tool_menu_opened");
         }
         if (action == ToolbarAction.CaptureScreenshot)
         {
@@ -2813,9 +2812,9 @@ public sealed partial class VenueEditorGame : Game
                             ToolbarAction.SelectExportPlan => "配置決定案を選択する",
                             _ => "書き出す",
                         }, ToRectangle(bounds, 5), foreground, 16, true);
-                    else if (button.Action == ToolbarAction.DeskMenu)
-                        DrawToolbarIcon(activeCanvasTool is ToolbarAction.AddDesk or ToolbarAction.RemoveDesk
-                            ? activeCanvasTool : ToolbarAction.DeskMenu, bounds, foreground);
+                    else if (button.Action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu)
+                        DrawToolbarIcon(GetToolMenu(activeCanvasTool) == button.Action
+                            ? activeCanvasTool : button.Action, bounds, foreground);
                     else
                         DrawToolbarIcon(button.Action, bounds, foreground);
                 });
@@ -2942,6 +2941,7 @@ public sealed partial class VenueEditorGame : Game
                 textRenderer?.Draw("机", new Rectangle((int)center.X - 9, (int)center.Y - 8, 18, 16), color, 14, true);
                 DrawLine(new ScreenPoint(center.X + 5d, center.Y + 7d), new ScreenPoint(center.X + 12d, center.Y + 14d), 3d, color);
                 break;
+            case ToolbarAction.PillarMenu:
             case ToolbarAction.AddPillar:
             case ToolbarAction.RemovePillar:
                 DrawRectangle(new ScreenRectangle(center.X - 10d, center.Y - 10d, 20d, 20d), new Color(94, 104, 114));
@@ -2950,7 +2950,8 @@ public sealed partial class VenueEditorGame : Game
                 DrawCircle(new ScreenPoint(center.X + 4d, center.Y - 4d), 1.5d, color);
                 DrawCircle(new ScreenPoint(center.X - 4d, center.Y + 4d), 1.5d, color);
                 DrawCircle(new ScreenPoint(center.X + 4d, center.Y + 4d), 1.5d, color);
-                DrawLine(new ScreenPoint(center.X - 4d, center.Y + 14d), new ScreenPoint(center.X + 4d, center.Y + 14d), 2d, color);
+                if (action != ToolbarAction.PillarMenu)
+                    DrawLine(new ScreenPoint(center.X - 4d, center.Y + 14d), new ScreenPoint(center.X + 4d, center.Y + 14d), 2d, color);
                 if (action == ToolbarAction.AddPillar)
                     DrawLine(new ScreenPoint(center.X, center.Y + 10d), new ScreenPoint(center.X, center.Y + 18d), 2d, color);
                 break;
@@ -3071,6 +3072,7 @@ public sealed partial class VenueEditorGame : Game
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
         ToolbarAction.DeskMenu => "机：追加・削除を選択",
+        ToolbarAction.PillarMenu => "柱：追加・削除を選択",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
         ToolbarAction.DeskPlacementMode => "机配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
@@ -3609,6 +3611,7 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    PillarMenu,
     DeskMenu,
     ParticipantDataMode,
     DeskPlacementMode,

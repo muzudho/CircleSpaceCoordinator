@@ -10,6 +10,7 @@ internal static class Program
     {
         var tests = new (string Name, Action Run)[]
         {
+            ("Ring buttons stay square and on the circle at window edges", RingLayoutStaysInsideWindow),
             ("Screen positions map to grid cells", ScreenPositionsMapToCells),
             ("Panning moves cell bounds", PanningMovesCellBounds),
             ("Zooming preserves the anchored world position", ZoomPreservesAnchor),
@@ -42,6 +43,27 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void RingLayoutStaysInsideWindow()
+    {
+        foreach (var size in new[] { (1280d, 720d), (240d, 180d), (32d, 24d) })
+        foreach (var anchor in new[] { new ScreenRectangle(0, 0, 44, 44), new ScreenRectangle(size.Item1 - 44, size.Item2 - 44, 44, 44) })
+        foreach (var count in new[] { 3, 5 })
+        {
+            var layout = CircleSpaceCoordinator.ReusableControls.RingMenuLayout.Create(anchor, size.Item1, size.Item2, count);
+            AssertEqual(count, layout.Buttons.Count);
+            foreach (var bounds in layout.Buttons)
+            {
+                AssertEqual(bounds.Width, bounds.Height);
+                if (bounds.X < -0.001 || bounds.Y < -0.001 || bounds.X + bounds.Width > size.Item1 + 0.001 || bounds.Y + bounds.Height > size.Item2 + 0.001)
+                    throw new Exception("Ring button escaped the viewport.");
+                var dx = bounds.X + bounds.Width / 2 - layout.Center.X;
+                var dy = bounds.Y + bounds.Height / 2 - layout.Center.Y;
+                if (Math.Abs(Math.Sqrt(dx * dx + dy * dy) - layout.Radius) > 0.001)
+                    throw new Exception("Ring button is not on the band centerline.");
+            }
+        }
     }
 
     private static void ScreenPositionsMapToCells()

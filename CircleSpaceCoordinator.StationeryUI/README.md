@@ -1,6 +1,12 @@
 2026-09-08: Reusable controls, viewport and text editing now come from the StationeryUI 0.1.0 package: https://github.com/muzudho/StationeryUI. This project is a compatibility reference point and contains no copied control implementation. Windows input and rasterization use StationeryUI.Windows 0.1.0. The initial packages are in LocalPackages/StationeryUI; NuGet.Config enables clean restoration without a sibling repository.
 # StationeryUI library
 
+## リングメニューの移植準備
+
+`Controls/RingMenuLayout.cs` は、今後 StationeryUI パッケージへ移す候補として、このプロジェクトで開発する共通部品です。円形の等間隔配置・正方形の寸法・画面端への補正を担当し、MonoGame・Windows・会場モデルには依存しません。現行パッケージとの名前の衝突を避けるため、名前空間は `CircleSpaceCoordinator.ReusableControls` としています。
+
+デスクトップ側の `VenueEditorGame.ToolRing.cs` は机・柱の操作定義を共通の入力・描画処理へ渡します。操作、ラベル、説明を定義し、キャンセルは操作なしの項目として扱います。暗幕・入力遮断・入力解放待ち・撮影例外・下部説明はホスト側の責任です。将来のパッケージ化では、入力状態と帯の描画も抽出し、アイコン描画と操作実行はホストのコールバックとして接続する方針です。
+
 GUI部品を再利用するためのクラスライブラリーです。計算用のCoreやApplicationには依存しません。
 
 MonoGame上のテキスト入力、IME合成表示、ボタン、ダイアログ、選択などを置きます。
