@@ -820,6 +820,16 @@ internal static class Program
         AssertEqual(6, workspace.Project.Venue.Width);
         AssertEqual(5, workspace.Project.Venue.Height);
 
+        var anchor = workspace.SelectedPlan.DeskPlacements[0].Anchor;
+        AssertEqual(true, commands.ResizeVenue(1, 0, 1, 0).Applied);
+        AssertEqual(anchor + new GridPosition(1, 0), workspace.SelectedPlan.DeskPlacements[0].Anchor);
+        AssertEqual(true, commands.Undo());
+        AssertEqual(anchor, workspace.SelectedPlan.DeskPlacements[0].Anchor);
+        AssertEqual(true, commands.Redo());
+        AssertEqual(anchor + new GridPosition(1, 0), workspace.SelectedPlan.DeskPlacements[0].Anchor);
+        AssertEqual(true, commands.ResizeVenue(-1, 0, -1, 0).Applied);
+        AssertEqual(anchor, workspace.SelectedPlan.DeskPlacements[0].Anchor);
+
         var before = workspace.SelectedPlan.DeskPlacements.Count;
         AssertEqual(true, commands.FillDesks().Applied);
         AssertEqual(true, workspace.SelectedPlan.DeskPlacements.Count > before);

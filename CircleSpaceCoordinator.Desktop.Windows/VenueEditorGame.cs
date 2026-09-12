@@ -2300,10 +2300,7 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.FillDesks,
             ToolbarAction.RotateLeft,
             ToolbarAction.RotateRight,
-            ToolbarAction.DecreaseWidth,
-            ToolbarAction.IncreaseWidth,
-            ToolbarAction.DecreaseHeight,
-            ToolbarAction.IncreaseHeight,
+            ToolbarAction.VenueSizeMenu,
         };
         var circleActions = new[]
         {
@@ -2362,7 +2359,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
+            var buttonWidth = action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
                 action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
@@ -2391,7 +2388,7 @@ public sealed partial class VenueEditorGame : Game
         {
             button.Model.IsEnabled = button.Action switch
             {
-                ToolbarAction.DeskMenu or ToolbarAction.PillarMenu => workspace is not null,
+                ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu => workspace is not null,
                 ToolbarAction.PreviousPlan or ToolbarAction.NextPlan => GetDisplayedPlans().Count > 1,
                 ToolbarAction.Undo => workspace?.CanUndo == true,
                 ToolbarAction.Redo => workspace?.CanRedo == true,
@@ -2521,6 +2518,10 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.IncreaseWidth => FormatOutcome(commandController.ResizeVenue(1, 0)),
             ToolbarAction.DecreaseHeight => FormatOutcome(commandController.ResizeVenue(0, -1)),
             ToolbarAction.IncreaseHeight => FormatOutcome(commandController.ResizeVenue(0, 1)),
+            ToolbarAction.ExpandTop => FormatOutcome(commandController.ResizeVenue(0, 1, 0, 1)),
+            ToolbarAction.ShrinkTop => FormatOutcome(commandController.ResizeVenue(0, -1, 0, -1)),
+            ToolbarAction.ExpandLeft => FormatOutcome(commandController.ResizeVenue(1, 0, 1, 0)),
+            ToolbarAction.ShrinkLeft => FormatOutcome(commandController.ResizeVenue(-1, 0, -1, 0)),
             ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
             ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
             ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => SelectCanvasTool(action),
@@ -2822,6 +2823,13 @@ public sealed partial class VenueEditorGame : Game
     private static Color ToButtonColor(ButtonColor color) => new(color.R, color.G, color.B, color.A);
     private void DrawToolbarIcon(ToolbarAction action, ScreenRectangle bounds, Color color)
     {
+        if (action is ToolbarAction.VenueSizeMenu or ToolbarAction.ExpandTop or ToolbarAction.ShrinkTop or
+            ToolbarAction.ExpandLeft or ToolbarAction.ShrinkLeft or ToolbarAction.IncreaseWidth or ToolbarAction.DecreaseWidth or
+            ToolbarAction.IncreaseHeight or ToolbarAction.DecreaseHeight)
+        {
+            DrawVenueSizeIcon(action, bounds, color);
+            return;
+        }
         var center = new ScreenPoint(bounds.X + bounds.Width / 2d, bounds.Y + bounds.Height / 2d);
         switch (action)
         {
@@ -3071,6 +3079,7 @@ public sealed partial class VenueEditorGame : Game
     {
         ToolbarAction.DeskMenu => "机：追加・削除を選択",
         ToolbarAction.PillarMenu => "柱：追加・削除を選択",
+        ToolbarAction.VenueSizeMenu => "会場サイズ：上下左右の辺を伸ばす・縮める",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
         ToolbarAction.DeskPlacementMode => "机配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
@@ -3609,6 +3618,11 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    VenueSizeMenu,
+    ExpandTop,
+    ShrinkTop,
+    ExpandLeft,
+    ShrinkLeft,
     PillarMenu,
     DeskMenu,
     ParticipantDataMode,

@@ -31,7 +31,7 @@ public static class EditorOperationHandler
         TemporaryPlacementEditorSwapRegions op => TemporaryPlacementEditor.SwapRegions(project, op.planId, op.source, op.destination, op.width, op.height),
         VenueEditorAddPillar op => VenueEditor.AddPillar(project, op.cell),
         VenueEditorRemovePillar op => VenueEditor.RemovePillar(project, op.cell),
-        VenueEditorResize op => VenueEditor.Resize(project, op.width, op.height),
+        VenueEditorResize op => VenueEditor.Resize(project, op.width, op.height, op.offsetX, op.offsetY),
         VenueTopologyEditorAddConnector op => VenueTopologyEditor.AddConnector(project, op.planId, op.firstDeskId, op.secondDeskId, op.firstCell, op.secondCell),
         VenueTopologyEditorAddFacingRegion op => VenueTopologyEditor.AddFacingRegion(project, op.planId, op.first, op.second),
         VenueTopologyEditorToggleAutomaticConnection op => VenueTopologyEditor.ToggleAutomaticConnection(project, op.planId, op.first, op.second),

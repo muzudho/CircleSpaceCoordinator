@@ -163,10 +163,10 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
                 deskType.Id));
     }
 
-    public EditorCommandResult ResizeVenue(int widthDelta, int heightDelta) => Apply(
+    public EditorCommandResult ResizeVenue(int widthDelta, int heightDelta, int offsetX = 0, int offsetY = 0) => Apply(
         new VenueEditorResize(
             workspace.Project.Venue.Width + widthDelta,
-            workspace.Project.Venue.Height + heightDelta));
+            workspace.Project.Venue.Height + heightDelta, offsetX, offsetY));
 
     public EditorCommandResult AddPillarAt(GridPosition cell) => Apply(
         new VenueEditorAddPillar( cell));

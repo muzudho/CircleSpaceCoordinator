@@ -73,7 +73,7 @@ public sealed record TemporaryPlacementEditorSwap(string planId, string firstId,
 public sealed record TemporaryPlacementEditorSwapRegions(string planId, GridPosition source, GridPosition destination, int width, int height) : EditorOperation, IPlanOperation;
 public sealed record VenueEditorAddPillar(GridPosition cell) : EditorOperation;
 public sealed record VenueEditorRemovePillar(GridPosition cell) : EditorOperation;
-public sealed record VenueEditorResize(int width, int height) : EditorOperation;
+public sealed record VenueEditorResize(int width, int height, int offsetX = 0, int offsetY = 0) : EditorOperation;
 public sealed record VenueTopologyEditorAddConnector(string planId, string firstDeskId, string secondDeskId, GridPosition? firstCell = null, GridPosition? secondCell = null) : EditorOperation, IPlanOperation;
 public sealed record VenueTopologyEditorAddFacingRegion(string planId, GridPosition first, GridPosition second) : EditorOperation, IPlanOperation;
 public sealed record VenueTopologyEditorToggleAutomaticConnection(string planId, GridPosition first, GridPosition second) : EditorOperation, IPlanOperation;

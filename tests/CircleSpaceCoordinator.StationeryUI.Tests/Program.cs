@@ -49,10 +49,18 @@ internal static class Program
     {
         foreach (var size in new[] { (1280d, 720d), (240d, 180d), (32d, 24d) })
         foreach (var anchor in new[] { new ScreenRectangle(0, 0, 44, 44), new ScreenRectangle(size.Item1 - 44, size.Item2 - 44, 44, 44) })
-        foreach (var count in new[] { 3, 5 })
+        foreach (var count in new[] { 3, 5, 9 })
         {
             var layout = CircleSpaceCoordinator.ReusableControls.RingMenuLayout.Create(anchor, size.Item1, size.Item2, count);
             AssertEqual(count, layout.Buttons.Count);
+            for (var i = 0; i < count; i++)
+            for (var j = i + 1; j < count; j++)
+            {
+                var a = layout.Buttons[i];
+                var b = layout.Buttons[j];
+                if (a.X < b.X + b.Width && b.X < a.X + a.Width && a.Y < b.Y + b.Height && b.Y < a.Y + a.Height)
+                    throw new Exception("Ring buttons overlap.");
+            }
             foreach (var bounds in layout.Buttons)
             {
                 AssertEqual(bounds.Width, bounds.Height);

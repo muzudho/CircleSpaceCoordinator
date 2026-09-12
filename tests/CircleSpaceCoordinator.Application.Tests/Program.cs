@@ -51,6 +51,7 @@ internal static class Program
             ("A plan snapshot contains desks assignments and unassigned participants", PlanSnapshotContainsViewData),
             ("A workspace exposes its selected plan snapshot", WorkspaceExposesSelectedSnapshot),
             ("A venue can be expanded", VenueCanBeExpanded),
+            ("Top and left resizing preserve all layout coordinates and weights", VenueEdgesShiftCoordinates),
             ("A venue cannot shrink across an existing desk", VenueCannotShrinkAcrossDesk),
             ("A pillar blocks and frees a venue cell", PillarBlocksAndFreesVenueCell),
             ("Two-cell desks fill available venue cells", DesksFillAvailableCells),
@@ -648,6 +649,48 @@ internal static class Program
         var edited = VenueEditor.Resize(CreateProject(), 8, 6);
         AssertEqual(8, edited.Venue.Width);
         AssertEqual(6, edited.Venue.Height);
+    }
+
+    private static void VenueEdgesShiftCoordinates()
+    {
+        var source = CreateScoredProject();
+        source = source with
+        {
+            Venue = source.Venue with
+            {
+                Width = 4, Height = 2,
+                BlockedCells = new HashSet<GridPosition> { new(3, 0) },
+                Zones = [new VenueZone("zone", "zone", new HashSet<GridPosition> { new(2, 0) })],
+            },
+        };
+        foreach (var offset in new[] { new GridPosition(1, 0), new GridPosition(0, 1) })
+        {
+            var shifted = VenueEditor.Resize(source, source.Venue.Width + offset.X, source.Venue.Height + offset.Y, offset.X, offset.Y);
+            AssertEqual(source.Plans[0].DeskPlacements[0].Anchor + offset, shifted.Plans[0].DeskPlacements[0].Anchor);
+            AssertEqual(source.Plans[0].Assignments[0].ScoringPosition + offset, shifted.Plans[0].Assignments[0].ScoringPosition);
+            AssertEqual(true, shifted.Venue.BlockedCells.Contains(new GridPosition(3, 0) + offset));
+            AssertEqual(true, shifted.Venue.Zones[0].Cells.Contains(new GridPosition(2, 0) + offset));
+            foreach (var item in source.Evaluation.WeightMaps[0].Cells)
+                AssertEqual(item.Value, shifted.Evaluation.WeightMaps[0].Cells[item.Key + offset]);
+            var restored = VenueEditor.Resize(shifted, source.Venue.Width, source.Venue.Height, -offset.X, -offset.Y);
+            AssertEqual(source.Plans[0].DeskPlacements[0].Anchor, restored.Plans[0].DeskPlacements[0].Anchor);
+            AssertEqual(true, restored.Venue.BlockedCells.SetEquals(source.Venue.BlockedCells));
+            var workspace = new ProjectWorkspace(source);
+            var operation = new CircleSpaceCoordinator.Engine.Model.VenueEditorResize(
+                source.Venue.Width + offset.X, source.Venue.Height + offset.Y, offset.X, offset.Y);
+            var json = System.Text.Json.JsonSerializer.Serialize<CircleSpaceCoordinator.Engine.Model.EditorOperation>(operation);
+            workspace.Execute(System.Text.Json.JsonSerializer.Deserialize<CircleSpaceCoordinator.Engine.Model.EditorOperation>(json)!);
+            AssertEqual(source.Plans[0].DeskPlacements[0].Anchor + offset, workspace.Project.DeskLayouts[0].DeskPlacements[0].Anchor);
+            AssertEqual(source.Plans[0].Assignments[0].ScoringPosition + offset, workspace.Project.CircleLayouts[0].Assignments[0].ScoringPosition);
+            workspace.Undo();
+            AssertEqual(source.Plans[0].Assignments[0].ScoringPosition, workspace.Project.CircleLayouts[0].Assignments[0].ScoringPosition);
+            try
+            {
+                VenueEditor.Resize(source, source.Venue.Width - offset.X, source.Venue.Height - offset.Y, -offset.X, -offset.Y);
+                throw new Exception("Expected occupied edge shrink to fail.");
+            }
+            catch (ProjectValidationException) { }
+        }
     }
 
     private static void VenueCannotShrinkAcrossDesk()

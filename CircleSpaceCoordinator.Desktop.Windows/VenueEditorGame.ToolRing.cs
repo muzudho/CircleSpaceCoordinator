@@ -24,6 +24,18 @@ public sealed partial class VenueEditorGame
             new(ToolbarAction.RemovePillar, "柱削除", "柱削除：選択後、柱のあるセルをクリックして柱を削除します"),
             CancelRingEntry,
         ]),
+        new(ToolbarAction.VenueSizeMenu,
+        [
+            new(ToolbarAction.ExpandTop, "上側を伸ばす", "会場の上側を１セル伸ばします"),
+            new(ToolbarAction.ShrinkTop, "上側を縮める", "会場の上側を１セル縮めます（机・柱などがはみ出す場合は変更しません）"),
+            new(ToolbarAction.IncreaseWidth, "右側を伸ばす", "会場の右側を１セル伸ばします"),
+            new(ToolbarAction.DecreaseWidth, "右側を縮める", "会場の右側を１セル縮めます（机・柱などがはみ出す場合は変更しません）"),
+            new(ToolbarAction.IncreaseHeight, "下側を伸ばす", "会場の下側を１セル伸ばします"),
+            new(ToolbarAction.DecreaseHeight, "下側を縮める", "会場の下側を１セル縮めます（机・柱などがはみ出す場合は変更しません）"),
+            new(ToolbarAction.ExpandLeft, "左側を伸ばす", "会場の左側を１セル伸ばします"),
+            new(ToolbarAction.ShrinkLeft, "左側を縮める", "会場の左側を１セル縮めます（机・柱などがはみ出す場合は変更しません）"),
+            CancelRingEntry,
+        ]),
     ];
     private ToolRingDefinition toolRingDefinition = ToolRings[0];
 
@@ -63,7 +75,7 @@ public sealed partial class VenueEditorGame
         toolRingButtons.Clear();
         var anchor = toolbarButtons.Single(button => button.Action == toolRingDefinition.Menu).Model.Bounds;
         var layout = CircleSpaceCoordinator.ReusableControls.RingMenuLayout.Create(
-            anchor, width, height, toolRingDefinition.Entries.Count);
+            anchor, width, Math.Max(1, height - StatusBarHeight), toolRingDefinition.Entries.Count);
         toolRingCenter = layout.Center;
         toolRingRadius = layout.Radius;
         for (var index = 0; index < layout.Buttons.Count; index++)
@@ -117,6 +129,9 @@ public sealed partial class VenueEditorGame
         {
             var outcome = ExecuteToolbarAction(action, toolRingCenter);
             Log("toolbar_action", success: outcome.Success, detail: $"action={action};{outcome.Detail}");
+            if (toolRingDefinition.Menu == ToolbarAction.VenueSizeMenu)
+                rangeSwapStatus = outcome.Success ? "会場サイズを変更しました（Ctrl+Zで元に戻す）"
+                    : "会場サイズを変更できません。机・柱などが会場外に出ないか、サイズが１セル未満にならないか確認してください";
         }
         toolRingOpen = false;
         toolRingInputDrain = true;
@@ -153,6 +168,31 @@ public sealed partial class VenueEditorGame
                         DrawToolbarIcon(action, area, ToButtonColor(color));
                 });
         }
+    }
+
+    private void DrawVenueSizeIcon(ToolbarAction action, ScreenRectangle bounds, Color color)
+    {
+        var center = new ScreenPoint(bounds.X + bounds.Width / 2d, bounds.Y + bounds.Height / 2d);
+        var scale = Math.Min(bounds.Width, bounds.Height) / 44d;
+        DrawOutline(new ScreenRectangle(center.X - 9 * scale, center.Y - 9 * scale, 18 * scale, 18 * scale), 2 * scale, color);
+        if (action == ToolbarAction.VenueSizeMenu) return;
+        var direction = action switch
+        {
+            ToolbarAction.ExpandTop or ToolbarAction.ShrinkTop => new ScreenPoint(0, -1),
+            ToolbarAction.IncreaseWidth or ToolbarAction.DecreaseWidth => new ScreenPoint(1, 0),
+            ToolbarAction.IncreaseHeight or ToolbarAction.DecreaseHeight => new ScreenPoint(0, 1),
+            _ => new ScreenPoint(-1, 0),
+        };
+        var expanding = action is ToolbarAction.ExpandTop or ToolbarAction.IncreaseWidth or ToolbarAction.IncreaseHeight or ToolbarAction.ExpandLeft;
+        var startDistance = expanding ? 7d : 19d;
+        var endDistance = expanding ? 19d : 1d;
+        ScreenPoint Point(double distance, double side = 0) => new(
+            center.X + (direction.X * distance - direction.Y * side) * scale,
+            center.Y + (direction.Y * distance + direction.X * side) * scale);
+        DrawLine(Point(startDistance), Point(endDistance), 2 * scale, color);
+        var wingDistance = endDistance + (expanding ? -5 : 5);
+        DrawLine(Point(endDistance), Point(wingDistance, -4), 2 * scale, color);
+        DrawLine(Point(endDistance), Point(wingDistance, 4), 2 * scale, color);
     }
 
     private void DrawToolRingBand()

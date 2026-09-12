@@ -10,8 +10,11 @@ public sealed record RingMenuLayout(ScreenPoint Center, double Radius, IReadOnly
         if (!double.IsFinite(width) || width <= 0) throw new ArgumentOutOfRangeException(nameof(width));
         if (!double.IsFinite(height) || height <= 0) throw new ArgumentOutOfRangeException(nameof(height));
         if (count < 1) throw new ArgumentOutOfRangeException(nameof(count));
-        var radius = Math.Max(0d, Math.Min(72d, Math.Min((width - 60d) / 2d, (height - 60d) / 2d)));
-        var halfSize = Math.Min(22d, Math.Min(width, height) / 2d);
+        // Circumscribed button circles leave a gap even at diagonal positions.
+        var radius = count <= 3 ? 72d : Math.Max(72d, (44d * Math.Sqrt(2d) + 8d) / (2d * Math.Sin(Math.PI / count)));
+        var scale = Math.Min(1d, Math.Min(width, height) / (2d * (radius + 30d)));
+        radius *= scale;
+        var halfSize = 22d * scale;
         var extent = radius + halfSize;
         var center = new ScreenPoint(
             Math.Clamp(anchor.X + anchor.Width / 2d, extent, Math.Max(extent, width - extent)),
