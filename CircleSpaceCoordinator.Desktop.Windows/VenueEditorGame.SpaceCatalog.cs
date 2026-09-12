@@ -237,7 +237,7 @@ public sealed partial class VenueEditorGame
         }
     }
 
-    private void DrawSpaceOnCanvas(SpaceTypeDetails space, GridPosition anchor, QuarterTurn orientation, bool ghost, bool disabled, Color? ghostColor = null)
+    private void DrawSpaceOnCanvas(SpaceTypeDetails space, GridPosition anchor, QuarterTurn orientation, bool ghost, bool disabled, Color? ghostColor = null, string? placementId = null)
     {
         var cells = space.Cells.Select(cell => anchor + new GridPosition(cell.X, cell.Y).Rotate(orientation)).ToArray();
         if (cells.Length == 0) return;
@@ -251,8 +251,16 @@ public sealed partial class VenueEditorGame
         DrawOutline(bounds, 2, outline);
         DrawDeskOrientationMarker(bounds, orientation, ghost ? ghostColor ?? Color.LightBlue : disabled ? Color.Gray : new Color(145, 98, 38));
 
+        var labels = workspace?.SelectedPlan.SeatLabels.Where(label => label.DeskPlacementId == placementId)
+            .ToDictionary(label => label.RelativeCell);
         foreach (var seat in space.Cells.Where(cell => cell.Area > 0))
         {
+            var label = labels?.GetValueOrDefault(new GridPosition(seat.X, seat.Y));
+            var hasBlock = !string.IsNullOrWhiteSpace(label?.BlockName);
+            var hasCell = !string.IsNullOrWhiteSpace(label?.SeatName);
+            var hasNumber = !IsWeightChannelSelected && selectedNumberChannel == 0 ? hasBlock
+                : !IsWeightChannelSelected && selectedNumberChannel == 2 ? hasCell : hasBlock && hasCell;
+            if (hasNumber) continue;
             var at = anchor + new GridPosition(seat.X, seat.Y).Rotate(orientation);
             var cellBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(at));
             // Offset from the label's center so numbers do not hide the placement marker.

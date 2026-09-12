@@ -1452,7 +1452,7 @@ public sealed partial class VenueEditorGame : Game
             var definition = workspace.Project.DeskTypes.Single(t => t.Id == placed.DeskTypeId);
             if (definition.Space is { } space)
             {
-                DrawSpaceOnCanvas(space, placed.Anchor, placed.Orientation, false, deletionDisabled);
+                DrawSpaceOnCanvas(space, placed.Anchor, placed.Orientation, false, deletionDisabled, placementId: placed.Id);
                 continue;
             }
             DrawDesk(
@@ -1469,7 +1469,7 @@ public sealed partial class VenueEditorGame : Game
             var deskType = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
             if (deskType.Space is { } space)
             {
-                DrawSpaceOnCanvas(space, previewAnchor, placement.Orientation, true, false);
+                DrawSpaceOnCanvas(space, previewAnchor, placement.Orientation, true, false, placementId: placement.Id);
                 return;
             }
             var previewCells = deskType.Footprint
@@ -1492,17 +1492,15 @@ public sealed partial class VenueEditorGame : Game
         foreach (var placement in CircleSeatExportBuilder.FindMissingDeskNumbers(plan))
         {
             var type = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
-            var seats = placement.GetFrameNumberCells(type);
-            foreach (var cell in seats)
-            {
-                var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
-                var warning = new ScreenRectangle(bounds.X + 2d, bounds.Y + 2d, bounds.Width - 4d, bounds.Height - 4d);
-                DrawRectangle(warning, new Color(204, 38, 48, 92));
-                DrawOutline(warning, 2d, new Color(255, 72, 80));
-            }
-            if (seats.Count == 0) continue;
-            var anchorBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(seats.Contains(placement.Anchor) ? placement.Anchor : seats.First()));
-            textRenderer?.Draw("フレーム番号 未設定", ToRectangle(anchorBounds), new Color(255, 235, 235), VenueTextSize(10), true);
+            var cells = placement.GetOccupiedCells(type);
+            if (cells.Count == 0) continue;
+            var topLeft = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(new GridPosition(cells.Min(cell => cell.X), cells.Min(cell => cell.Y))));
+            var bottomRight = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(new GridPosition(cells.Max(cell => cell.X) + 1, cells.Max(cell => cell.Y) + 1)));
+            var warning = new ScreenRectangle(topLeft.X + 2, topLeft.Y + 2,
+                Math.Max(1, bottomRight.X - topLeft.X - 4), Math.Max(1, bottomRight.Y - topLeft.Y - 4));
+            DrawRectangle(warning, new Color(204, 38, 48, 92));
+            DrawOutline(warning, 2d, new Color(255, 72, 80));
+            textRenderer?.Draw("フレーム番号 未設定", ToRectangle(warning), new Color(255, 235, 235), VenueTextSize(10), true);
         }
     }
 
