@@ -27,4 +27,12 @@ public sealed record DeskPlacement(
         deskType.Footprint
             .Select(relative => Anchor + relative.Rotate(Orientation))
             .ToHashSet();
+
+    /// <summary>Number-editing targets exclude occupied cells that are not seats.</summary>
+    public IReadOnlySet<GridPosition> GetSeatCells(DeskType deskType) =>
+        (deskType.Space is { } space
+            ? space.Cells.Where(cell => cell.Area > 0).Select(cell => new GridPosition(cell.X, cell.Y))
+            : deskType.Footprint)
+        .Select(relative => Anchor + relative.Rotate(Orientation))
+        .ToHashSet();
 }

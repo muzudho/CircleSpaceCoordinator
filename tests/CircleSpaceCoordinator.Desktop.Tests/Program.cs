@@ -828,6 +828,11 @@ internal static class Program
             var before = ProjectJsonSerializer.Save(workspace.Project);
             AssertEqual(true, commands.AddDeskAt(new GridPosition(10, 10), orientation, type).Applied);
             var placed = workspace.SelectedPlan.DeskPlacements.Single(p => p.DeskTypeId == type.Id);
+            var seats = placed.GetSeatCells(type);
+            foreach (var cell in definition.Cells)
+                AssertEqual(cell.Area > 0, seats.Contains(placed.Anchor + new GridPosition(cell.X, cell.Y).Rotate(orientation)));
+            var legacyType = type with { Space = null };
+            AssertEqual(true, placed.GetSeatCells(legacyType).SetEquals(placed.GetOccupiedCells(legacyType)));
             AssertEqual(true, placed.GetOccupiedCells(type).SetEquals(definition.Cells.Select(c => new GridPosition(10, 10) + new GridPosition(c.X, c.Y).Rotate(orientation))));
             var saved = ProjectJsonSerializer.Save(workspace.Project);
             var loaded = ProjectJsonSerializer.Load(saved);

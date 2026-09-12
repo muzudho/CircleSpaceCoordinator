@@ -1521,20 +1521,29 @@ public sealed partial class VenueEditorGame : Game
             return;
 
         var plan = workspace.SelectedPlan;
-        var desks = workspace.GetSelectedPlanSnapshot().Desks;
         foreach (var placement in CircleSeatExportBuilder.FindMissingDeskNumbers(plan))
         {
-            var desk = desks.Single(item => item.Id == placement.Id);
-            foreach (var cell in desk.OccupiedCells)
+            var type = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
+            var seats = placement.GetSeatCells(type);
+            foreach (var cell in seats)
             {
                 var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
                 var warning = new ScreenRectangle(bounds.X + 2d, bounds.Y + 2d, bounds.Width - 4d, bounds.Height - 4d);
                 DrawRectangle(warning, new Color(204, 38, 48, 92));
                 DrawOutline(warning, 2d, new Color(255, 72, 80));
             }
-            var anchorBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(placement.Anchor));
+            if (seats.Count == 0) continue;
+            var anchorBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(seats.Contains(placement.Anchor) ? placement.Anchor : seats.First()));
             textRenderer?.Draw("スペース番号 未設定", ToRectangle(anchorBounds), new Color(255, 235, 235), VenueTextSize(10), true);
         }
+    }
+
+    private bool IsSpaceNumberTarget(string placementId, GridPosition cell)
+    {
+        if (workspace is null) return false;
+        var placement = workspace.SelectedPlan.DeskPlacements.Single(item => item.Id == placementId);
+        var type = workspace.Project.DeskTypes.Single(item => item.Id == placement.DeskTypeId);
+        return placement.GetSeatCells(type).Contains(cell);
     }
 
     private int VenueTextSize(int basePixelHeight) =>
@@ -1575,6 +1584,9 @@ public sealed partial class VenueEditorGame : Game
         }
         var desk = desks.LastOrDefault(item => item.OccupiedCells.Contains(cell));
         if (desk is null)
+            return;
+
+        if (activeCanvasTool == ToolbarAction.EditDeskNumber && !IsSpaceNumberTarget(desk.Id, cell))
             return;
 
         DrawOutline(TargetBounds(activeCanvasTool == ToolbarAction.EditSeatName ? [cell] : desk.OccupiedCells),
@@ -2815,7 +2827,7 @@ public sealed partial class VenueEditorGame : Game
         EditorCommandResult EditDeskNumberAt(GridPosition position)
         {
             var desk = workspace!.GetSelectedPlanSnapshot().Desks.LastOrDefault(item => item.OccupiedCells.Contains(position));
-            if (desk is null)
+            if (desk is null || !IsSpaceNumberTarget(desk.Id, position))
                 return EditorCommandResult.NoTarget;
             var placement = workspace.SelectedPlan.DeskPlacements.Single(item => item.Id == desk.Id);
             var edit = DeskNumberDialog.Show(placement.DeskNumber);
