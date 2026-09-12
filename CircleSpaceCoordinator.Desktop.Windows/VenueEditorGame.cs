@@ -2830,6 +2830,8 @@ public sealed partial class VenueEditorGame : Game
                             ? activeCanvasTool : button.Action, bounds, foreground);
                     else
                         DrawToolbarIcon(button.Action, bounds, foreground);
+                    if (ToolRings.Any(ring => ring.Menu == button.Action))
+                        DrawCircle(new ScreenPoint(bounds.X + bounds.Width - 6d, bounds.Y + bounds.Height - 6d), 3.5d, foreground);
                 });
         }
     }
