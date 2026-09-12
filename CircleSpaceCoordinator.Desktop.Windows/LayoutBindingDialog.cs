@@ -4,7 +4,8 @@ using CircleSpaceCoordinator.Core.Model;
 
 internal static class LayoutBindingDialog
 {
-    public static string? Show(IReadOnlyList<DeskLayout> deskLayouts, string currentDeskLayoutId)
+    public static string? Show(IReadOnlyList<DeskLayout> deskLayouts, string currentDeskLayoutId,
+        string prompt = "紐付け先の机配置")
     {
         using var form = new System.Windows.Forms.Form
         {
@@ -17,7 +18,7 @@ internal static class LayoutBindingDialog
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
             ShowInTaskbar = false,
         };
-        using var label = new System.Windows.Forms.Label { Text = "紐付け先の机配置", Left = 14, Top = 14, AutoSize = true };
+        using var label = new System.Windows.Forms.Label { Text = prompt, Left = 14, Top = 14, AutoSize = true };
         using var choices = new System.Windows.Forms.ComboBox
         {
             Left = 14, Top = 38, Width = 386,

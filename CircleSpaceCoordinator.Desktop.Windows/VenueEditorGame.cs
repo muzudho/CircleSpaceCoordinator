@@ -84,6 +84,7 @@ public sealed partial class VenueEditorGame : Game
     private bool hoveredLayoutAdd;
     private bool hoveredLayoutDelete;
     private bool hoveredLayoutBind;
+    private bool hoveredDeskLayoutParent;
     private bool hoveredLayoutRename;
     private string primaryStatusMessage = "";
     private string secondaryStatusMessage = "";
@@ -225,6 +226,7 @@ public sealed partial class VenueEditorGame : Game
         hoveredLayoutAdd = UsesSeparatedLayouts && Contains(GetLayoutAddBounds(), pointer);
         hoveredLayoutDelete = UsesSeparatedLayouts && Contains(GetLayoutDeleteBounds(), pointer);
         hoveredLayoutBind = UsesSeparatedLayouts && workspace!.HasSelectedCircleLayout && (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement) && Contains(GetLayoutBindBounds(), pointer);
+        hoveredDeskLayoutParent = UsesSeparatedLayouts && (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement) && Contains(GetDeskLayoutParentBounds(), pointer);
         hoveredLayoutRename = UsesSeparatedLayouts && (ShowsDeskLayouts || workspace!.HasSelectedCircleLayout) && Contains(GetLayoutRenameBounds(), pointer);
         if (activeCanvasTool == ToolbarAction.AddDesk &&
             IsPointerInEditorCanvas(pointer) &&
@@ -324,6 +326,19 @@ public sealed partial class VenueEditorGame : Game
             {
                 var outcome = CanRemoveLayout ? PromptDeleteLayout() : (Success: false, Detail: "layout_remove_disabled");
                 LogPointer("layout_delete", pointer, outcome.Success, outcome.Detail);
+            }
+            else if (hoveredDeskLayoutParent)
+            {
+                var target = LayoutBindingDialog.Show(workspace!.Project.DeskLayouts, workspace.SelectedDeskLayoutId,
+                    "表示する机配置");
+                if (target is not null && target != workspace.SelectedDeskLayoutId)
+                {
+                    dragController?.Cancel();
+                    workspace.SelectDeskLayout(target);
+                    planScroll = 0;
+                    hoveredPlanId = null;
+                    LogPointer("desk_layout_select", pointer, true, $"deskLayoutId={target}");
+                }
             }
             else if (hoveredLayoutBind)
             {
@@ -548,6 +563,7 @@ public sealed partial class VenueEditorGame : Game
         hoveredPlanId = null;
         hoveredPlanCopy = hoveredPlanRename = false;
         hoveredLayoutAdd = hoveredLayoutDelete = hoveredLayoutBind = hoveredLayoutRename = false;
+        hoveredDeskLayoutParent = false;
         lastDeskGhostPointer = null;
         pressedModalButton?.CancelPress();
         pressedModalButton = null;
@@ -750,23 +766,23 @@ public sealed partial class VenueEditorGame : Game
         var visibleCount = Math.Min(plans.Count, GetVisiblePlanRowCount());
         planScroll = Math.Clamp(planScroll, 0, Math.Max(0, plans.Count - visibleCount));
         var panel = GetPlanListBounds(visibleCount);
-        DrawRectangle(panel, new Color(20, 25, 32, 238));
-        DrawOutline(panel, 2d, new Color(88, 103, 120));
         var showsDeskLayouts = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
+        var hasDeskParent = UsesSeparatedLayouts && !showsDeskLayouts;
+        var listPanel = hasDeskParent
+            ? new ScreenRectangle(panel.X + 8d, panel.Y + 32d, panel.Width - 8d, panel.Height - 32d)
+            : panel;
+        DrawRectangle(listPanel, new Color(20, 25, 32, 238));
+        DrawOutline(listPanel, 2d, new Color(88, 103, 120));
         if (UsesSeparatedLayouts)
         {
+            if (hasDeskParent)
+                DrawLayoutButton(GetDeskLayoutParentBounds(), $"机配置: {CurrentDeskLayoutName()} ▾", hoveredDeskLayoutParent);
             textRenderer?.Draw(
-                showsDeskLayouts ? "机配置" : "サークル配置",
-                new Rectangle((int)panel.X + 10, (int)panel.Y + 2, (int)panel.Width - 20, 32),
+                showsDeskLayouts ? "机配置" : "└ 配置案",
+                new Rectangle((int)listPanel.X + 10, (int)listPanel.Y + 2, (int)listPanel.Width - 20, hasDeskParent ? 22 : 32),
                 Color.White,
-                22,
+                hasDeskParent ? 18 : 22,
                 true);
-            if (!showsDeskLayouts)
-                textRenderer?.Draw(
-                    $"机配置: {CurrentDeskLayoutName()}",
-                    new Rectangle((int)panel.X + 10, (int)panel.Y + 34, (int)panel.Width - 20, 22),
-                    new Color(184, 204, 214),
-                    14);
 
             DrawLayoutButton(GetLayoutAddBounds(), "+", hoveredLayoutAdd);
             DrawLayoutButton(GetLayoutDeleteBounds(), "Remove", hoveredLayoutDelete, CanRemoveLayout);
@@ -859,9 +875,9 @@ public sealed partial class VenueEditorGame : Game
         Math.Max(1, rowCount) * 42d + 92d);
 
     private ScreenRectangle GetPlanRowBounds(int index) => new(
-        GraphicsDevice.PresentationParameters.BackBufferWidth - 272d,
+        GraphicsDevice.PresentationParameters.BackBufferWidth - (UsesSeparatedLayouts && !ShowsDeskLayouts ? 264d : 272d),
         ToolbarHeight + 100d + index * 42d,
-        236d,
+        UsesSeparatedLayouts && !ShowsDeskLayouts ? 228d : 236d,
         38d);
 
     private ScreenRectangle GetPlanCopyBounds() => new(
@@ -884,6 +900,9 @@ public sealed partial class VenueEditorGame : Game
 
     private ScreenRectangle GetLayoutBindBounds() => new(
         GraphicsDevice.PresentationParameters.BackBufferWidth - 116d, ToolbarHeight + 68d, 42d, 26d);
+
+    private ScreenRectangle GetDeskLayoutParentBounds() => new(
+        GraphicsDevice.PresentationParameters.BackBufferWidth - 276d, ToolbarHeight + 12d, 264d, 28d);
 
     private ScreenRectangle GetLayoutRenameBounds() => new(
         GraphicsDevice.PresentationParameters.BackBufferWidth - 70d, ToolbarHeight + 68d, 50d, 26d);
@@ -3161,6 +3180,8 @@ public sealed partial class VenueEditorGame : Game
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
                 ? "未使用の机配置を削除する"
                 : "選択中のサークル配置を削除する");
+        if (hoveredDeskLayoutParent)
+            details.Add("机配置を選択して、その机配置の配置案を表示する");
         if (hoveredLayoutBind)
             details.Add("選択中のサークル配置の机配置を変更する");
         if (hoveredLayoutRename)
