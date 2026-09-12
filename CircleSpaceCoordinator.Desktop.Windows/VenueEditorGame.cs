@@ -2300,8 +2300,6 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.FillDesks,
             ToolbarAction.RotateLeft,
             ToolbarAction.RotateRight,
-            ToolbarAction.AssignParticipant,
-            ToolbarAction.UnassignParticipant,
             ToolbarAction.DecreaseWidth,
             ToolbarAction.IncreaseWidth,
             ToolbarAction.DecreaseHeight,
