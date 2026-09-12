@@ -124,7 +124,8 @@ public sealed partial class VenueEditorGame
         for (var index = 0; index < deskRingButtons.Count; index++)
         {
             var button = deskRingButtons[index];
-            button.IsSelected = index == deskRingFocus;
+            // Ring entries choose a tool; keyboard focus is not an active-tool selection.
+            button.IsSelected = false;
             StationeryButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
