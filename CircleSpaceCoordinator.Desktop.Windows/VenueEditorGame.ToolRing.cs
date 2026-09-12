@@ -14,16 +14,16 @@ public sealed partial class VenueEditorGame
     [
         new(ToolbarAction.NextDirectionMenu,
         [
-            new(ToolbarAction.FaceNorth, "上向き", "上向き：次に配置するスペースを上向きにします"),
-            new(ToolbarAction.FaceEast, "右向き", "右向き：次に配置するスペースを右向きにします"),
-            new(ToolbarAction.FaceSouth, "下向き", "下向き：次に配置するスペースを下向きにします"),
-            new(ToolbarAction.FaceWest, "左向き", "左向き：次に配置するスペースを左向きにします"),
+            new(ToolbarAction.FaceNorth, "上向き", "上向き：次に配置するフレームを上向きにします"),
+            new(ToolbarAction.FaceEast, "右向き", "右向き：次に配置するフレームを右向きにします"),
+            new(ToolbarAction.FaceSouth, "下向き", "下向き：次に配置するフレームを下向きにします"),
+            new(ToolbarAction.FaceWest, "左向き", "左向き：次に配置するフレームを左向きにします"),
             new(null, "キャンセル", "キャンセル：向きを変えずにリングを閉じます"),
         ]),
         new(ToolbarAction.DeskMenu,
         [
-            new(ToolbarAction.AddDesk, "スペース追加", "スペース追加：選択後、会場のセルをクリックしてスペースを追加します"),
-            new(ToolbarAction.RemoveDesk, "スペース削除", "スペース削除：選択後、スペースをクリックして削除します（サークルが割り当てられたスペースは削除できません）"),
+            new(ToolbarAction.AddDesk, "フレーム追加", "フレーム追加：選択後、会場のセルをクリックしてフレームを追加します"),
+            new(ToolbarAction.RemoveDesk, "フレーム削除", "フレーム削除：選択後、フレームをクリックして削除します（サークルが割り当てられたフレームは削除できません）"),
             CancelRingEntry,
         ]),
         new(ToolbarAction.PillarMenu,
@@ -35,13 +35,13 @@ public sealed partial class VenueEditorGame
         new(ToolbarAction.VenueSizeMenu,
         [
             new(ToolbarAction.ExpandTop, "上側を伸ばす", "会場の上側を１セル伸ばします"),
-            new(ToolbarAction.ShrinkTop, "上側を縮める", "会場の上側を１セル縮めます（スペース・柱などがはみ出す場合は変更しません）"),
+            new(ToolbarAction.ShrinkTop, "上側を縮める", "会場の上側を１セル縮めます（フレーム・柱などがはみ出す場合は変更しません）"),
             new(ToolbarAction.IncreaseWidth, "右側を伸ばす", "会場の右側を１セル伸ばします"),
-            new(ToolbarAction.DecreaseWidth, "右側を縮める", "会場の右側を１セル縮めます（スペース・柱などがはみ出す場合は変更しません）"),
+            new(ToolbarAction.DecreaseWidth, "右側を縮める", "会場の右側を１セル縮めます（フレーム・柱などがはみ出す場合は変更しません）"),
             new(ToolbarAction.IncreaseHeight, "下側を伸ばす", "会場の下側を１セル伸ばします"),
-            new(ToolbarAction.DecreaseHeight, "下側を縮める", "会場の下側を１セル縮めます（スペース・柱などがはみ出す場合は変更しません）"),
+            new(ToolbarAction.DecreaseHeight, "下側を縮める", "会場の下側を１セル縮めます（フレーム・柱などがはみ出す場合は変更しません）"),
             new(ToolbarAction.ExpandLeft, "左側を伸ばす", "会場の左側を１セル伸ばします"),
-            new(ToolbarAction.ShrinkLeft, "左側を縮める", "会場の左側を１セル縮めます（スペース・柱などがはみ出す場合は変更しません）"),
+            new(ToolbarAction.ShrinkLeft, "左側を縮める", "会場の左側を１セル縮めます（フレーム・柱などがはみ出す場合は変更しません）"),
             CancelRingEntry,
         ], CloseAfterAction: false),
     ];
@@ -143,7 +143,7 @@ public sealed partial class VenueEditorGame
             Log("toolbar_action", success: outcome.Success, detail: $"action={action};{outcome.Detail}");
             if (toolRingDefinition.Menu == ToolbarAction.VenueSizeMenu)
                 toolRingResult = rangeSwapStatus = outcome.Success ? "会場サイズを変更しました（リングを閉じてCtrl+Zで元に戻す）"
-                    : "会場サイズを変更できません。スペース・柱などが会場外に出ないか、サイズが１セル未満にならないか確認してください";
+                    : "会場サイズを変更できません。フレーム・柱などが会場外に出ないか、サイズが１セル未満にならないか確認してください";
             if (!toolRingDefinition.CloseAfterAction)
             {
                 // Keep the same layout and hover target for repeated clicks. Key input

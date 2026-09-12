@@ -33,7 +33,7 @@ public sealed partial class VenueEditorGame
             CreateToolbar();
             BuildSpaceButtons();
         }
-        catch (Exception ex) { ShowInAppMessage("スペース定義を開けません", ex.Message); }
+        catch (Exception ex) { ShowInAppMessage("フレーム定義を開けません", ex.Message); }
     }
 
     private void BuildSpaceButtons()
@@ -59,7 +59,7 @@ public sealed partial class VenueEditorGame
     private void SaveSpaceDefinitions(SpaceDefinitionCatalog catalog)
     {
         SpaceDefinitions.Save(catalog);
-        spaceDefinitionStatus = "アプリ共通のスペース定義を保存しました。";
+        spaceDefinitionStatus = "アプリ共通のフレーム定義を保存しました。";
         spaceSelected = Math.Clamp(spaceSelected, 0, Math.Max(0, SpaceCount - 1));
     }
 
@@ -105,7 +105,7 @@ public sealed partial class VenueEditorGame
         var index = spaceSelected;
         var name = spaceRequestsTab ? catalog.Requests[index].Value : catalog.Types[index].Name;
         var requests = spaceRequestsTab;
-        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "スペース定義を削除", $"「{name}」をアプリ共通の定義から削除します。"), action =>
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "フレーム定義を削除", $"「{name}」をアプリ共通の定義から削除します。"), action =>
         {
             if (action != ModalDialogAction.Accept) return;
             try
@@ -167,8 +167,8 @@ public sealed partial class VenueEditorGame
         }
         void Text(string value, int y, int size = 18) => textRenderer?.Draw(value,
             new Rectangle(370, y, Math.Max(1, GraphicsDevice.Viewport.Width - 390), 30), Color.White, size);
-        Text("アプリ共通のスペース定義", 124, 23);
-        Text("すべてのイベント・スペース配置・サークル配置案で同じ定義を使います", 162, 16);
+        Text("アプリ共通のフレーム定義", 124, 23);
+        Text("すべてのイベント・フレーム配置・サークル配置案で同じ定義を使います", 162, 16);
         if (SpaceCount == 0) { Text("［追加］から定義を作成してください", 222); return; }
         if (spaceRequestsTab)
         {

@@ -1012,7 +1012,7 @@ internal static class Program
             {
                 CircleSeatExportBuilder.Build(workspace.Project, workspace.SelectedPlan);
             }
-            catch (InvalidOperationException exception) when (exception.Message.Contains("スペース番号"))
+            catch (InvalidOperationException exception) when (exception.Message.Contains("フレーム番号"))
             {
                 return;
             }

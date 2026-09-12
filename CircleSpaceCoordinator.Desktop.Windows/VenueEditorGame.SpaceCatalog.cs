@@ -60,7 +60,7 @@ public sealed partial class VenueEditorGame
             spaceCatalogDrain = true;
             BuildCatalogButtons();
         }
-        catch (Exception ex) { ShowInAppMessage("スペースカタログ", ex.Message); }
+        catch (Exception ex) { ShowInAppMessage("フレームカタログ", ex.Message); }
     }
 
     private ScreenRectangle CatalogBounds => new(
@@ -147,7 +147,7 @@ public sealed partial class VenueEditorGame
         textRenderer?.Draw("次に配置　▾", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 5, 204, 26)), Color.White, 18, true);
         if (NextSpace is not { } type)
         {
-            textRenderer?.Draw("スペース定義で型を追加", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 60, 204, 40)), Color.LightGray, 16);
+            textRenderer?.Draw("フレーム定義で型を追加", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 60, 204, 40)), Color.LightGray, 16);
             return;
         }
         DrawSpaceTypePreview(type, nextDeskOrientation, new ScreenRectangle(bounds.X + 12, bounds.Y + 35, 90, 80));
@@ -174,7 +174,7 @@ public sealed partial class VenueEditorGame
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
         DrawRectangle(panel, new Color(24, 32, 42));
         DrawOutline(panel, 2, new Color(110, 160, 170));
-        textRenderer?.Draw("スペースカタログ ― 型と方向を選ぶ", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 12, panel.Width - 32, 32)), Color.White, 22, true);
+        textRenderer?.Draw("フレームカタログ ― 型と方向を選ぶ", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 12, panel.Width - 32, 32)), Color.White, 22, true);
         var types = SpaceDefinitions.Current.Types.Skip(catalogPage * 6).Take(6).ToArray();
         for (var index = 0; index < catalogButtons.Count; index++)
         {

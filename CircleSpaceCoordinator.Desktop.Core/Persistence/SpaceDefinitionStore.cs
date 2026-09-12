@@ -22,7 +22,7 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
             Type("desk-whole", "長さ2・1サークル用長机", "机", 2, 1, (_, _) => 1, ["正面", "開放", "開放", "開放"]),
             Type("desk-3-seats", "長さ3・3サークル用長机", "机", 3, 1, (x, _) => x + 1, ["正面", "開放", "開放", "開放"]),
             Type("desk-3-ends", "長さ3・2サークル用長机", "机", 3, 1, (x, _) => x == 1 ? 0 : x == 0 ? 1 : 2, ["正面", "開放", "開放", "開放"]),
-            Type("free-space", "フリースペース2×2", "場所", 2, 2, (_, _) => 1, ["入口", "入口", "入口", "入口"]),
+            Type("free-space", "自由配置フレーム2×2", "場所", 2, 2, (_, _) => 1, ["入口", "入口", "入口", "入口"]),
             Type("booth", "ブース3×3", "ブース", 3, 3, (_, _) => 1, ["壁", "入口", "入口", "壁"]),
         ],
         [
@@ -33,7 +33,7 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
 
     public void Validate()
     {
-        if (SchemaVersion != 1) throw new InvalidDataException("未対応のスペース定義形式です。");
+        if (SchemaVersion != 1) throw new InvalidDataException("未対応のフレーム定義形式です。");
         if (Types is null || Requests is null) throw new InvalidDataException("型と申込スペースの一覧が必要です。");
         if (Types.Select(t => t.Id).Distinct().Count() != Types.Count || Requests.Select(r => r.Id).Distinct().Count() != Requests.Count)
             throw new InvalidDataException("定義IDが重複しています。");
@@ -76,7 +76,7 @@ public sealed class SpaceDefinitionStore
         if (File.Exists(Path))
         {
             savedJson = File.ReadAllText(Path);
-            Current = JsonSerializer.Deserialize<SpaceDefinitionCatalog>(savedJson, Options) ?? throw new InvalidDataException("スペース定義を読み込めません。");
+            Current = JsonSerializer.Deserialize<SpaceDefinitionCatalog>(savedJson, Options) ?? throw new InvalidDataException("フレーム定義を読み込めません。");
         }
         else Current = SpaceDefinitionCatalog.CreateDefault();
         Current.Validate();
@@ -90,7 +90,7 @@ public sealed class SpaceDefinitionStore
         // A second running application must reload instead of silently overwriting edits.
         using var guard = new FileStream(Path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         if ((File.Exists(Path) ? File.ReadAllText(Path) : null) != savedJson)
-            throw new IOException("別のアプリでスペース定義が変更されました。アプリを開き直してください。");
+            throw new IOException("別のアプリでフレーム定義が変更されました。アプリを開き直してください。");
         var json = JsonSerializer.Serialize(catalog, Options);
         try
         {

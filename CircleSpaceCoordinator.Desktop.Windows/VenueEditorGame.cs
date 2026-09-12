@@ -139,7 +139,7 @@ public sealed partial class VenueEditorGame : Game
         SdlWindowIcon.TrySet(Window, Path.Combine(AppContext.BaseDirectory, "Assets", "long-table-app-icon.png"));
         RestoreWorkingState();
         try { _ = SpaceDefinitions; }
-        catch (Exception ex) { ShowInAppMessage("スペース定義", ex.Message); }
+        catch (Exception ex) { ShowInAppMessage("フレーム定義", ex.Message); }
         CreateToolbar();
         previousMouse = Mouse.GetState();
         previousKeyboard = Keyboard.GetState();
@@ -382,7 +382,7 @@ public sealed partial class VenueEditorGame : Game
             else if (hoveredDeskLayoutParent)
             {
                 var target = LayoutBindingDialog.Show(workspace!.Project.DeskLayouts, workspace.SelectedDeskLayoutId,
-                    "表示するスペース配置");
+                    "表示するフレーム配置");
                 if (target is not null && target != workspace.SelectedDeskLayoutId)
                 {
                     dragController?.Cancel();
@@ -851,9 +851,9 @@ public sealed partial class VenueEditorGame : Game
         if (UsesSeparatedLayouts)
         {
             if (hasDeskParent)
-                DrawLayoutButton(GetDeskLayoutParentBounds(), $"スペース配置: {CurrentDeskLayoutName()} ▾", hoveredDeskLayoutParent);
+                DrawLayoutButton(GetDeskLayoutParentBounds(), $"フレーム配置: {CurrentDeskLayoutName()} ▾", hoveredDeskLayoutParent);
             textRenderer?.Draw(
-                showsDeskLayouts ? "スペース配置" : "└ 配置案",
+                showsDeskLayouts ? "フレーム配置" : "└ 配置案",
                 new Rectangle((int)listPanel.X + 10, (int)listPanel.Y + 2, (int)listPanel.Width - 20, hasDeskParent ? 22 : 32),
                 Color.White,
                 hasDeskParent ? 18 : 22,
@@ -1102,7 +1102,7 @@ public sealed partial class VenueEditorGame : Game
         DrawOutline(left, 2d, new Color(88, 103, 120));
         DrawOutline(right, 2d, new Color(88, 103, 120));
 
-        textRenderer?.Draw("ジャンル別スペース構成", new Rectangle((int)left.X + 16, (int)left.Y + 12, (int)left.Width - 32, 28), Color.White, 21, true);
+        textRenderer?.Draw("ジャンル別フレーム構成", new Rectangle((int)left.X + 16, (int)left.Y + 12, (int)left.Width - 32, 28), Color.White, 21, true);
         textRenderer?.Draw("ジャンル名と網掛けパターン", new Rectangle((int)right.X + 16, (int)right.Y + 12, (int)right.Width - 32, 28), Color.White, 21, true);
         var groups = BuildGenreDataGroups();
         if (groups.Count == 0)
@@ -1534,7 +1534,7 @@ public sealed partial class VenueEditorGame : Game
             }
             if (seats.Count == 0) continue;
             var anchorBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(seats.Contains(placement.Anchor) ? placement.Anchor : seats.First()));
-            textRenderer?.Draw("スペース番号 未設定", ToRectangle(anchorBounds), new Color(255, 235, 235), VenueTextSize(10), true);
+            textRenderer?.Draw("フレーム番号 未設定", ToRectangle(anchorBounds), new Color(255, 235, 235), VenueTextSize(10), true);
         }
     }
 
@@ -3210,11 +3210,11 @@ public sealed partial class VenueEditorGame : Game
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
         ToolbarAction.SpaceDefinitionsMode => "アプリ共通の配置物の型と申込スペースを編集する",
-        ToolbarAction.DeskMenu => "スペース：追加・削除を選択",
+        ToolbarAction.DeskMenu => "フレーム：追加・削除を選択",
         ToolbarAction.PillarMenu => "柱：追加・削除を選択",
         ToolbarAction.VenueSizeMenu => "会場サイズ：上下左右の辺を伸ばす・縮める",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
-        ToolbarAction.DeskPlacementMode => "スペース配置モードへ切り替える",
+        ToolbarAction.DeskPlacementMode => "フレーム配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
         ToolbarAction.GenrePlacementMode => "ジャンル配置モードへ切り替える",
         ToolbarAction.CirclePlacementMode => "サークル配置モードへ切り替える",
@@ -3226,7 +3226,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・席番号をExcelへ書き出す（未決定の場合はサークルデータで選択）",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",
         ToolbarAction.EditGenreStyles => "ジャンルと色・網掛けパターンの対応を編集する",
-        ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（スペース上のセルを2回選択）",
+        ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（フレーム上のセルを2回選択）",
         ToolbarAction.ToggleAutomaticIslandConnection => "自動島接続を有効・無効に切り替える（線をクリック）",
         ToolbarAction.AddFacingRegion => "向かい合わせ領域矩形を追加する（対角を2回選択）",
         ToolbarAction.RemoveTopology => "島接続補助直線または向かい合わせ領域を削除する",
@@ -3236,16 +3236,16 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.Undo => "元に戻す",
         ToolbarAction.Redo => "やり直す",
         ToolbarAction.DuplicatePlan => "現在の配置案を配置修正版として複製する",
-        ToolbarAction.MoveDesk => "スペースを移動する",
-        ToolbarAction.AddDesk => "スペースを追加する",
-        ToolbarAction.RemoveDesk => "スペースを削除する",
-        ToolbarAction.EditSeatName => "選択チャンネルの番地または重みを変更する（スペース上のセルをクリック）",
-        ToolbarAction.EditDeskNumber => "スペース番号を変更する（全てのスペースに設定が必要）",
+        ToolbarAction.MoveDesk => "フレームを移動する",
+        ToolbarAction.AddDesk => "フレームを追加する",
+        ToolbarAction.RemoveDesk => "フレームを削除する",
+        ToolbarAction.EditSeatName => "選択チャンネルの番地または重みを変更する（フレーム上のセルをクリック）",
+        ToolbarAction.EditDeskNumber => "フレーム番号を変更する（全てのフレームに設定が必要）",
         ToolbarAction.AddPillar => "柱を置く",
         ToolbarAction.RemovePillar => "柱を消す",
-        ToolbarAction.FillDesks => "空き領域へスペースを自動配置する",
-        ToolbarAction.RotateLeft => "スペースを左回転",
-        ToolbarAction.RotateRight => "スペースを右回転",
+        ToolbarAction.FillDesks => "空き領域へフレームを自動配置する",
+        ToolbarAction.RotateLeft => "フレームを左回転",
+        ToolbarAction.RotateRight => "フレームを右回転",
         ToolbarAction.AssignParticipant => "サークルを割り当てる",
         ToolbarAction.UnassignParticipant => "サークル割当てを解除する",
         ToolbarAction.DecreaseWidth => "会場を横に1セル縮める",
@@ -3260,9 +3260,9 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetModeLabel(ToolbarAction action) => action switch
     {
-        ToolbarAction.SpaceDefinitionsMode => "スペース定義",
+        ToolbarAction.SpaceDefinitionsMode => "フレーム定義",
         ToolbarAction.ParticipantDataMode => "サークルデータ",
-        ToolbarAction.DeskPlacementMode => "スペース配置",
+        ToolbarAction.DeskPlacementMode => "フレーム配置",
         ToolbarAction.IslandDefinitionMode => "島定義",
         ToolbarAction.GenrePlacementMode => "ジャンル配置",
         ToolbarAction.CirclePlacementMode => "サークル配置",
@@ -3301,7 +3301,7 @@ public sealed partial class VenueEditorGame : Game
         Window.Title = GetWindowTitle();
         if (editorMode == EditorMode.SpaceDefinitions)
         {
-            primaryStatusMessage = "スペース定義（アプリ共通）　変更は編集画面の［保存］で確定";
+            primaryStatusMessage = "フレーム定義（アプリ共通）　変更は編集画面の［保存］で確定";
             secondaryStatusMessage = spaceDefinitionStatus;
             return;
         }
@@ -3326,20 +3326,20 @@ public sealed partial class VenueEditorGame : Game
             activeCanvasTool == ToolbarAction.AddDesk &&
             hoveredToolbarButton.Action is ToolbarAction.RotateLeft or ToolbarAction.RotateRight
                 ? hoveredToolbarButton.Action == ToolbarAction.RotateLeft
-                    ? "次のスペースを左へ90度回転"
-                    : "次のスペースを右へ90度回転"
+                    ? "次のフレームを左へ90度回転"
+                    : "次のフレームを右へ90度回転"
                 : hoveredToolbarButton?.Model.AccessibleName;
         var hoveredPlan = hoveredPlanId is null
             ? null
             : GetDisplayedPlans().FirstOrDefault(plan => plan.PlanId == hoveredPlanId);
         primaryStatusMessage = ShowsDeskLayouts
-            ? $"スペース配置: {CurrentDeskLayoutName()}"
+            ? $"フレーム配置: {CurrentDeskLayoutName()}"
             : $"配置案: {snapshot.PlanName}　一般参加者評価値: {snapshot.AudienceEvaluation.GeneralAttendeeScore:0.##}　サークル参加者評価値: {snapshot.AudienceEvaluation.CircleParticipantScore:0.##}";
         if (editorMode != EditorMode.DeskPlacement && !snapshot.AudienceEvaluation.CombinedSpaceRequirementsSatisfied)
-            primaryStatusMessage += "　⚠ 合体サークルが同じスペースにありません";
+            primaryStatusMessage += "　⚠ 合体サークルが同じフレームにありません";
         primaryStatusMessage += editorMode switch
         {
-            EditorMode.DeskPlacement => $"　モード: スペース配置　次のスペース: {FormatOrientation(nextDeskOrientation)}",
+            EditorMode.DeskPlacement => $"　モード: フレーム配置　次のフレーム: {FormatOrientation(nextDeskOrientation)}",
             EditorMode.IslandDefinition => "　モード: 島定義",
             EditorMode.GenrePlacement => "　モード: ジャンル配置",
             EditorMode.CirclePlacement => $"　モード: サークル配置　選択中: {participant}",
@@ -3350,21 +3350,21 @@ public sealed partial class VenueEditorGame : Game
             details.Add(hoveredButton);
         if (hoveredLayoutAdd)
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
-                ? "スペース配置を追加する"
-                : "選択中のスペース配置にサークル配置を追加する");
+                ? "フレーム配置を追加する"
+                : "選択中のフレーム配置にサークル配置を追加する");
         if (hoveredLayoutDuplicate)
-            details.Add(ShowsDeskLayouts ? "選択中のスペース配置を独立したスペース配置として複製する" : "選択中のサークル配置案を複製する");
+            details.Add(ShowsDeskLayouts ? "選択中のフレーム配置を独立したフレーム配置として複製する" : "選択中のサークル配置案を複製する");
         if (hoveredLayoutDelete)
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
-                ? "未使用のスペース配置を削除する"
+                ? "未使用のフレーム配置を削除する"
                 : "選択中のサークル配置を削除する");
         if (hoveredDeskLayoutParent)
-            details.Add("スペース配置を選択して、そのスペース配置の配置案を表示する");
+            details.Add("フレーム配置を選択して、そのフレーム配置の配置案を表示する");
         if (hoveredLayoutBind)
-            details.Add("選択中のサークル配置のスペース配置を変更する");
+            details.Add("選択中のサークル配置のフレーム配置を変更する");
         if (hoveredLayoutRename)
             details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
-                ? "選択中のスペース配置の名前を変更する"
+                ? "選択中のフレーム配置の名前を変更する"
                 : "選択中のサークル配置の名前を変更する");
         if (hoveredPlan is not null)
             details.Add(editorMode == EditorMode.DeskPlacement
@@ -3476,8 +3476,8 @@ public sealed partial class VenueEditorGame : Game
     {
         if (workspace is null) return (false, "workspace_unavailable");
         var isDesk = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
-        var name = PlanNameDialog.Show(isDesk ? "スペース配置を追加" : "サークル配置を追加",
-            isDesk ? $"スペース配置{workspace.Project.DeskLayouts.Count + 1}" : $"サークル配置{workspace.Project.CircleLayouts.Count + 1}");
+        var name = PlanNameDialog.Show(isDesk ? "フレーム配置を追加" : "サークル配置を追加",
+            isDesk ? $"フレーム配置{workspace.Project.DeskLayouts.Count + 1}" : $"サークル配置{workspace.Project.CircleLayouts.Count + 1}");
         if (name is null) return (false, "cancelled");
         var id = $"{(isDesk ? "desk-layout" : "circle-layout")}-{Guid.NewGuid():N}";
         try
@@ -3509,7 +3509,7 @@ public sealed partial class VenueEditorGame : Game
         var id = isDesk ? SelectedDeskLayoutId() : workspace.SelectedPlanId;
         if (isDesk && workspace.Project.CircleLayouts.Any(item => item.DeskLayoutId == id))
         {
-            ShowInAppMessage("スペース配置を削除", "このスペース配置はサークル配置で使用中です。\n先にサークル配置を削除または紐付け変更してください。");
+            ShowInAppMessage("フレーム配置を削除", "このフレーム配置はサークル配置で使用中です。\n先にサークル配置を削除または紐付け変更してください。");
             return (false, "desk_layout_referenced");
         }
         if (!isDesk && workspace.Project.CircleLayouts.Count <= 1)
@@ -3518,7 +3518,7 @@ public sealed partial class VenueEditorGame : Game
             return (false, "last_circle_layout");
         }
         OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "配置を削除",
-            isDesk ? $"スペース配置「{CurrentDeskLayoutName()}」を削除しますか？" : "このサークル配置を削除しますか？"), action =>
+            isDesk ? $"フレーム配置「{CurrentDeskLayoutName()}」を削除しますか？" : "このサークル配置を削除しますか？"), action =>
         {
             if (action != ModalDialogAction.Accept) return;
             try
@@ -3550,7 +3550,7 @@ public sealed partial class VenueEditorGame : Game
         }
         catch (Exception exception)
         {
-            System.Windows.Forms.MessageBox.Show("このサークル配置は選択したスペース配置へ収まりません。\n" + exception.Message,
+            System.Windows.Forms.MessageBox.Show("このサークル配置は選択したフレーム配置へ収まりません。\n" + exception.Message,
                 "紐付けを変更", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
             return (false, $"error={exception.GetType().Name}");
         }
@@ -3566,7 +3566,7 @@ public sealed partial class VenueEditorGame : Game
         var currentName = isDesk
             ? workspace.Project.DeskLayouts.Single(item => item.Id == id).Name
             : workspace.Project.CircleLayouts.Single(item => item.Id == id).Name;
-        OpenUnderlineInput(isDesk ? "スペース配置の名前を変更" : "サークル配置の名前を変更", currentName, name =>
+        OpenUnderlineInput(isDesk ? "フレーム配置の名前を変更" : "サークル配置の名前を変更", currentName, name =>
         {
             workspace.Execute(isDesk
                 ? new LayoutCatalogServiceRenameDeskLayout( id, name)
@@ -3579,7 +3579,7 @@ public sealed partial class VenueEditorGame : Game
         if (workspace is null) return (false, "workspace_unavailable");
         if (!ShowsDeskLayouts) return PromptDuplicateSelectedPlan();
         var sourceId = workspace.SelectedDeskLayoutId;
-        var name = PlanNameDialog.Show("スペース配置を複製", $"{CurrentDeskLayoutName()}2");
+        var name = PlanNameDialog.Show("フレーム配置を複製", $"{CurrentDeskLayoutName()}2");
         if (name is null) return (false, "cancelled");
         var id = $"desk-layout-{Guid.NewGuid():N}";
         workspace.Execute(new LayoutCatalogServiceDuplicateDeskLayout(sourceId!, id, name), selectedPlanEdit: false);
@@ -3614,8 +3614,8 @@ public sealed partial class VenueEditorGame : Game
             if (!result.Applied)
             {
                 var message = result.Issues.Any(issue => issue.Code == "assignment.cell.withoutDesk")
-                    ? "コピー先のサークル配置が、コピー元のスペース配置に収まりません。\nサークルを先に移動または解除してからコピーしてください。"
-                    : "スペース配置をコピーできませんでした。\nコピー元・コピー先の内容を確認してください。";
+                    ? "コピー先のサークル配置が、コピー元のフレーム配置に収まりません。\nサークルを先に移動または解除してからコピーしてください。"
+                    : "フレーム配置をコピーできませんでした。\nコピー元・コピー先の内容を確認してください。";
                 System.Windows.Forms.MessageBox.Show(message, "色んなコピー",
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
             }
@@ -3701,7 +3701,7 @@ public sealed partial class VenueEditorGame : Game
             catch (Exception ex)
             {
                 editorMode = EditorMode.DeskPlacement;
-                ShowInAppMessage("スペース定義を復元できません", ex.Message);
+                ShowInAppMessage("フレーム定義を復元できません", ex.Message);
             }
         }
         showEvaluationAnalysis = state.Switches?.GetValueOrDefault("evaluationAnalysis") == true;
@@ -3738,7 +3738,7 @@ public sealed partial class VenueEditorGame : Game
             "rangeSwap.overlap" => "移動元と移動先が重なっているため、範囲スワップをキャンセルしました",
             "rangeSwap.source.protrudes" => "選択範囲からはみ出すサークルがあるため、範囲スワップをキャンセルしました",
             "rangeSwap.destination.protrudes" => "移動先範囲からはみ出すサークルがあるため、範囲スワップをキャンセルしました",
-            "rangeSwap.destination.invalid" or "rangeSwap.destination.noDesk" => "移動先にスペース以外のセルがあるため、範囲スワップをキャンセルしました",
+            "rangeSwap.destination.invalid" or "rangeSwap.destination.noDesk" => "移動先にフレーム以外のセルがあるため、範囲スワップをキャンセルしました",
             _ => "範囲スワップをキャンセルしました",
         };
 

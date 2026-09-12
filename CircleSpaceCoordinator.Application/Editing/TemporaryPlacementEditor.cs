@@ -25,7 +25,7 @@ public static class TemporaryPlacementEditor
         var first = all.Single(item => item.ParticipantId == firstId);
         var second = all.Single(item => item.ParticipantId == secondId);
         if (first.OccupiedCells.Count != second.OccupiedCells.Count)
-            throw Invalid("temporary.swap.capacity", "仮置きとの入れ替えは同じスペース数同士で行ってください。範囲選択なら複数のスペースをまとめて交換できます。");
+            throw Invalid("temporary.swap.capacity", "仮置きとの入れ替えは同じセル数同士で行ってください。範囲選択なら複数のセルをまとめて交換できます。");
         return Replace(project, plan, all.Select(item => item.ParticipantId == firstId
             ? item with { OccupiedCells = second.OccupiedCells.ToHashSet(), ScoringPosition = second.ScoringPosition }
             : item.ParticipantId == secondId

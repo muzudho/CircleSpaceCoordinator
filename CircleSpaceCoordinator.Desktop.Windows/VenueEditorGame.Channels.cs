@@ -67,7 +67,7 @@ public sealed partial class VenueEditorGame
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
             textRenderer?.Draw(feature is null ? "番地" : $"{feature.Name}  {score:0.###}点",
                 new Rectangle((int)row.X + 6, (int)row.Y + 1, 240, 27), Color.White, 15, selected);
-            textRenderer?.Draw(feature is null ? "ブロック名・スペース番地・セル番地（採点なし）" : $"列: {feature.SourceColumn ?? "（対応なし）"}",
+            textRenderer?.Draw(feature is null ? "ブロック名・フレーム番地・セル番地（採点なし）" : $"列: {feature.SourceColumn ?? "（対応なし）"}",
                 new Rectangle((int)row.X + 6, (int)row.Y + 26, 240, 20), new Color(184, 204, 214), 11);
         }
         textRenderer?.Draw($"サークル配置評価値: {evaluation.TotalScore:0.###}",
