@@ -210,6 +210,15 @@ public sealed partial class VenueEditorGame : Game
             base.Update(gameTime);
             return;
         }
+        if (HandlePlanScrollbarInput(mouse, pointer))
+        {
+            hoveredPlanId = null;
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
         hoveredPlanId = editorMode == EditorMode.GenreData ? null : HitTestPlanList(pointer);
         hoveredPlanCopy = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanCopyBounds(), pointer);
         hoveredPlanRename = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanRenameBounds(), pointer);
@@ -534,6 +543,7 @@ public sealed partial class VenueEditorGame : Game
     private void CancelInProgressPointerInteraction()
     {
         tableScrollDragVertical = null;
+        draggingPlanScrollbar = false;
         foreach (var button in toolbarButtons) button.Model.ClearPointerState();
         hoveredPlanId = null;
         hoveredPlanCopy = hoveredPlanRename = false;
@@ -797,7 +807,7 @@ public sealed partial class VenueEditorGame : Game
             textRenderer?.Draw(
                 $"{plan.Rank}. {plan.PlanName}",
                 new Rectangle((int)row.X + 8, (int)row.Y + 2,
-                    showsDeskLayouts ? 236 : 88, 20),
+                    showsDeskLayouts ? (int)row.Width - 16 : (int)row.Width - 176, 20),
                 Color.White,
                 pixelHeight: 17,
                 bold: selected);
@@ -818,6 +828,7 @@ public sealed partial class VenueEditorGame : Game
                     selected ? new Color(244, 208, 111) : new Color(104, 157, 204));
             }
         }
+        DrawPlanScrollbar();
     }
 
     private string? HitTestPlanList(ScreenPoint pointer)
@@ -850,7 +861,7 @@ public sealed partial class VenueEditorGame : Game
     private ScreenRectangle GetPlanRowBounds(int index) => new(
         GraphicsDevice.PresentationParameters.BackBufferWidth - 272d,
         ToolbarHeight + 100d + index * 42d,
-        256d,
+        236d,
         38d);
 
     private ScreenRectangle GetPlanCopyBounds() => new(
@@ -2241,8 +2252,6 @@ public sealed partial class VenueEditorGame : Game
         {
             ToolbarAction.PanViewport,
             ToolbarAction.FitVenueToWindow,
-            ToolbarAction.PreviousPlan,
-            ToolbarAction.NextPlan,
             ToolbarAction.Undo,
             ToolbarAction.Redo,
             ToolbarAction.DuplicatePlan,
