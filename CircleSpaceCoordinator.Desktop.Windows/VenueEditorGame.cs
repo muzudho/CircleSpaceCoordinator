@@ -584,7 +584,8 @@ public sealed partial class VenueEditorGame : Game
         if (spriteBatch is null || pixel is null)
             return;
 
-        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        // Preserve antialiased text strokes when labels are scaled to fit their bounds.
+        spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
         if (editorMode == EditorMode.ParticipantData)
             DrawParticipantData();
         else if (editorMode == EditorMode.GenreData)
@@ -824,9 +825,9 @@ public sealed partial class VenueEditorGame : Game
             textRenderer?.Draw(
                 $"{plan.Rank}. {plan.PlanName}",
                 new Rectangle((int)row.X + 8, (int)row.Y + 2,
-                    showsDeskLayouts ? (int)row.Width - 16 : (int)row.Width - 176, 20),
+                    showsDeskLayouts ? (int)row.Width - 16 : (int)row.Width - 136, 24),
                 Color.White,
-                pixelHeight: 17,
+                pixelHeight: 19,
                 bold: selected);
             if (!showsDeskLayouts)
             {
@@ -834,7 +835,7 @@ public sealed partial class VenueEditorGame : Game
                     plan.CombinedSpaceRequirementsSatisfied
                         ? $"般 {plan.GeneralAttendeeScore:0.##}  サ {plan.CircleParticipantScore:0.##}"
                         : "合体違反  般 0  サ 0",
-                    new Rectangle((int)(row.X + row.Width) - 160, (int)row.Y + 2, 152, 20),
+                    new Rectangle((int)(row.X + row.Width) - 120, (int)row.Y + 2, 112, 24),
                     plan.CombinedSpaceRequirementsSatisfied ? new Color(244, 208, 111) : new Color(255, 116, 116),
                     pixelHeight: 16,
                     bold: true);
