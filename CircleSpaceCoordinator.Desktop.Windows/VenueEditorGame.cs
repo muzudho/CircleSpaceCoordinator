@@ -642,7 +642,7 @@ public sealed partial class VenueEditorGame : Game
         }
         DrawToolbar();
         DrawConfidentialBadge();
-        DrawStatusBar();
+        if (!deskRingOpen) DrawStatusBar();
         DrawModalDialog();
         DrawDeskRing();
         spriteBatch.End();
@@ -3133,7 +3133,7 @@ public sealed partial class VenueEditorGame : Game
     private static bool IsControlDown(KeyboardState keyboard) =>
         keyboard.IsKeyDown(Keys.LeftControl) || keyboard.IsKeyDown(Keys.RightControl);
 
-    private void DrawStatusBar()
+    private void DrawStatusBar(string? toolDescription = null)
     {
         var width = GraphicsDevice.PresentationParameters.BackBufferWidth;
         var height = GraphicsDevice.PresentationParameters.BackBufferHeight;
@@ -3147,7 +3147,7 @@ public sealed partial class VenueEditorGame : Game
             pixelHeight: 17,
             bold: true);
         textRenderer?.Draw(
-            secondaryStatusMessage,
+            toolDescription ?? secondaryStatusMessage,
             new Rectangle(14, top + 30, Math.Max(1, width - 28), 20),
             new Color(184, 204, 214),
             pixelHeight: 15);

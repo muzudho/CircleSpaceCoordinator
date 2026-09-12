@@ -121,6 +121,14 @@ public sealed partial class VenueEditorGame
         EnsureDeskRingButtons();
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
         DrawDeskRingBand();
+        var hoveredIndex = deskRingButtons.FindIndex(button => button.IsPointerOver);
+        DrawStatusBar(hoveredIndex switch
+        {
+            0 => "机追加：選択後、会場のセルをクリックして机を追加します",
+            1 => "机削除：選択後、机をクリックして削除します（サークルが割り当てられた机は削除できません）",
+            2 => "キャンセル：ツールの選択を変えずにリングを閉じます",
+            _ => "リングのボタンにマウスを合わせると操作説明を表示します　｜　Esc：キャンセル　Ctrl+P：撮影",
+        });
         for (var index = 0; index < deskRingButtons.Count; index++)
         {
             var button = deskRingButtons[index];
