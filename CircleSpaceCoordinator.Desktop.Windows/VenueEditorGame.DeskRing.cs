@@ -15,6 +15,7 @@ public sealed partial class VenueEditorGame
     private int deskRingWidth;
     private int deskRingHeight;
     private ScreenPoint deskRingCenter;
+    private double deskRingRadius;
 
     private void OpenDeskRing()
     {
@@ -39,6 +40,7 @@ public sealed partial class VenueEditorGame
         var anchor = toolbarButtons.Single(button => button.Action == ToolbarAction.DeskMenu).Model.Bounds;
         // Shift the whole ring into the window when its toolbar anchor is near an edge.
         var radius = Math.Max(0d, Math.Min(72d, Math.Min((width - 60d) / 2d, (height - 60d) / 2d)));
+        deskRingRadius = radius;
         var halfWidth = Math.Min(22d, Math.Min(width, height) / 2d);
         var halfHeight = halfWidth;
         var extentX = radius + halfWidth;
@@ -55,9 +57,6 @@ public sealed partial class VenueEditorGame
                 deskRingCenter.Y + Math.Sin(angle) * radius - halfHeight,
                 halfWidth * 2d, halfHeight * 2d), labels[index]));
         }
-        deskRingButtons.Add(new IconButtonModel(new ScreenRectangle(
-            deskRingCenter.X - halfWidth, deskRingCenter.Y - halfHeight,
-            halfWidth * 2d, halfHeight * 2d), "机（メニューを閉じる）"));
     }
 
     private bool UpdateDeskRing(KeyboardState keyboard, MouseState mouse)
@@ -121,6 +120,7 @@ public sealed partial class VenueEditorGame
         if (!deskRingOpen) return;
         EnsureDeskRingButtons();
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
+        DrawDeskRingBand();
         for (var index = 0; index < deskRingButtons.Count; index++)
         {
             var button = deskRingButtons[index];
@@ -137,13 +137,33 @@ public sealed partial class VenueEditorGame
                         DrawLine(new ScreenPoint(center.X + 8, center.Y - 8), new ScreenPoint(center.X - 8, center.Y + 8), 3, ToButtonColor(color));
                     }
                     else
-                        DrawToolbarIcon(index switch
-                        {
-                            0 => ToolbarAction.AddDesk,
-                            1 => ToolbarAction.RemoveDesk,
-                            _ => ToolbarAction.DeskMenu,
-                        }, area, ToButtonColor(color));
+                        DrawToolbarIcon(index == 0 ? ToolbarAction.AddDesk : ToolbarAction.RemoveDesk,
+                            area, ToButtonColor(color));
                 });
+        }
+    }
+
+    private void DrawDeskRingBand()
+    {
+        if (deskRingRadius <= 0d) return;
+        var thickness = Math.Min(24d, deskRingRadius);
+        DrawRing(deskRingRadius, thickness, new Color(57, 78, 86));
+        DrawRing(deskRingRadius - thickness / 2d, 1.5d, new Color(111, 149, 157));
+        DrawRing(deskRingRadius + thickness / 2d, 1.5d, new Color(111, 149, 157));
+
+        void DrawRing(double radius, double lineWidth, Color color)
+        {
+            const int segments = 128;
+            for (var index = 0; index < segments; index++)
+            {
+                var start = Math.Tau * index / segments;
+                // Slightly overlap opaque segments to keep the band continuous.
+                var end = Math.Tau * (index + 1.1d) / segments;
+                DrawLine(
+                    new ScreenPoint(deskRingCenter.X + Math.Cos(start) * radius, deskRingCenter.Y + Math.Sin(start) * radius),
+                    new ScreenPoint(deskRingCenter.X + Math.Cos(end) * radius, deskRingCenter.Y + Math.Sin(end) * radius),
+                    lineWidth, color);
+            }
         }
     }
 }
