@@ -136,6 +136,7 @@ public sealed partial class VenueEditorGame
                     if (index < 3) selectedNumberChannel = index;
                     activeCanvasTool = ToolbarAction.EditSeatName;
                     selectedCellRange = null;
+                    selectedFrameIds.Clear();
                 }
             }
         }

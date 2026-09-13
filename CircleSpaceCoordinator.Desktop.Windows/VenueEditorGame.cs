@@ -469,6 +469,9 @@ public sealed partial class VenueEditorGame : Game
                 // over an existing selection or when another tool is active.
                 rangeSelectionAnchor = VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer));
                 rangeSelectionCurrent = rangeSelectionAnchor;
+                frameSelectionStart = IsFrameNumberChannelSelected ? pointer : null;
+                frameSelectionPointer = pointer;
+                selectedFrameIds.Clear();
                 rangeSwapStatus = null;
                 LogPointer("range_select_start", pointer, true);
             }
@@ -550,7 +553,10 @@ public sealed partial class VenueEditorGame : Game
                     $"button=left;deltaX={mouse.X - previousMouse.X};deltaY={mouse.Y - previousMouse.Y}");
             }
             else if (rangeSelectionAnchor is not null)
+            {
                 rangeSelectionCurrent = VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer));
+                frameSelectionPointer = pointer;
+            }
             else if (draggedCellRange is not null)
                 participantDragPointer = pointer;
             else if (draggedParticipantToken is not null)
@@ -579,6 +585,7 @@ public sealed partial class VenueEditorGame : Game
             {
                 var current = VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer));
                 selectedCellRange = CellRange.From(anchor, current);
+                FinishFrameSelection(pointer);
                 rangeSelectionAnchor = null;
                 rangeSelectionCurrent = null;
                 LogPointer("range_select_end", pointer, true,
@@ -699,6 +706,7 @@ public sealed partial class VenueEditorGame : Game
         draggedParticipantToken = null;
         rangeSelectionAnchor = null;
         rangeSelectionCurrent = null;
+        frameSelectionStart = null;
         draggedCellRange = null;
     }
 
@@ -1859,6 +1867,11 @@ public sealed partial class VenueEditorGame : Game
     {
         if (!CanSelectCellRange)
             return;
+        if (IsFrameNumberChannelSelected)
+        {
+            DrawFrameSelection();
+            return;
+        }
         var range = rangeSelectionAnchor is { } anchor && rangeSelectionCurrent is { } current
             ? CellRange.From(anchor, current)
             : selectedCellRange;
@@ -2740,6 +2753,8 @@ public sealed partial class VenueEditorGame : Game
             rangeSelectionAnchor = null;
             rangeSelectionCurrent = null;
             selectedCellRange = null;
+            selectedFrameIds.Clear();
+            frameSelectionStart = null;
             draggedCellRange = null;
             pressedToolbarButton = null;
             CreateToolbar();

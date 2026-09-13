@@ -264,6 +264,7 @@ public sealed partial class VenueEditorGame
         toolRingOpen = spaceCatalogOpen = false;
         toolRingInputDrain = spaceCatalogDrain = false;
         selectedCellRange = null;
+        selectedFrameIds.Clear();
         topologyFirstDeskId = null;
         topologyFirstCell = topologyFirstCorner = null;
         rangeSwapStatus = screenshotStatus = null;
