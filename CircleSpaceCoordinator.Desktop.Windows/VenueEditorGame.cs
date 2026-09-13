@@ -1,28 +1,27 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
-using CircleSpaceCoordinator.Desktop.Core;
-using CircleSpaceCoordinator.Desktop.Core.Screenshots;
-using CircleSpaceCoordinator.Engine.Model;
-using CircleSpaceCoordinator.EditorClient;
-
-using CircleSpaceCoordinator.Application.Queries;
 using CircleSpaceCoordinator.Application.Plans;
-using CircleSpaceCoordinator.Core.Evaluation;
+using CircleSpaceCoordinator.Application.Queries;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Model;
+using CircleSpaceCoordinator.Desktop.Core;
 using CircleSpaceCoordinator.Desktop.Core.Interaction;
 using CircleSpaceCoordinator.Desktop.Core.Logging;
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
+using CircleSpaceCoordinator.Desktop.Core.Screenshots;
 using CircleSpaceCoordinator.Desktop.Windows.Persistence;
-using CircleSpaceCoordinator.Desktop.Windows.Screenshots;
+using StationeryUI.MonoGame.Audio;
+using StationeryUI.MonoGame.Effects;
 using CircleSpaceCoordinator.Desktop.Windows.Text;
+using CircleSpaceCoordinator.EditorClient;
+using CircleSpaceCoordinator.Engine.Model;
 using CircleSpaceCoordinator.Infrastructure.Tabular;
-using StationeryUI.Canvas;
-using StationeryUI.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using StationeryUI.Canvas;
+using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame : Game
 {
@@ -73,6 +72,8 @@ public sealed partial class VenueEditorGame : Game
     private DynamicTextRenderer? textRenderer;
     private MouseState previousMouse;
     private KeyboardState previousKeyboard;
+    private const double ScreenshotEffectDurationSeconds = 0.42d;
+    private readonly ScreenshotEffect screenshotEffect = new();
     private bool screenshotRequested;
     private double screenshotEffectStartedAt = double.NegativeInfinity;
     private SoundEffect? screenshotShutterSound;
@@ -714,14 +715,15 @@ public sealed partial class VenueEditorGame : Game
         }
 
         var effectAge = gameTime.TotalGameTime.TotalSeconds - screenshotEffectStartedAt;
-        if (effectAge >= 0d && effectAge < ScreenshotEffect.DurationSeconds)
+        if (effectAge >= 0d && effectAge < ScreenshotEffectDurationSeconds)
         {
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            ScreenshotEffect.Draw(
-                (float)(effectAge / ScreenshotEffect.DurationSeconds),
-                GraphicsDevice.PresentationParameters.BackBufferWidth,
-                GraphicsDevice.PresentationParameters.BackBufferHeight,
-                (rectangle, color) => spriteBatch.Draw(pixel, rectangle, color));
+            screenshotEffect.Draw(
+                (float)(effectAge / ScreenshotEffectDurationSeconds),
+                new ScreenshotEffectDrawingCallbacks(
+                    GraphicsDevice.PresentationParameters.BackBufferWidth,
+                    GraphicsDevice.PresentationParameters.BackBufferHeight,
+                    (rectangle, color) => spriteBatch.Draw(pixel, rectangle, color)));
             spriteBatch.End();
         }
         textRenderer?.EndFrame();

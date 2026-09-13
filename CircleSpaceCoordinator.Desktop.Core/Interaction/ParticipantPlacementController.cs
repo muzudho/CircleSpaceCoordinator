@@ -1,10 +1,9 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 
-using CircleSpaceCoordinator.Engine.Model;
-using CircleSpaceCoordinator.EditorClient;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Validation;
+using CircleSpaceCoordinator.Engine.Model;
 
 public sealed class ParticipantPlacementController(IEditorWorkspace workspace)
 {

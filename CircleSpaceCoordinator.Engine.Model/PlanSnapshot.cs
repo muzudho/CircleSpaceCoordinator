@@ -2,7 +2,6 @@ namespace CircleSpaceCoordinator.Application.Queries;
 
 using CircleSpaceCoordinator.Core.Evaluation;
 using CircleSpaceCoordinator.Core.Geometry;
-using CircleSpaceCoordinator.Core.Model;
 
 public sealed record DeskView(
     string Id,

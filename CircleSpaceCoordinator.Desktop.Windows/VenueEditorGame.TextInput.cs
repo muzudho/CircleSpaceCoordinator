@@ -1,13 +1,12 @@
-using global::StationeryUI.Windows;
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
-using System.Globalization;
-using CircleSpaceCoordinator.Desktop.Windows.Text;
+using global::StationeryUI.Windows;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 using StationeryUI.Canvas;
 using StationeryUI.Controls;
 using StationeryUI.Text;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
+using System.Globalization;
 
 public sealed partial class VenueEditorGame
 {

@@ -1,8 +1,6 @@
 namespace CircleSpaceCoordinator.Application.Plans;
 
 using CircleSpaceCoordinator.Core.Evaluation;
-using CircleSpaceCoordinator.Core.Model;
-using CircleSpaceCoordinator.Core.Validation;
 
 public sealed record RankedPlan(
     int Rank,

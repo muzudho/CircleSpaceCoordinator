@@ -1,12 +1,10 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 
-using CircleSpaceCoordinator.Application.Plans;
-using CircleSpaceCoordinator.Engine.Model;
-using CircleSpaceCoordinator.EditorClient;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Model;
 using CircleSpaceCoordinator.Core.Validation;
+using CircleSpaceCoordinator.Engine.Model;
 using CircleSpaceCoordinator.OptimizationEngine;
 
 public sealed record EditorCommandResult(

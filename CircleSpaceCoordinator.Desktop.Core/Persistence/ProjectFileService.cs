@@ -1,6 +1,5 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Persistence;
 
-using CircleSpaceCoordinator.Core.Evaluation;
 using CircleSpaceCoordinator.Core.Model;
 using CircleSpaceCoordinator.EditorClient;
 
