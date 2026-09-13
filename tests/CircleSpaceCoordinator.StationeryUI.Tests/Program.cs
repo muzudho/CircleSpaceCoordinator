@@ -51,7 +51,7 @@ internal static class Program
         foreach (var anchor in new[] { new ScreenRectangle(0, 0, 44, 44), new ScreenRectangle(size.Item1 - 44, size.Item2 - 44, 44, 44) })
         foreach (var count in new[] { 3, 5, 9 })
         {
-            var layout = CircleSpaceCoordinator.ReusableControls.RingMenuLayout.Create(anchor, size.Item1, size.Item2, count);
+            var layout = RingMenuLayout.Create(anchor, size.Item1, size.Item2, count);
             AssertEqual(count, layout.Buttons.Count);
             for (var i = 0; i < count; i++)
             for (var j = i + 1; j < count; j++)

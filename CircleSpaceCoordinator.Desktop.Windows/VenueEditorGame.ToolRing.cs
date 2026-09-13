@@ -86,7 +86,7 @@ public sealed partial class VenueEditorGame
         toolRingButtons.Clear();
         var anchor = toolRingDefinition.Menu == ToolbarAction.NextDirectionMenu
             ? NextDirectionBounds : toolbarButtons.Single(button => button.Action == toolRingDefinition.Menu).Model.Bounds;
-        var layout = CircleSpaceCoordinator.ReusableControls.RingMenuLayout.Create(
+        var layout = RingMenuLayout.Create(
             anchor, width, Math.Max(1, height - StatusBarHeight), toolRingDefinition.Entries.Count);
         toolRingCenter = layout.Center;
         toolRingRadius = layout.Radius;
