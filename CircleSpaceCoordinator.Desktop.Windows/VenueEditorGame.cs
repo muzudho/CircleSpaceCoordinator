@@ -262,17 +262,18 @@ public sealed partial class VenueEditorGame : Game
             {
                 CancelInProgressPointerInteraction();
                 pressedNextSpace = Contains(NextSpaceBounds, pointer);
+                NextSpaceSelectionButton.Press(pointer);
                 pressedNextDirection = NextSpace is not null && NextDirectionButton.Press(pointer);
             }
             if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed)
             {
-                var open = pressedNextSpace && Contains(NextSpaceBounds, pointer);
+                var open = NextSpaceSelectionButton.Release(pointer);
                 var direction = pressedNextDirection;
                 var openDirection = NextDirectionButton.Release(pointer);
                 pressedNextSpace = false;
                 pressedNextDirection = false;
                 if (direction && openDirection) OpenToolRing(ToolbarAction.NextDirectionMenu);
-                else if (open && !direction && !Contains(NextDirectionBounds, pointer)) OpenSpaceCatalog();
+                else if (open) OpenSpaceCatalog();
                 else CancelInProgressPointerInteraction();
             }
             previousMouse = mouse;
@@ -668,6 +669,7 @@ public sealed partial class VenueEditorGame : Game
         foreach (var (button, _) in eventButtons) button.ClearPointerState();
         pressedNextSpace = false;
         pressedNextDirection = false;
+        nextSpaceSelectionButton?.CancelPress();
         nextDirectionButton?.CancelPress();
         pressedCatalogButton?.CancelPress();
         pressedCatalogButton = null;
