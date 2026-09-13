@@ -752,12 +752,14 @@ public sealed partial class VenueEditorGame : Game
                     DrawGenreTokensAndConnectors();
                     if (showEvaluationAnalysis)
                         DrawEvaluationAnalysis();
+                    DrawVacantSeats();
                     DrawParticipantDragGhost();
                 }
                 if (editorMode == EditorMode.CirclePlacement)
                 {
                     if (showEvaluationAnalysis)
                         DrawEvaluationAnalysis();
+                    DrawVacantSeats();
                     DrawAssignments();
                     DrawParticipantDragGhost();
                 }
@@ -988,9 +990,19 @@ public sealed partial class VenueEditorGame : Game
                     bold: true);
 
                 var normalized = maximum <= minimum ? 1d : (plan.GeneralAttendeeScore - minimum) / (maximum - minimum);
-                DrawRectangle(new ScreenRectangle(row.X + 10d, row.Y + 27d, row.Width - 20d, 6d), new Color(13, 17, 22));
-                DrawRectangle(new ScreenRectangle(row.X + 10d, row.Y + 27d, Math.Max(3d, (row.Width - 20d) * normalized), 6d),
+                var vacant = VacantSeatCount(plan.PlanId);
+                var barX = vacant > 0 ? row.X + 160 : row.X + 10;
+                var barWidth = row.X + row.Width - 10 - barX;
+                DrawRectangle(new ScreenRectangle(barX, row.Y + 27d, barWidth, 6d), new Color(13, 17, 22));
+                DrawRectangle(new ScreenRectangle(barX, row.Y + 27d, Math.Max(3d, barWidth * normalized), 6d),
                     selected ? new Color(244, 208, 111) : new Color(104, 157, 204));
+                if (vacant > 0)
+                {
+                    DrawRectangle(new ScreenRectangle(row.X + 5, row.Y + 24, 151, 13), new Color(91, 55, 14));
+                    textRenderer?.Draw($"未完成・空き{vacant}スペース", new Rectangle((int)row.X + 7, (int)row.Y + 24, 147, 13),
+                        VacancyColor, 12, true);
+                    DrawRectangle(new ScreenRectangle(row.X, row.Y, 3, row.Height), VacancyColor);
+                }
             }
         }
         DrawPlanScrollbar();
@@ -3310,6 +3322,8 @@ public sealed partial class VenueEditorGame : Game
             _ => "　モード: ジャンルデータ",
         };
         var details = new List<string>();
+        if (ShowsVacantSeats)
+            details.Add($"○ 空きスペース：{GetVacantSeats(workspace.SelectedPlan).Count}（サークル配置で消えます）");
         if (hoveredButton is not null)
             details.Add(hoveredButton);
         if (hoveredLayoutAdd)

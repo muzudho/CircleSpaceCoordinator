@@ -248,6 +248,8 @@ public sealed partial class VenueEditorGame
         PersistWorkingState();
         workspace?.Dispose();
         workspace = null;
+        vacancyProject = null;
+        vacancyCache.Clear();
         dragController = null;
         commandController = null;
         participantController = null;

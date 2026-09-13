@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Vacancy markers count physical seats and follow placement, parking and history", VacantPhysicalSeats),
             ("A missing circle layout reports the reason and creating one enables placement", MissingCircleLayoutCanBeCreated),
             ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
@@ -98,6 +99,50 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void VacantPhysicalSeats()
+    {
+        var project = CreateProject();
+        var type = new DeskType("custom", "Custom", [new(0, 0), new(1, 0), new(2, 0)])
+        {
+            Space = new("custom", "机", 3, 1,
+                [new(0, 0, 1), new(1, 0, 0), new(2, 0, 1)], ["開放", "開放", "開放", "開放"]),
+        };
+        var desk = new DeskPlacement("custom", type.Id, new(2, 1), QuarterTurn.East);
+        var plan = new Plan("vacant", "Vacant", [desk], []);
+        project = project with { DeskTypes = [type] };
+        var expected = new HashSet<GridPosition>
+        {
+            desk.Anchor, desk.Anchor + new GridPosition(2, 0).Rotate(QuarterTurn.East),
+        };
+        AssertEqual(true, CircleLayoutVacancies.Find(project, plan).SetEquals(expected));
+        var restricted = project with { Venue = project.Venue with { BlockedCells = new HashSet<GridPosition> { desk.Anchor } } };
+        AssertEqual(1, CircleLayoutVacancies.Find(restricted, plan).Count);
+        AssertEqual(0, CircleLayoutVacancies.Find(project with { Venue = project.Venue with { Width = 1 } }, plan).Count);
+        AssertEqual(0, CircleLayoutVacancies.Find(project, plan with
+        {
+            Assignments = [new ParticipantAssignment("fictional-circle-001", expected, desk.Anchor)],
+        }).Count);
+
+        var workspace = new ProjectWorkspace(CreateAssignmentProject(2));
+        int Count() => CircleLayoutVacancies.Find(workspace.Project, workspace.SelectedPlan).Count;
+        AssertEqual(3, Count());
+        var controller = new ParticipantPlacementController(workspace);
+        AssertEqual(true, controller.PlaceParticipantAt("fictional-circle-002", new(2, 0)).Applied);
+        AssertEqual(1, Count());
+        AssertEqual(true, controller.PlaceParticipantAt("fictional-circle-001", new(1, 0)).Applied);
+        AssertEqual(true, CircleLayoutVacancies.Find(workspace.Project, workspace.SelectedPlan).SetEquals([new(0, 0)]));
+        AssertEqual(true, controller.ParkParticipantAt("fictional-circle-002", [new(2, 0), new(3, 0)], new(2, 0), new(2, 2)).Applied);
+        AssertEqual(3, Count());
+        var commands = new EditorCommandController(workspace);
+        AssertEqual(true, commands.Undo());
+        AssertEqual(1, Count());
+        AssertEqual(true, commands.Redo());
+        AssertEqual(3, Count());
+        var filled = CreateProject();
+        AssertEqual(0, CircleLayoutVacancies.Find(filled, filled.Plans[0]).Count);
+        AssertEqual(2, CircleLayoutVacancies.Find(filled, filled.Plans[0] with { Assignments = [] }).Count);
     }
 
     private static void TemporaryPositionsSurviveHistoryAndSave()
