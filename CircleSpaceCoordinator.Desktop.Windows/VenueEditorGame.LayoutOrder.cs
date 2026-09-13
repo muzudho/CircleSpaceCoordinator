@@ -8,7 +8,7 @@ public sealed partial class VenueEditorGame
     private bool ShowsLayoutOrder => UsesSeparatedLayouts && ShowsDeskLayouts;
 
     private ScreenRectangle LayoutOrderButton(int direction) => new(
-        GraphicsDevice.Viewport.Width - (direction < 0 ? 88 : 54), ToolbarHeight + 16, 30, 28);
+        GraphicsDevice.PresentationParameters.BackBufferWidth - (direction < 0 ? 116 : 92), ToolbarHeight + 68, 20, 26);
 
     private bool CanMoveLayout(int direction)
     {

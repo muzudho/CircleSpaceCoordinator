@@ -932,7 +932,7 @@ public sealed partial class VenueEditorGame : Game
                 DrawLayoutButton(GetDeskLayoutParentBounds(), $"フレーム配置: {CurrentDeskLayoutName()} ▾", hoveredDeskLayoutParent);
             textRenderer?.Draw(
                 showsDeskLayouts ? "フレーム配置" : "└ 配置案",
-                new Rectangle((int)listPanel.X + 10, (int)listPanel.Y + 2, (int)listPanel.Width - (ShowsLayoutOrder ? 88 : 20), hasDeskParent ? 22 : 32),
+                new Rectangle((int)listPanel.X + 10, (int)listPanel.Y + 2, (int)listPanel.Width - 20, hasDeskParent ? 22 : 32),
                 Color.White,
                 hasDeskParent ? 18 : 22,
                 true);
