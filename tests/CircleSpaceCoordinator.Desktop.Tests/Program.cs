@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Number channel gaps distinguish frames from seats and follow independent edits and history", MissingNumberChannels),
             ("Vacancy markers count physical seats and follow placement, parking and history", VacantPhysicalSeats),
             ("A missing circle layout reports the reason and creating one enables placement", MissingCircleLayoutCanBeCreated),
             ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
@@ -99,6 +100,46 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void MissingNumberChannels()
+    {
+        var project = CreateProject();
+        var type = new DeskType("custom", "Custom", [new(0, 0), new(1, 0), new(2, 0)])
+        {
+            Space = new("custom", "机", 3, 1, [new(0, 0, 1), new(1, 0, 0), new(2, 0, 1)],
+                ["開放", "開放", "開放", "開放"]),
+        };
+        project = project with { DeskTypes = [type] };
+        var plan = new Plan("test", "Test", [new("desk", type.Id, new(2, 1), QuarterTurn.East)], [])
+        {
+            SeatLabels = [new("desk", new(0, 0), "A", " "), new("desk", new(2, 0), "", "2")],
+        };
+        AssertEqual(new NumberChannelGaps(1, 1, 1), NumberChannelGaps.Find(project, plan));
+        AssertEqual(new NumberChannelGaps(0, 0, 0), NumberChannelGaps.Find(project, plan with
+        {
+            DeskPlacements = [plan.DeskPlacements[0] with { DeskNumber = "1" }],
+            SeatLabels = [new("desk", new(0, 0), "A", "1"), new("desk", new(2, 0), "A", "2")],
+        }));
+        var noSeats = project with { DeskTypes = [type with { Space = type.Space! with
+        {
+            Cells = type.Space.Cells.Select(cell => cell with { Area = 0 }).ToArray(),
+        } }] };
+        AssertEqual(new NumberChannelGaps(0, 1, 0), NumberChannelGaps.Find(noSeats, plan));
+        AssertEqual(new NumberChannelGaps(0, 0, 0), NumberChannelGaps.Find(project, plan with { DeskPlacements = [] }));
+
+        var workspace = new ProjectWorkspace(CreateProject());
+        NumberChannelGaps Gaps() => NumberChannelGaps.Find(workspace.Project, workspace.SelectedPlan);
+        AssertEqual(new NumberChannelGaps(2, 1, 2), Gaps());
+        var commands = new EditorCommandController(workspace);
+        AssertEqual(true, commands.SetDeskNumber("desk-1", "10").Applied);
+        AssertEqual(new NumberChannelGaps(2, 0, 2), Gaps());
+        AssertEqual(true, commands.ReplaceSeatLabels([new("desk-1", new(0, 0), "A", "1"), new("desk-1", new(1, 0), "A", "2")]).Applied);
+        AssertEqual(new NumberChannelGaps(0, 0, 0), Gaps());
+        AssertEqual(true, commands.Undo());
+        AssertEqual(new NumberChannelGaps(2, 0, 2), Gaps());
+        AssertEqual(true, commands.Redo());
+        AssertEqual(new NumberChannelGaps(0, 0, 0), Gaps());
     }
 
     private static void VacantPhysicalSeats()

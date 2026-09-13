@@ -59,6 +59,7 @@ public sealed partial class VenueEditorGame
         DrawLayoutButton(ChannelButton(1), "列・名前", false, IsWeightChannelSelected);
         DrawLayoutButton(ChannelButton(2), "削除", false, IsWeightChannelSelected);
         var evaluation = workspace.GetSelectedPlanSnapshot().Evaluation;
+        var gaps = GetNumberChannelGaps();
         for (var rowIndex = 0; rowIndex < VisibleChannelRows; rowIndex++)
         {
             var index = channelScroll + rowIndex;
@@ -67,9 +68,18 @@ public sealed partial class VenueEditorGame
             var selected = feature is null ? selectedChannelId is null && selectedNumberChannel == index : feature.Id == selectedChannelId;
             var row = ChannelRow(rowIndex);
             DrawRectangle(row, selected ? new Color(35, 126, 111) : new Color(29, 36, 45));
+            var missing = feature is null && gaps[index] > 0;
+            if (missing)
+            {
+                var mark = new ScreenRectangle(row.X + row.Width - 25, row.Y + 5, 20, 20);
+                DrawRectangle(mark, new Color(195, 35, 48));
+                DrawOutline(mark, 1, new Color(255, 112, 120));
+                DrawRectangle(new ScreenRectangle(mark.X + 9, mark.Y + 4, 2, 8), Color.White);
+                DrawRectangle(new ScreenRectangle(mark.X + 9, mark.Y + 14, 2, 2), Color.White);
+            }
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
             textRenderer?.Draw(feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点",
-                new Rectangle((int)row.X + 6, (int)row.Y + 1, 240, 27), Color.White, 15, selected);
+                new Rectangle((int)row.X + 6, (int)row.Y + 1, missing ? (int)row.Width - 36 : 240, 27), Color.White, 15, selected);
             textRenderer?.Draw(feature is null ? index == 1 ? "フレーム単位で入力（採点なし）" : "席のセル単位で入力（採点なし）" : $"列: {feature.SourceColumn ?? "（対応なし）"}",
                 new Rectangle((int)row.X + 6, (int)row.Y + 26, 240, 20), new Color(184, 204, 214), 11);
         }

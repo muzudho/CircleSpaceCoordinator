@@ -3322,6 +3322,8 @@ public sealed partial class VenueEditorGame : Game
             _ => "　モード: ジャンルデータ",
         };
         var details = new List<string>();
+        if (CanShowEditorHover && GetNumberChannelHoverError(new ScreenPoint(previousMouse.X, previousMouse.Y)) is { } numberError)
+            details.Add(numberError);
         if (ShowsVacantSeats)
             details.Add($"○ 空きスペース：{GetVacantSeats(workspace.SelectedPlan).Count}（サークル配置で消えます）");
         if (hoveredButton is not null)

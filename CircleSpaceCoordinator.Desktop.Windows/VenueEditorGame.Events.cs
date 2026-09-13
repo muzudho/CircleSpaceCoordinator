@@ -250,6 +250,9 @@ public sealed partial class VenueEditorGame
         workspace = null;
         vacancyProject = null;
         vacancyCache.Clear();
+        numberGapsProject = null;
+        numberGapsPlanId = null;
+        numberGaps = null;
         dragController = null;
         commandController = null;
         participantController = null;

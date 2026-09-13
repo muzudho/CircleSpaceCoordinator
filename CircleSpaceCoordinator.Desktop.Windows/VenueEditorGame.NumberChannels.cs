@@ -9,6 +9,38 @@ using StationeryUI.Canvas;
 
 public sealed partial class VenueEditorGame
 {
+    private CircleSpaceProject? numberGapsProject;
+    private string? numberGapsPlanId;
+    private NumberChannelGaps? numberGaps;
+
+    private NumberChannelGaps GetNumberChannelGaps()
+    {
+        var project = workspace!.Project;
+        var plan = workspace.SelectedPlan;
+        if (numberGaps is null || !ReferenceEquals(project, numberGapsProject) || numberGapsPlanId != plan.Id)
+        {
+            numberGapsProject = project;
+            numberGapsPlanId = plan.Id;
+            numberGaps = NumberChannelGaps.Find(project, plan);
+        }
+        return numberGaps;
+    }
+
+    private string? GetNumberChannelHoverError(ScreenPoint pointer)
+    {
+        if (workspace is null || editorMode != EditorMode.DeskPlacement) return null;
+        for (var row = 0; row < VisibleChannelRows; row++)
+        {
+            var index = channelScroll + row;
+            if (index >= 3) break;
+            if (!Contains(ChannelRow(row), pointer)) continue;
+            var count = GetNumberChannelGaps()[index];
+            if (count > 0)
+                return $"エラー：{NumberChannelNames[index]}が未設定の{(index == 1 ? "フレーム" : "スペース")}が{count}件あります。番号を設定してください。";
+        }
+        return null;
+    }
+
     private EditorCommandResult EditNumberCells(Func<GridPosition, bool> includes)
     {
         if (workspace is null || commandController is null || IsWeightChannelSelected || selectedNumberChannel == 1)
