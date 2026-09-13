@@ -92,6 +92,16 @@ public static class PlanDeskEditor
         return ReplacePlan(project, planIndex, plan with { DeskPlacements = placements });
     }
 
+    public static CircleSpaceProject SetDeskNumbers(
+        CircleSpaceProject project, string planId, IReadOnlyList<string> deskPlacementIds, string? deskNumber)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(deskPlacementIds);
+        foreach (var id in deskPlacementIds.Distinct(StringComparer.Ordinal))
+            project = SetDeskNumber(project, planId, id, deskNumber);
+        return project;
+    }
+
     private static CircleSpaceProject TransformDesk(
         CircleSpaceProject project,
         string planId,

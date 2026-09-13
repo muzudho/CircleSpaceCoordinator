@@ -21,6 +21,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(PlanDeskEditorMoveDesk), "PlanDeskEditor.MoveDesk")]
 [JsonDerivedType(typeof(PlanDeskEditorRotateDesk), "PlanDeskEditor.RotateDesk")]
 [JsonDerivedType(typeof(PlanDeskEditorSetDeskNumber), "PlanDeskEditor.SetDeskNumber")]
+[JsonDerivedType(typeof(PlanDeskEditorSetDeskNumbers), "PlanDeskEditor.SetDeskNumbers")]
 [JsonDerivedType(typeof(TemporaryPlacementEditorPark), "TemporaryPlacementEditor.Park")]
 [JsonDerivedType(typeof(TemporaryPlacementEditorSwap), "TemporaryPlacementEditor.Swap")]
 [JsonDerivedType(typeof(TemporaryPlacementEditorSwapRegions), "TemporaryPlacementEditor.SwapRegions")]
@@ -70,6 +71,7 @@ public sealed record PlanDeskEditorRemoveDesk(string planId, string deskPlacemen
 public sealed record PlanDeskEditorMoveDesk(string planId, string deskPlacementId, GridPosition newAnchor) : EditorOperation, IPlanOperation;
 public sealed record PlanDeskEditorRotateDesk(string planId, string deskPlacementId, QuarterTurn newOrientation) : EditorOperation, IPlanOperation;
 public sealed record PlanDeskEditorSetDeskNumber(string planId, string deskPlacementId, string? deskNumber) : EditorOperation, IPlanOperation;
+public sealed record PlanDeskEditorSetDeskNumbers(string planId, IReadOnlyList<string> deskPlacementIds, string? deskNumber) : EditorOperation, IPlanOperation;
 public sealed record TemporaryPlacementEditorPark(string planId, string participantId, IReadOnlySet<GridPosition> cells, GridPosition position) : EditorOperation, IPlanOperation;
 public sealed record TemporaryPlacementEditorSwap(string planId, string firstId, string secondId) : EditorOperation, IPlanOperation;
 public sealed record TemporaryPlacementEditorSwapRegions(string planId, GridPosition source, GridPosition destination, int width, int height) : EditorOperation, IPlanOperation;

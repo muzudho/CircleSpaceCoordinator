@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Frame numbers support bulk input and clearing with one undo", BulkFrameNumbers),
             ("Frame layout order survives remote operations, history and save without changing bindings", FrameLayoutOrder),
             ("Space totals sum requests and count each frame layout independently of assignments and history", SpaceTotals),
             ("Number channel gaps distinguish frames from seats and follow independent edits and history", MissingNumberChannels),
@@ -1313,6 +1314,26 @@ internal static class Program
         AssertEqual(new GridPosition(2, 0), restored.SelectedPlan.Assignments.Single().ScoringPosition);
         restored.SelectPlan("plan-1");
         AssertEqual(new GridPosition(2, 0), restored.SelectedPlan.Assignments.Single().ScoringPosition);
+    }
+
+    private static void BulkFrameNumbers()
+    {
+        var workspace = new ProjectWorkspace(CreateAssignmentProject(2));
+        var commands = new EditorCommandController(workspace);
+        AssertEqual(true, commands.SetDeskNumber("desk-1", "A").Applied);
+        AssertEqual(true, commands.SetDeskNumber("desk-2", "B").Applied);
+        AssertEqual(true, commands.SetDeskNumbers(["desk-1", "desk-2"], " 10 ").Applied);
+        AssertEqual(true, workspace.SelectedPlan.DeskPlacements.All(desk => desk.DeskNumber == "10"));
+        AssertEqual(true, commands.Undo());
+        AssertEqual("A", workspace.SelectedPlan.DeskPlacements.Single(desk => desk.Id == "desk-1").DeskNumber);
+        AssertEqual("B", workspace.SelectedPlan.DeskPlacements.Single(desk => desk.Id == "desk-2").DeskNumber);
+        AssertEqual(true, commands.Redo());
+        AssertEqual(true, workspace.SelectedPlan.DeskPlacements.All(desk => desk.DeskNumber == "10"));
+        AssertEqual(true, commands.SetDeskNumbers(["desk-1", "desk-2"], " ").Applied);
+        AssertEqual(true, workspace.SelectedPlan.DeskPlacements.All(desk => desk.DeskNumber is null));
+        AssertEqual(true, commands.Undo());
+        AssertEqual(true, commands.SetDeskNumbers(["desk-1"], "20").Applied);
+        AssertEqual("10", workspace.SelectedPlan.DeskPlacements.Single(desk => desk.Id == "desk-2").DeskNumber);
     }
 
     private static void DuplicateDeskEditsAreShared()

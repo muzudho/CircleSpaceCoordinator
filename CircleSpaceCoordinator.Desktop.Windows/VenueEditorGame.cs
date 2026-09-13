@@ -2831,10 +2831,20 @@ public sealed partial class VenueEditorGame : Game
             if (desk is null || !IsSpaceNumberTarget(desk.Id, position))
                 return EditorCommandResult.NoTarget;
             var placement = workspace.SelectedPlan.DeskPlacements.Single(item => item.Id == desk.Id);
-            var edit = DeskNumberDialog.Show(placement.DeskNumber);
+            var targets = IsFrameNumberChannelSelected && selectedFrameIds.Contains(desk.Id)
+                ? workspace.SelectedPlan.DeskPlacements.Where(item => selectedFrameIds.Contains(item.Id)).ToArray()
+                : [placement];
+            var values = targets.Select(item => item.DeskNumber).Distinct().ToArray();
+            if (values.Length > 1 && System.Windows.Forms.MessageBox.Show(
+                    "選択したフレームには異なるフレーム番号が入っています。まとめて変更しますか？", "番号入力",
+                    System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Warning,
+                    System.Windows.Forms.MessageBoxDefaultButton.Button2) != System.Windows.Forms.DialogResult.Yes)
+                return EditorCommandResult.NoTarget;
+            var edit = DeskNumberDialog.Show(values.Length == 1 ? values[0] : "",
+                targets.Length > 1 ? $"フレーム番号（{targets.Length} フレーム）" : "フレーム番号");
             return edit is null
                 ? EditorCommandResult.NoTarget
-                : commandController.SetDeskNumber(desk.Id, edit.DeskNumber);
+                : commandController.SetDeskNumbers(targets.Select(item => item.Id).ToArray(), edit.DeskNumber);
         }
 
         EditorCommandResult RemoveTopologyAt(ScreenPoint point, GridPosition position)

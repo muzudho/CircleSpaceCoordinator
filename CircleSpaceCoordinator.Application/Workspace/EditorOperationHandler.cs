@@ -26,6 +26,7 @@ public static class EditorOperationHandler
         PlanDeskEditorMoveDesk op => PlanDeskEditor.MoveDesk(project, op.planId, op.deskPlacementId, op.newAnchor),
         PlanDeskEditorRotateDesk op => PlanDeskEditor.RotateDesk(project, op.planId, op.deskPlacementId, op.newOrientation),
         PlanDeskEditorSetDeskNumber op => PlanDeskEditor.SetDeskNumber(project, op.planId, op.deskPlacementId, op.deskNumber),
+        PlanDeskEditorSetDeskNumbers op => PlanDeskEditor.SetDeskNumbers(project, op.planId, op.deskPlacementIds, op.deskNumber),
         TemporaryPlacementEditorPark op => TemporaryPlacementEditor.Park(project, op.planId, op.participantId, op.cells, op.position),
         TemporaryPlacementEditorSwap op => TemporaryPlacementEditor.Swap(project, op.planId, op.firstId, op.secondId),
         TemporaryPlacementEditorSwapRegions op => TemporaryPlacementEditor.SwapRegions(project, op.planId, op.source, op.destination, op.width, op.height),

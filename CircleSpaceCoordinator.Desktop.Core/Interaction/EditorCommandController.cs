@@ -151,6 +151,10 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
     public EditorCommandResult SetDeskNumber(string deskPlacementId, string? deskNumber) => Apply(
         new PlanDeskEditorSetDeskNumber( workspace.SelectedPlanId, deskPlacementId, deskNumber));
 
+    public EditorCommandResult SetDeskNumbers(IReadOnlyList<string> deskPlacementIds, string? deskNumber) =>
+        deskPlacementIds.Count == 0 ? EditorCommandResult.NoTarget : Apply(
+            new PlanDeskEditorSetDeskNumbers(workspace.SelectedPlanId, deskPlacementIds, deskNumber));
+
     public EditorCommandResult FillDesks()
     {
         var deskType = workspace.Project.DeskTypes.FirstOrDefault();
