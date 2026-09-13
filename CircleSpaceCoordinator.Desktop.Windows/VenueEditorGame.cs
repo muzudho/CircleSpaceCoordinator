@@ -616,7 +616,11 @@ public sealed partial class VenueEditorGame : Game
                         ? !deskExists ? "通路に仮置きしました" : null
                         : result.Issues.FirstOrDefault()?.Message;
                     LogPointer("participant_drop", pointer, result.Applied,
-                        $"{FormatParticipantLogDetail(participantToken.ParticipantId)};action={(swapping ? "swap" : deskExists ? "place" : "park")};issues={FormatIssues(result.Issues)}");
+                        $"{FormatParticipantLogDetail(participantToken.ParticipantId)};action={(swapping ? "swap" : deskExists ? "place" : "park")};issues={FormatIssues(result.Issues)}",
+                        result.Applied ? null : result.Issues.Any(issue => issue.Code == "assignment.circleLayout.required")
+                            ? UiOperationFailure.CircleLayoutRequired : result.Issues.Count == 0 ? UiOperationFailure.NoTarget : UiOperationFailure.ValidationRejected);
+                    if (result.Issues.Any(issue => issue.Code == "assignment.circleLayout.required"))
+                        ShowMissingCircleLayout();
                 }
                 else if (!participantToken.Assigned)
                 {
@@ -3387,7 +3391,7 @@ public sealed partial class VenueEditorGame : Game
         _ => throw new ArgumentOutOfRangeException(nameof(orientation)),
     };
 
-    private void LogPointer(string action, ScreenPoint pointer, bool? success, string? detail = null)
+    private void LogPointer(string action, ScreenPoint pointer, bool? success, string? detail = null, UiOperationFailure? failureCode = null)
     {
         var cell = viewport.ScreenToCell(pointer);
         operationLogger.Log(new UiOperationLogEntry(
@@ -3398,11 +3402,31 @@ public sealed partial class VenueEditorGame : Game
             cell.Column,
             cell.Row,
             success,
-            detail));
+            detail,
+            failureCode));
     }
 
     private void Log(string action, bool? success = null, string? detail = null) =>
         operationLogger.Log(new UiOperationLogEntry(DateTimeOffset.UtcNow, action, Success: success, Detail: detail));
+
+    private void ShowMissingCircleLayout()
+    {
+        if (workspace is null) return;
+        var deskId = workspace.SelectedDeskLayoutId;
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "サークル配置案が必要です",
+            "このフレーム配置には、サークルの配置先となる配置案がありません。\nサークル配置案を作成すると、フレームへの配置と通路への仮置きができます。"), action =>
+        {
+            if (action != ModalDialogAction.Accept) return;
+            OpenUnderlineInput("サークル配置案を追加", $"サークル配置{workspace.Project.CircleLayouts.Count + 1}", name =>
+            {
+                var id = $"circle-layout-{Guid.NewGuid():N}";
+                workspace.Execute(new LayoutCatalogServiceCreateCircleLayout(id, name, deskId), selectedPlanEdit: false);
+                workspace.SelectPlan(id);
+                CreateToolbar();
+                rangeSwapStatus = "サークル配置案を作成しました。サークルをもう一度置いてください。";
+            }, "新しいサークル配置案の名前を入力してください。\n作成後、サークルをもう一度ドラッグして配置してください。");
+        }, [("配置案を作成", ModalDialogAction.Accept), ("キャンセル", ModalDialogAction.Cancel)]);
+    }
 
     private (bool Success, string Detail) SaveProject()
     {

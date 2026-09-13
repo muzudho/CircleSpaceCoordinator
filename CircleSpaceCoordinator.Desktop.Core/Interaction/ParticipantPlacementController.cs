@@ -7,6 +7,9 @@ using CircleSpaceCoordinator.Engine.Model;
 
 public sealed class ParticipantPlacementController(IEditorWorkspace workspace)
 {
+    private static EditorCommandResult MissingCircleLayout => new(false,
+        [new ValidationIssue("assignment.circleLayout.required", "circleLayouts",
+            "このフレーム配置にはサークル配置案がありません。サークル配置案を追加してから配置してください。")]);
     private string? selectedParticipantId;
 
     public string? SelectedParticipantId
@@ -69,7 +72,7 @@ public sealed class ParticipantPlacementController(IEditorWorkspace workspace)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(participantId);
         if (!workspace.HasSelectedCircleLayout)
-            return EditorCommandResult.NoTarget;
+            return MissingCircleLayout;
 
         var snapshot = workspace.GetSelectedPlanSnapshot();
         var desk = snapshot.Desks.LastOrDefault(item => item.OccupiedCells.Contains(scoringPosition));
@@ -131,6 +134,7 @@ public sealed class ParticipantPlacementController(IEditorWorkspace workspace)
 
     public EditorCommandResult SwapParticipants(string firstParticipantId, string secondParticipantId)
     {
+        if (!workspace.HasSelectedCircleLayout) return MissingCircleLayout;
         ArgumentException.ThrowIfNullOrWhiteSpace(firstParticipantId);
         ArgumentException.ThrowIfNullOrWhiteSpace(secondParticipantId);
         if (firstParticipantId == secondParticipantId)
@@ -197,6 +201,7 @@ public sealed class ParticipantPlacementController(IEditorWorkspace workspace)
         int width,
         int height)
     {
+        if (!workspace.HasSelectedCircleLayout) return MissingCircleLayout;
         try
         {
             workspace.Execute( new TemporaryPlacementEditorSwapRegions( workspace.SelectedPlanId, sourceTopLeft, destinationTopLeft, width, height));
@@ -212,7 +217,7 @@ public sealed class ParticipantPlacementController(IEditorWorkspace workspace)
     public EditorCommandResult ParkParticipantAt(string participantId, IReadOnlyList<GridPosition> displayCells,
         GridPosition originalPosition, GridPosition destination)
     {
-        if (!workspace.HasSelectedCircleLayout) return EditorCommandResult.NoTarget;
+        if (!workspace.HasSelectedCircleLayout) return MissingCircleLayout;
         var delta = new GridPosition(destination.X - originalPosition.X, destination.Y - originalPosition.Y);
         try
         {

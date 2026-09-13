@@ -1,6 +1,10 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Logging;
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
+
+[JsonConverter(typeof(JsonStringEnumConverter<UiOperationFailure>))]
+public enum UiOperationFailure { CircleLayoutRequired, NoTarget, ValidationRejected }
 
 public sealed record UiOperationLogEntry(
     DateTimeOffset TimestampUtc,
@@ -10,7 +14,8 @@ public sealed record UiOperationLogEntry(
     int? GridX = null,
     int? GridY = null,
     bool? Success = null,
-    string? Detail = null);
+    string? Detail = null,
+    UiOperationFailure? FailureCode = null);
 
 public interface IOperationLogger
 {

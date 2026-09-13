@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("A missing circle layout reports the reason and creating one enables placement", MissingCircleLayoutCanBeCreated),
             ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
@@ -302,7 +303,8 @@ internal static class Program
             GridX: 3,
             GridY: 1,
             Success: true,
-            Detail: "circleName=fictional-circle-private;circleId=private-001;path=C:\\Users\\private-user\\event.json;message=private-error"));
+            Detail: "circleName=fictional-circle-private;circleId=private-001;path=C:\\Users\\private-user\\event.json;message=private-error",
+            FailureCode: UiOperationFailure.CircleLayoutRequired));
 
         AssertEqual(true, json.Contains("\"action\":\"pointer_left_down\"", StringComparison.Ordinal));
         AssertEqual(true, json.Contains("\"screenX\":123", StringComparison.Ordinal));
@@ -310,6 +312,7 @@ internal static class Program
         AssertEqual(false, json.Contains("fictional-circle", StringComparison.Ordinal));
         AssertEqual(false, json.Contains("private-", StringComparison.Ordinal));
         AssertEqual(true, json.Contains("\"detail\":null", StringComparison.Ordinal));
+        AssertEqual(true, json.Contains("\"failureCode\":\"CircleLayoutRequired\"", StringComparison.Ordinal));
     }
 
     private static void ParticipantCanBePlaced()
@@ -1275,6 +1278,27 @@ internal static class Program
         AssertEqual(1, restored.Project.DeskLayouts.Count);
     }
 
+    private static void MissingCircleLayoutCanBeCreated()
+    {
+        var workspace = new ProjectWorkspace(LayoutCatalogService.CreateDeskLayout(CreateProject(), "unused", "Unused"));
+        workspace.SelectDeskLayout("unused");
+        AssertEqual(true, new EditorCommandController(workspace).AddDeskAt(new GridPosition(0, 0)).Applied);
+        var placement = new ParticipantPlacementController(workspace);
+        var id = workspace.Project.Participants[0].Id;
+        var before = placement.PlaceParticipantAt(id, new GridPosition(0, 0));
+        AssertEqual("assignment.circleLayout.required", before.Issues.Single().Code);
+        workspace.Execute(new CircleSpaceCoordinator.Engine.Model.LayoutCatalogServiceCreateCircleLayout("new-circle", "New circle", "unused"), selectedPlanEdit: false);
+        workspace.SelectPlan("new-circle");
+        AssertEqual(true, placement.PlaceParticipantAt(id, new GridPosition(0, 0)).Applied);
+        AssertEqual(1, workspace.SelectedPlan.Assignments.Count);
+        workspace.Undo();
+        AssertEqual(0, workspace.SelectedPlan.Assignments.Count);
+        workspace.Undo();
+        AssertEqual(false, workspace.Project.CircleLayouts.Any(layout => layout.Id == "new-circle"));
+        workspace.SelectDeskLayout("unused");
+        AssertEqual(false, workspace.HasSelectedCircleLayout);
+    }
+
     private static void UnusedDeskCanBeEditedAndSaved()
     {
         var workspace = new ProjectWorkspace(LayoutCatalogService.CreateDeskLayout(CreateProject(), "unused", "Unused"));
@@ -1284,7 +1308,11 @@ internal static class Program
         AssertEqual(false, commands.AddDeskAt(new GridPosition(0, 0)).Applied);
         AssertEqual(1, workspace.GetSelectedPlanSnapshot().Desks.Count);
         var placement = new ParticipantPlacementController(workspace);
-        AssertEqual(false, placement.PlaceParticipantAt(workspace.Project.Participants[0].Id, new GridPosition(0, 0)).Applied);
+        var rejected = placement.PlaceParticipantAt(workspace.Project.Participants[0].Id, new GridPosition(0, 0));
+        AssertEqual(false, rejected.Applied);
+        AssertEqual("assignment.circleLayout.required", rejected.Issues.Single().Code);
+        var parkRejected = placement.ParkParticipantAt(workspace.Project.Participants[0].Id, [new(0, 0)], new(0, 0), new(0, 2));
+        AssertEqual("assignment.circleLayout.required", parkRejected.Issues.Single().Code);
         var viewport = new GridViewport(32d);
         var drag = new DeskDragController(workspace, viewport);
         AssertEqual(true, drag.BeginDrag(new ScreenPoint(8, 8)));
