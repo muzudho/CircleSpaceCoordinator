@@ -1921,6 +1921,7 @@ public sealed partial class VenueEditorGame : Game
         foreach (var assignment in workspace.GetSelectedPlanSnapshot().Assignments
                      .Where(item => item.ParticipantId != draggedParticipantToken?.ParticipantId))
         {
+            if (!AreTokenCellsSeats(assignment.OccupiedCells)) continue;
             foreach (var cell in assignment.OccupiedCells)
             {
                 var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
@@ -1954,6 +1955,11 @@ public sealed partial class VenueEditorGame : Game
                 var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
                 var inset = token.Assigned ? 5d : 7d;
                 var tile = new ScreenRectangle(bounds.X + inset, bounds.Y + inset, bounds.Width - inset * 2d, bounds.Height - inset * 2d);
+                if (IsOffSeatToken(token))
+                {
+                    DrawOffSeatToken(tile, genreId, IsTwoSpaceSingleCircle(token) && cell != token.Position);
+                    continue;
+                }
                 if (IsTwoSpaceSingleCircle(token) && cell != token.Position)
                 {
                     DrawRectangle(tile, CanvasGridColor);
@@ -1997,7 +2003,7 @@ public sealed partial class VenueEditorGame : Game
             DrawOutline(bounds, borderWidth, border);
     }
 
-    private void DrawGenrePattern(ScreenRectangle bounds, int pattern, Color secondary, byte opacity = 180)
+    private void DrawGenrePattern(ScreenRectangle bounds, int pattern, Color secondary, byte opacity = 180, bool round = false)
     {
         if (pattern <= 0)
             return;
@@ -2007,6 +2013,11 @@ public sealed partial class VenueEditorGame : Game
         var mark = new Color(secondary.R, secondary.G, secondary.B, opacity);
         void FillPattern(ScreenRectangle rectangle, Color color)
         {
+            if (round)
+            {
+                FillRoundToken(bounds, rectangle, color);
+                return;
+            }
             var left = Math.Max(bounds.X, rectangle.X);
             var top = Math.Max(bounds.Y, rectangle.Y);
             var right = Math.Min(bounds.X + bounds.Width, rectangle.X + rectangle.Width);
@@ -2364,6 +2375,18 @@ public sealed partial class VenueEditorGame : Game
     {
         var cells = token.DisplayCells;
         var label = GetCircleLabel(token);
+        if (IsOffSeatToken(token))
+        {
+            var genreId = workspace?.Project.Participants.Single(item => item.Id == token.ParticipantId).GenreId;
+            foreach (var cell in cells)
+            {
+                var cellBounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
+                var hollow = IsTwoSpaceSingleCircle(token) && cell != token.Position;
+                DrawOffSeatToken(new ScreenRectangle(cellBounds.X + 6, cellBounds.Y + 6,
+                    cellBounds.Width - 12, cellBounds.Height - 12), genreId, hollow, hollow ? null : label);
+            }
+            return;
+        }
         if (IsTwoSpaceSingleCircle(token))
         {
             foreach (var cell in cells)
@@ -3381,7 +3404,10 @@ public sealed partial class VenueEditorGame : Game
         if (CanShowEditorHover && GetNumberChannelHoverError(new ScreenPoint(previousMouse.X, previousMouse.Y)) is { } numberError)
             details.Add(numberError);
         if (ShowsVacantSeats)
+        {
             details.Add($"○ 空きスペース：{GetVacantSeats(workspace.SelectedPlan).Count}（サークル配置で消えます）");
+            details.Add("オレンジ縁の丸い駒：席外・未配置のサークル");
+        }
         if (hoveredButton is not null)
             details.Add(hoveredButton);
         if (hoveredLayoutAdd)
