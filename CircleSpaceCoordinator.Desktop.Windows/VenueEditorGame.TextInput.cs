@@ -18,11 +18,11 @@ public sealed partial class VenueEditorGame
     private bool suppressTextConfirmation;
     private bool selectingUnderlineText;
 
-    private void OpenUnderlineInput(string title, string initial, Action<string> accepted)
+    private void OpenUnderlineInput(string title, string initial, Action<string> accepted, string? message = null, int maxLength = 100)
     {
-        var editor = new UnderlineTextEditor(initial);
+        var editor = new UnderlineTextEditor(initial, maxLength);
         OpenModal(new ModalDialogModel(ModalDialogKind.Text, title,
-            "選択した配置の名前を変更します。\n新しい名前を入力し、［確定］を選んでください（100 文字まで）。\n［キャンセル］を選ぶと、元の名前を残します。"), action =>
+            message ?? "選択した配置の名前を変更します。\n新しい名前を入力し、［確定］を選んでください（100 文字まで）。\n［キャンセル］を選ぶと、元の名前を残します。"), action =>
         {
             if (action != ModalDialogAction.Accept) return;
             try { accepted(editor.Text.Trim()); }

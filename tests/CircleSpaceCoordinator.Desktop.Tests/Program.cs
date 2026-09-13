@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
             ("Catalog spaces place in all directions and preserve snapshots through history and JSON", CatalogSpacesRoundTrip),
             ("Space definitions persist globally and reject broken references and stale saves", SpaceDefinitionsPersist),
@@ -597,6 +598,60 @@ internal static class Program
         finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; }
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = "[" }));
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = null }));
+    }
+
+    private static void EventProjectCloseTransitions()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"circle-space-close-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            foreach (var decision in new[] { ProjectCloseDecision.Cancel, ProjectCloseDecision.Save, ProjectCloseDecision.Discard })
+            foreach (var saveSucceeds in new[] { false, true })
+            {
+                var path = Path.Combine(directory, "event.json");
+                ProjectFileService.Save(path, CreateProject() with { Name = "Saved name" });
+                using var remote = DesktopApplication.LoadWorkspace(path);
+                remote.LoadProject(remote.Project with { Name = "Edited name" });
+                var saveCalls = 0;
+                var closed = false;
+                var result = ProjectCloseWorkflow.TryClose(decision, () =>
+                {
+                    saveCalls++;
+                    if (!saveSucceeds) return false;
+                    ProjectFileService.Save(path, remote.Project);
+                    return true;
+                }, () => { remote.Dispose(); closed = true; });
+                var shouldClose = decision == ProjectCloseDecision.Discard || (decision == ProjectCloseDecision.Save && saveSucceeds);
+                AssertEqual(shouldClose, result);
+                AssertEqual(shouldClose, closed);
+                AssertEqual(decision == ProjectCloseDecision.Save ? 1 : 0, saveCalls);
+                AssertEqual(decision == ProjectCloseDecision.Save && saveSucceeds ? "Edited name" : "Saved name", ProjectFileService.Load(path).Name);
+                if (!closed)
+                {
+                    remote.Refresh();
+                    AssertEqual("Edited name", remote.Project.Name);
+                }
+                else
+                {
+                    var rejected = false;
+                    try { remote.Refresh(); }
+                    catch (InvalidOperationException) { rejected = true; }
+                    AssertEqual(true, rejected);
+                    using var reopened = DesktopApplication.LoadWorkspace(path);
+                    AssertEqual(ProjectFileService.Load(path).Name, reopened.Project.Name);
+                    AssertEqual(false, reopened.CanUndo);
+                }
+            }
+            var closeCalled = false;
+            try
+            {
+                ProjectCloseWorkflow.TryClose(ProjectCloseDecision.Save, () => throw new IOException("save failed"), () => closeCalled = true);
+                throw new Exception("Expected save exception");
+            }
+            catch (IOException) { AssertEqual(false, closeCalled); }
+        }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 
     private static void SettingsManageProjectCatalog()

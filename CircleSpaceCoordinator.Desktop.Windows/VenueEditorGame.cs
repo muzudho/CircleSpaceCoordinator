@@ -55,10 +55,10 @@ public sealed partial class VenueEditorGame : Game
     ];
     private readonly GraphicsDeviceManager graphics;
     private readonly GridViewport viewport = new(32d);
-    private readonly RemoteWorkspace? workspace;
-    private readonly DeskDragController? dragController;
-    private readonly EditorCommandController? commandController;
-    private readonly ParticipantPlacementController? participantController;
+    private RemoteWorkspace? workspace;
+    private DeskDragController? dragController;
+    private EditorCommandController? commandController;
+    private ParticipantPlacementController? participantController;
     private readonly IOperationLogger operationLogger;
     private readonly ApplicationSettingsService? settings;
     private string? projectSavePath;
@@ -116,7 +116,7 @@ public sealed partial class VenueEditorGame : Game
         this.workspace = workspace;
         this.operationLogger = operationLogger ?? NullOperationLogger.Instance;
         this.projectSavePath = projectSavePath;
-        this.settings = settings;
+        this.settings = settings ?? new ApplicationSettingsService(Path.Combine(AppContext.BaseDirectory, "application-settings.json"));
         dragController = workspace is null ? null : new DeskDragController(workspace, viewport);
         commandController = workspace is null ? null : new EditorCommandController(workspace);
         participantController = workspace is null ? null : new ParticipantPlacementController(workspace);
@@ -144,6 +144,12 @@ public sealed partial class VenueEditorGame : Game
         CreateToolbar();
         previousMouse = Mouse.GetState();
         previousKeyboard = Keyboard.GetState();
+        RefreshEventProjects(this.settings?.Current.LastProjectPath);
+        if (workspace is null && projectSavePath is { } initialPath)
+        {
+            projectSavePath = null;
+            OpenEventProject(initialPath);
+        }
         base.Initialize();
     }
 
@@ -187,6 +193,15 @@ public sealed partial class VenueEditorGame : Game
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
+        if (workspace is null)
+        {
+            if (!UpdateModalDialog(keyboard, mouse)) UpdateEventProjects(keyboard, mouse);
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
         if (UpdateSpaceCatalog(keyboard, mouse) || UpdateToolRing(keyboard, mouse))
         {
             previousMouse = mouse;
@@ -206,12 +221,22 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.Escape))
-            Exit();
+        if (IsPressed(keyboard, Keys.Escape))
+        {
+            RequestReturnToEvents();
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            return;
+        }
         if (editorMode != EditorMode.SpaceDefinitions && IsControlDown(keyboard) && IsPressed(keyboard, Keys.S))
             SaveProject();
         if (editorMode != EditorMode.SpaceDefinitions && IsControlDown(keyboard) && IsPressed(keyboard, Keys.O))
-            LoadProject();
+        {
+            ReturnToEventList();
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            return;
+        }
 
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         UpdateToolbar(pointer);
@@ -610,6 +635,9 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedEventButton?.CancelPress();
+        pressedEventButton = null;
+        foreach (var (button, _) in eventButtons) button.ClearPointerState();
         pressedNextSpace = false;
         pressedNextDirection = false;
         nextDirectionButton?.CancelPress();
@@ -652,60 +680,68 @@ public sealed partial class VenueEditorGame : Game
 
         // Preserve antialiased text strokes when labels are scaled to fit their bounds.
         spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-        if (ShowVenueAboveRingCover)
-            DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
-        if (editorMode == EditorMode.SpaceDefinitions)
-            DrawSpaceDefinitions();
-        else if (editorMode == EditorMode.ParticipantData)
-            DrawParticipantData();
-        else if (editorMode == EditorMode.GenreData)
-            DrawGenreDataDashboard();
+        if (workspace is null)
+        {
+            DrawEventProjects();
+            DrawModalDialog();
+        }
         else
         {
-            DrawGrid();
-            DrawBlockedCells();
-            DrawDesks();
-            if (!IsWeightChannelSelected && selectedNumberChannel == 1) DrawMissingDeskNumbers();
-            if (IsWeightChannelSelected) DrawChannelWeights();
-            else DrawNumberLabels();
-            DrawDeskPlacementGhost();
-            DrawPillarGhost();
-            if (editorMode == EditorMode.IslandDefinition)
-                DrawVenueTopology();
-            // Genre tiles cover desk orientation markers where they overlap.
-            if (editorMode == EditorMode.GenrePlacement)
-                DrawGenreDeskWireframes();
-            if (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement)
-                DrawGenreAssignments();
-            if (editorMode == EditorMode.GenrePlacement)
+            if (ShowVenueAboveRingCover)
+                DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
+            if (editorMode == EditorMode.SpaceDefinitions)
+                DrawSpaceDefinitions();
+            else if (editorMode == EditorMode.ParticipantData)
+                DrawParticipantData();
+            else if (editorMode == EditorMode.GenreData)
+                DrawGenreDataDashboard();
+            else
             {
-                DrawGenreTokensAndConnectors();
-                if (showEvaluationAnalysis)
-                    DrawEvaluationAnalysis();
-                DrawParticipantDragGhost();
+                DrawGrid();
+                DrawBlockedCells();
+                DrawDesks();
+                if (!IsWeightChannelSelected && selectedNumberChannel == 1) DrawMissingDeskNumbers();
+                if (IsWeightChannelSelected) DrawChannelWeights();
+                else DrawNumberLabels();
+                DrawDeskPlacementGhost();
+                DrawPillarGhost();
+                if (editorMode == EditorMode.IslandDefinition)
+                    DrawVenueTopology();
+                // Genre tiles cover desk orientation markers where they overlap.
+                if (editorMode == EditorMode.GenrePlacement)
+                    DrawGenreDeskWireframes();
+                if (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement)
+                    DrawGenreAssignments();
+                if (editorMode == EditorMode.GenrePlacement)
+                {
+                    DrawGenreTokensAndConnectors();
+                    if (showEvaluationAnalysis)
+                        DrawEvaluationAnalysis();
+                    DrawParticipantDragGhost();
+                }
+                if (editorMode == EditorMode.CirclePlacement)
+                {
+                    if (showEvaluationAnalysis)
+                        DrawEvaluationAnalysis();
+                    DrawAssignments();
+                    DrawParticipantDragGhost();
+                }
+                DrawRangeSelection();
+                DrawDeskEditTarget();
+                DrawPlanList();
+                DrawChannels();
+                DrawGenreSummary();
+                DrawOffscreenParticipants();
             }
-            if (editorMode == EditorMode.CirclePlacement)
-            {
-                if (showEvaluationAnalysis)
-                    DrawEvaluationAnalysis();
-                DrawAssignments();
-                DrawParticipantDragGhost();
-            }
-            DrawRangeSelection();
-            DrawDeskEditTarget();
-            DrawPlanList();
-            DrawChannels();
-            DrawGenreSummary();
-            DrawOffscreenParticipants();
+            DrawToolbar();
+            DrawNextSpace();
+            DrawConfidentialBadge();
+            if (ShowVenueAboveRingCover) DrawVenueRingPanelCover();
+            if (!toolRingOpen) DrawStatusBar();
+            DrawModalDialog();
+            DrawToolRing();
+            DrawSpaceCatalog();
         }
-        DrawToolbar();
-        DrawNextSpace();
-        DrawConfidentialBadge();
-        if (ShowVenueAboveRingCover) DrawVenueRingPanelCover();
-        if (!toolRingOpen) DrawStatusBar();
-        DrawModalDialog();
-        DrawToolRing();
-        DrawSpaceCatalog();
         spriteBatch.End();
 
         if (screenshotRequested)
@@ -2385,7 +2421,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var commonEnd = new[]
         {
-            ToolbarAction.LoadProject,
+            ToolbarAction.ReturnToEventList,
             ToolbarAction.SaveProject,
             ToolbarAction.CaptureScreenshot,
         };
@@ -2409,7 +2445,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var actions = (editorMode is EditorMode.ParticipantData or EditorMode.SpaceDefinitions ? Array.Empty<ToolbarAction>() : commonStart)
             .Concat(modeSpecificActions)
-            .Concat(editorMode == EditorMode.SpaceDefinitions ? [ToolbarAction.CaptureScreenshot] : commonEnd)
+            .Concat(editorMode == EditorMode.SpaceDefinitions ? [ToolbarAction.ReturnToEventList, ToolbarAction.CaptureScreenshot] : commonEnd)
             .OrderBy(GetToolbarActionGroup)
             .ToArray();
         var actionX = 12d;
@@ -2470,7 +2506,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.AddIslandConnector or ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology or
                 ToolbarAction.DecreaseWidth or ToolbarAction.IncreaseWidth or ToolbarAction.DecreaseHeight or ToolbarAction.IncreaseHeight => workspace is not null,
                 ToolbarAction.CaptureScreenshot => true,
-                ToolbarAction.LoadProject => workspace is not null,
+                ToolbarAction.ReturnToEventList => workspace is not null,
                 ToolbarAction.SaveProject => workspace is not null && projectSavePath is not null,
                 _ => false,
             };
@@ -2524,8 +2560,8 @@ public sealed partial class VenueEditorGame : Game
         }
         if (action == ToolbarAction.SaveProject)
             return SaveProject();
-        if (action == ToolbarAction.LoadProject)
-            return LoadProject();
+        if (action == ToolbarAction.ReturnToEventList)
+            return ReturnToEventList();
         if (commandController is null || workspace is null)
             return (false, "no_project");
         if (action == ToolbarAction.ParticipantDataMode)
@@ -3013,7 +3049,7 @@ public sealed partial class VenueEditorGame : Game
                 DrawRectangle(new ScreenRectangle(center.X - 6d, center.Y - 10d, 10d, 7d), color);
                 DrawOutline(new ScreenRectangle(center.X - 7d, center.Y + 2d, 14d, 8d), 2d, color);
                 break;
-            case ToolbarAction.LoadProject:
+            case ToolbarAction.ReturnToEventList:
                 DrawOutline(new ScreenRectangle(center.X - 12d, center.Y - 7d, 24d, 15d), 3d, color);
                 DrawRectangle(new ScreenRectangle(center.X - 9d, center.Y - 11d, 10d, 5d), color);
                 DrawArrow(new ScreenPoint(center.X, center.Y), pointsRight: false, color, hooked: false);
@@ -3135,7 +3171,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.IncreaseHeight => "会場を縦に1セル広げる",
         ToolbarAction.CaptureScreenshot => "スクリーンショットを撮る（Ctrl+P）",
         ToolbarAction.SaveProject => "JSONプロジェクトを保存する（Ctrl+S）",
-        ToolbarAction.LoadProject => "JSONプロジェクトを開く（Ctrl+O）",
+        ToolbarAction.ReturnToEventList => "イベントリストに戻る（Ctrl+O）",
         _ => action.ToString(),
     };
 
@@ -3271,7 +3307,7 @@ public sealed partial class VenueEditorGame : Game
     }
 
     private string GetWindowTitle() => workspace is null
-        ? ApplicationIdentity.Title
+        ? $"{ApplicationIdentity.Title} - イベントリスト"
         : $"{ApplicationIdentity.Title} - {(workspace.Project.IsConfidential ? "（秘）" : "")}{workspace.Project.Name}";
 
     private void DrawConfidentialBadge()
@@ -3525,31 +3561,10 @@ public sealed partial class VenueEditorGame : Game
         });
         return (true, "dialog_opened");
     }
-    private (bool Success, string Detail) LoadProject()
+    private (bool Success, string Detail) ReturnToEventList()
     {
-        if (workspace is null)
-            return (false, "workspace_unavailable");
-        var selectedPath = WindowsProjectFileDialog.Open(projectSavePath, settings?.Current.ProjectsDirectory);
-        if (selectedPath is null)
-            return (false, "cancelled");
-        try
-        {
-            PersistWorkingState();
-            workspace.LoadProject(ProjectFileService.Load(selectedPath));
-            projectSavePath = Path.GetFullPath(selectedPath);
-            settings?.RememberProject(projectSavePath);
-            RestoreWorkingState();
-            CreateToolbar();
-            screenshotStatus = $"PROJECT OPENED: {Path.GetFileName(selectedPath)}";
-            Log("project_loaded", success: true, detail: $"path={projectSavePath}");
-            return (true, $"path={projectSavePath}");
-        }
-        catch (Exception exception)
-        {
-            screenshotStatus = $"PROJECT OPEN FAILED: {exception.Message}";
-            Log("project_loaded", success: false, detail: $"error={exception.GetType().Name};message={exception.Message}");
-            return (false, $"error={exception.GetType().Name}");
-        }
+        RequestReturnToEvents();
+        return (true, "return_confirmation_opened");
     }
 
     private void RestoreProjectView()
@@ -3650,6 +3665,7 @@ public sealed partial class VenueEditorGame : Game
         {
             textInputService?.Dispose();
             DisposeOptimization();
+            workspace?.Dispose();
             screenshotShutterSoundInstance?.Dispose();
             screenshotShutterSound?.Dispose();
             textRenderer?.Dispose();
@@ -3715,7 +3731,7 @@ internal enum ToolbarAction
     IncreaseWidth,
     DecreaseHeight,
     IncreaseHeight,
-    LoadProject,
+    ReturnToEventList,
     CaptureScreenshot,
     SaveProject,
 }

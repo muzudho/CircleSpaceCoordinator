@@ -18,6 +18,7 @@ public sealed partial class VenueEditorGame
     private int modalWidth;
     private int modalHeight;
     private int modalFocus;
+    private (string Label, ModalDialogAction Action)[]? modalChoices;
     private Task<JobEvent>? optimizationTask;
     private CancellationTokenSource? optimizationCancellation;
     private readonly LatestOptimizationProgress optimizationProgress = new();
@@ -25,12 +26,14 @@ public sealed partial class VenueEditorGame
     // Draw-time pointer queries must respect the same modal boundary as Update.
     private bool CanShowEditorHover => IsActive && modalDialog is null && !modalInputDrain && !toolRingOpen && !toolRingInputDrain && !spaceCatalogOpen && !spaceCatalogDrain;
 
-    private void OpenModal(ModalDialogModel dialog, Action<ModalDialogAction>? completed = null)
+    private void OpenModal(ModalDialogModel dialog, Action<ModalDialogAction>? completed = null,
+        (string Label, ModalDialogAction Action)[]? choices = null)
     {
         textInputService?.Stop();
         underlineEditor = null;
         CancelInProgressPointerInteraction();
         modalDialog = dialog;
+        modalChoices = choices;
         modalCompleted = completed;
         pressedModalButton = null;
         modalButtons.Clear();
@@ -90,7 +93,10 @@ public sealed partial class VenueEditorGame
     private void ApplyModalAction(ModalDialogAction action)
     {
         if (modalDialog is null) return;
-        var outcome = modalDialog.Apply(action);
+        // Custom choices use the existing model's closing transition; preserve the chosen result.
+        var customChoice = modalChoices?.Any(choice => choice.Action == action) == true;
+        var outcome = modalDialog.Apply(customChoice && action != ModalDialogAction.Cancel ? ModalDialogAction.Accept : action);
+        if (customChoice) outcome = action;
         if (outcome == ModalDialogAction.Stop)
         {
             optimizationCancellation?.Cancel();
@@ -102,6 +108,7 @@ public sealed partial class VenueEditorGame
         var completed = modalCompleted;
         modalDialog = null;
         modalCompleted = null;
+        modalChoices = null;
         modalButtons.Clear();
         pressedModalButton = null;
         modalInputDrain = true;
@@ -132,6 +139,15 @@ public sealed partial class VenueEditorGame
         var buttonWidth = Math.Min(130, (bounds.Width - 48) / 2);
         var right = bounds.X + bounds.Width - 20 - buttonWidth;
         var bottom = bounds.Y + bounds.Height - 58;
+        if (modalChoices is { } choices)
+        {
+            var choiceWidth = (bounds.Width - 40 - 12 * (choices.Length - 1)) / choices.Length;
+            for (var index = 0; index < choices.Length; index++)
+                Add(choices[index].Label, choices[index].Action,
+                    bounds.X + 20 + index * (choiceWidth + 12), bottom, choiceWidth);
+            if (initializeFocus) modalFocus = Math.Max(0, Array.FindIndex(choices, choice => choice.Action == ModalDialogAction.Cancel));
+            return;
+        }
         if (modalDialog.Kind == ModalDialogKind.Minutes)
         {
             Add("−", ModalDialogAction.Decrease, bounds.X + 20, bottom - 62, 44);
