@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Space totals sum requests and count each frame layout independently of assignments and history", SpaceTotals),
             ("Number channel gaps distinguish frames from seats and follow independent edits and history", MissingNumberChannels),
             ("Vacancy markers count physical seats and follow placement, parking and history", VacantPhysicalSeats),
             ("A missing circle layout reports the reason and creating one enables placement", MissingCircleLayoutCanBeCreated),
@@ -100,6 +101,41 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void SpaceTotals()
+    {
+        var project = CreateAssignmentProject(2);
+        var totals = SpaceCapacitySummary.Calculate(project);
+        AssertEqual(3L, totals.Requested);
+        AssertEqual(4L, totals.Layouts["plan-1"]);
+        var type = project.DeskTypes[0];
+        project = project with { DeskTypes = [type with
+        {
+            Space = new("custom", "机", 2, 1, [new(0, 0, 1), new(1, 0, 0)], ["開放", "開放", "開放", "開放"]),
+        }] };
+        AssertEqual(2L, SpaceCapacitySummary.Calculate(project).Layouts["plan-1"]);
+        AssertEqual(2L, SpaceCapacitySummary.Calculate(project with
+        {
+            Plans = [project.Plans[0] with { Assignments = [] }],
+        }).Layouts["plan-1"]);
+
+        var workspace = new ProjectWorkspace(CreateProject());
+        var commands = new EditorCommandController(workspace);
+        AssertEqual(true, commands.DuplicateSelectedPlan("Another circle layout").Applied);
+        totals = SpaceCapacitySummary.Calculate(workspace.Project);
+        AssertEqual(1, totals.Layouts.Count);
+        AssertEqual(2L, totals.Layouts.Values.Single());
+        AssertEqual(true, commands.AddDeskAt(new(2, 0)).Applied);
+        AssertEqual(4L, SpaceCapacitySummary.Calculate(workspace.Project).Layouts.Values.Single());
+        AssertEqual(true, commands.Undo());
+        AssertEqual(2L, SpaceCapacitySummary.Calculate(workspace.Project).Layouts.Values.Single());
+        var expanded = LayoutCatalogService.CreateDeskLayout(workspace.Project, "empty", "Empty");
+        totals = SpaceCapacitySummary.Calculate(expanded);
+        AssertEqual(2, totals.Layouts.Count);
+        AssertEqual(0L, totals.Layouts["empty"]);
+        AssertEqual(2L, totals.Requested);
+        AssertEqual(0L, SpaceCapacitySummary.Calculate(expanded with { Participants = [] }).Requested);
     }
 
     private static void MissingNumberChannels()

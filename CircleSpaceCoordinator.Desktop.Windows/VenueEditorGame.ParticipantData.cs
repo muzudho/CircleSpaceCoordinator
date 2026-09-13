@@ -177,7 +177,7 @@ public sealed partial class VenueEditorGame
             tableTextPage = page;
         }
         var ink = new Color(222, 234, 240);
-        tableTextRenderer!.Draw($"{table.SourceDescription}　{table.RowCount:N0} 行 × {table.ColumnCount:N0} 列",
+        tableTextRenderer!.Draw($"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　{table.SourceDescription}　{table.RowCount:N0} 行 × {table.ColumnCount:N0} 列",
             new Rectangle(12, 118, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), ink, 17, true);
         var exportPlan = CircleSeatExportBuilder.GetExportPlan(workspace.Project);
         var exportTarget = exportPlan is null ? "配置案　未決定" : $"配置決定案: {exportPlan.Name}";

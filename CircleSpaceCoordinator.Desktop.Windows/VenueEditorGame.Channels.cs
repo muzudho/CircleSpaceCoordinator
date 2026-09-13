@@ -72,10 +72,7 @@ public sealed partial class VenueEditorGame
             if (missing)
             {
                 var mark = new ScreenRectangle(row.X + row.Width - 25, row.Y + 5, 20, 20);
-                DrawRectangle(mark, new Color(195, 35, 48));
-                DrawOutline(mark, 1, new Color(255, 112, 120));
-                DrawRectangle(new ScreenRectangle(mark.X + 9, mark.Y + 4, 2, 8), Color.White);
-                DrawRectangle(new ScreenRectangle(mark.X + 9, mark.Y + 14, 2, 2), Color.White);
+                DrawErrorMark(mark);
             }
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
             textRenderer?.Draw(feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点",

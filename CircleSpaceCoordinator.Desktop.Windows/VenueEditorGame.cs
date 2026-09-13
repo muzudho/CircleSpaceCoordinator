@@ -970,11 +970,15 @@ public sealed partial class VenueEditorGame : Game
                 ? new Color(35, 126, 111)
                 : hovered ? new Color(52, 65, 78) : new Color(29, 36, 45));
             DrawOutline(row, 1d, selected ? new Color(129, 235, 202) : new Color(70, 82, 96));
+            var capacityMismatch = editorMode == EditorMode.DeskPlacement &&
+                GetSpaceCapacity().Layouts[plan.PlanId] != GetSpaceCapacity().Requested;
+            if (capacityMismatch)
+                DrawErrorMark(new ScreenRectangle(row.X + row.Width - 25, row.Y + 5, 20, 20));
 
             textRenderer?.Draw(
                 $"{plan.Rank}. {plan.PlanName}",
                 new Rectangle((int)row.X + 8, (int)row.Y + 2,
-                    showsDeskLayouts ? (int)row.Width - 16 : (int)row.Width - 136, 24),
+                    showsDeskLayouts ? (int)row.Width - (capacityMismatch ? 36 : 16) : (int)row.Width - 136, 24),
                 Color.White,
                 pixelHeight: 19,
                 bold: selected);
@@ -3290,7 +3294,7 @@ public sealed partial class VenueEditorGame : Game
 
         if (editorMode == EditorMode.ParticipantData)
         {
-            primaryStatusMessage = "サークルデータ（閲覧専用）　列見出し・行番号は固定";
+            primaryStatusMessage = $"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　サークルデータ（閲覧専用）";
             secondaryStatusMessage = toolbarButtons.FirstOrDefault(button => button.Model.IsPointerOver)?.Model.AccessibleName
                 ?? "ホイール: 縦スクロール　Shift＋ホイール: 横　矢印 / PageUp・Down / Home・End: 移動　セルクリック: 全文";
             return;
@@ -3322,6 +3326,13 @@ public sealed partial class VenueEditorGame : Game
             _ => "　モード: ジャンルデータ",
         };
         var details = new List<string>();
+        if (editorMode == EditorMode.DeskPlacement && SelectedDisplayedLayoutId is { } capacityLayoutId)
+            primaryStatusMessage = DescribeSpaceCapacity(capacityLayoutId) + "　｜　" + primaryStatusMessage;
+        if (editorMode == EditorMode.DeskPlacement && hoveredPlan is not null)
+        {
+            var mismatch = GetSpaceCapacity().Layouts[hoveredPlan.PlanId] != GetSpaceCapacity().Requested;
+            details.Add((mismatch ? "エラー：スペース数が一致していません。" : "") + DescribeSpaceCapacity(hoveredPlan.PlanId));
+        }
         if (CanShowEditorHover && GetNumberChannelHoverError(new ScreenPoint(previousMouse.X, previousMouse.Y)) is { } numberError)
             details.Add(numberError);
         if (ShowsVacantSeats)

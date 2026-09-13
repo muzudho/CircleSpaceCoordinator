@@ -253,6 +253,8 @@ public sealed partial class VenueEditorGame
         numberGapsProject = null;
         numberGapsPlanId = null;
         numberGaps = null;
+        capacityProject = null;
+        capacitySummary = null;
         dragController = null;
         commandController = null;
         participantController = null;
