@@ -6,6 +6,19 @@ using CircleSpaceCoordinator.Core.Validation;
 /// <summary>Lifecycle operations for the separated physical and circle layouts.</summary>
 public static class LayoutCatalogService
 {
+    public static CircleSpaceProject MoveDeskLayout(CircleSpaceProject project, string deskLayoutId, int direction)
+    {
+        if (direction is not (-1 or 1)) throw new ArgumentOutOfRangeException(nameof(direction));
+        project = LayoutProjection.MigrateLegacyPlans(project);
+        var layouts = project.DeskLayouts.ToArray();
+        var index = Array.FindIndex(layouts, item => item.Id == deskLayoutId);
+        if (index < 0) throw new KeyNotFoundException($"Desk layout '{deskLayoutId}' does not exist.");
+        var target = index + direction;
+        if (target < 0 || target >= layouts.Length) return project;
+        (layouts[index], layouts[target]) = (layouts[target], layouts[index]);
+        return ValidateProjected(project with { DeskLayouts = layouts });
+    }
+
     public static CircleSpaceProject DuplicateDeskLayout(CircleSpaceProject project, string sourceId, string id, string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);

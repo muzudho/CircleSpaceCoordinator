@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Frame layout order survives remote operations, history and save without changing bindings", FrameLayoutOrder),
             ("Space totals sum requests and count each frame layout independently of assignments and history", SpaceTotals),
             ("Number channel gaps distinguish frames from seats and follow independent edits and history", MissingNumberChannels),
             ("Vacancy markers count physical seats and follow placement, parking and history", VacantPhysicalSeats),
@@ -101,6 +102,29 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void FrameLayoutOrder()
+    {
+        var project = LayoutCatalogService.CreateDeskLayout(CreateProject(), "second", "Second");
+        project = LayoutCatalogService.CreateDeskLayout(project, "third", "Third");
+        using var remote = CircleSpaceCoordinator.EditorClient.EditorConnection.Current!.Open(ProjectJsonSerializer.Save(project));
+        remote.SelectDeskLayout("third");
+        var first = remote.Project.DeskLayouts[0].Id;
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.LayoutCatalogServiceMoveDeskLayout("third", -1), selectedPlanEdit: false);
+        AssertEqual($"{first},third,second", string.Join(",", remote.Project.DeskLayouts.Select(item => item.Id)));
+        AssertEqual("third", remote.SelectedDeskLayoutId);
+        remote.Undo();
+        AssertEqual($"{first},second,third", string.Join(",", remote.Project.DeskLayouts.Select(item => item.Id)));
+        remote.Redo();
+        var restored = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(remote.Project));
+        AssertEqual($"{first},third,second", string.Join(",", restored.DeskLayouts.Select(item => item.Id)));
+        AssertEqual(first, restored.CircleLayouts.Single().DeskLayoutId);
+        AssertEqual(true, restored.CircleLayouts.Single().Assignments.Count > 0);
+        var unchanged = LayoutCatalogService.MoveDeskLayout(restored, first, -1);
+        AssertEqual(true, ReferenceEquals(restored, unchanged));
+        var movedDown = LayoutCatalogService.MoveDeskLayout(restored, "third", 1);
+        AssertEqual($"{first},second,third", string.Join(",", movedDown.DeskLayouts.Select(item => item.Id)));
     }
 
     private static void SpaceTotals()

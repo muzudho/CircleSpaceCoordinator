@@ -403,6 +403,9 @@ public sealed partial class VenueEditorGame : Game
                 LogPointer("toolbar_press", pointer, accepted,
                     $"action={pressedToolbarButton.Action};state={(accepted ? "enabled" : "disabled")}");
             }
+            else if (HandleLayoutOrderClick(pointer))
+            {
+            }
             else if (HandleChannelPanelClick(pointer))
             {
             }
@@ -929,12 +932,13 @@ public sealed partial class VenueEditorGame : Game
                 DrawLayoutButton(GetDeskLayoutParentBounds(), $"フレーム配置: {CurrentDeskLayoutName()} ▾", hoveredDeskLayoutParent);
             textRenderer?.Draw(
                 showsDeskLayouts ? "フレーム配置" : "└ 配置案",
-                new Rectangle((int)listPanel.X + 10, (int)listPanel.Y + 2, (int)listPanel.Width - 20, hasDeskParent ? 22 : 32),
+                new Rectangle((int)listPanel.X + 10, (int)listPanel.Y + 2, (int)listPanel.Width - (ShowsLayoutOrder ? 88 : 20), hasDeskParent ? 22 : 32),
                 Color.White,
                 hasDeskParent ? 18 : 22,
                 true);
 
             DrawLayoutButton(GetLayoutAddBounds(), "+", hoveredLayoutAdd);
+            DrawLayoutOrderButtons();
             DrawLayoutButton(GetLayoutDuplicateBounds(), "複製", hoveredLayoutDuplicate, showsDeskLayouts || workspace.HasSelectedCircleLayout);
             DrawLayoutButton(GetLayoutDeleteBounds(), "Remove", hoveredLayoutDelete, CanRemoveLayout);
             if (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement)
@@ -3326,6 +3330,10 @@ public sealed partial class VenueEditorGame : Game
             _ => "　モード: ジャンルデータ",
         };
         var details = new List<string>();
+        if (ShowsLayoutOrder && CanShowEditorHover)
+            foreach (var direction in new[] { -1, 1 })
+                if (Contains(LayoutOrderButton(direction), new ScreenPoint(previousMouse.X, previousMouse.Y)))
+                    details.Add(direction < 0 ? "選択中のフレーム配置を1つ上へ移動" : "選択中のフレーム配置を1つ下へ移動");
         if (editorMode == EditorMode.DeskPlacement && SelectedDisplayedLayoutId is { } capacityLayoutId)
             primaryStatusMessage = DescribeSpaceCapacity(capacityLayoutId) + "　｜　" + primaryStatusMessage;
         if (editorMode == EditorMode.DeskPlacement && hoveredPlan is not null)
@@ -3359,7 +3367,7 @@ public sealed partial class VenueEditorGame : Game
                 : "選択中のサークル配置の名前を変更する");
         if (hoveredPlan is not null)
             details.Add(editorMode == EditorMode.DeskPlacement
-                ? $"一覧: {hoveredPlan.Rank}番 {hoveredPlan.PlanName}（名前順）"
+                ? $"一覧: {hoveredPlan.Rank}番 {hoveredPlan.PlanName}（{(UsesSeparatedLayouts ? "手動順" : "名前順")}）"
                 : $"一覧: {hoveredPlan.Rank}位 {hoveredPlan.PlanName}　一般 {hoveredPlan.GeneralAttendeeScore:0.##}／サークル {hoveredPlan.CircleParticipantScore:0.##}");
         if (screenshotStatus is not null)
             details.Add(screenshotStatus);
