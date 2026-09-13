@@ -193,6 +193,14 @@ public sealed partial class VenueEditorGame : Game
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
+        if (genreDraft is not null)
+        {
+            if (!UpdateModalDialog(keyboard, mouse)) UpdateGenreStyleEditor(keyboard, mouse);
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            base.Update(gameTime);
+            return;
+        }
         if (frameDraft is not null)
         {
             if (!UpdateModalDialog(keyboard, mouse)) UpdateFrameDefinitionEditor(keyboard, mouse);
@@ -643,6 +651,8 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedGenreButton?.CancelPress();
+        pressedGenreButton = null;
         pressedFrameButton?.CancelPress();
         pressedFrameButton = null;
         framePainting = false;
@@ -691,7 +701,12 @@ public sealed partial class VenueEditorGame : Game
 
         // Preserve antialiased text strokes when labels are scaled to fit their bounds.
         spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-        if (frameDraft is not null)
+        if (genreDraft is not null)
+        {
+            DrawGenreStyleEditor();
+            DrawModalDialog();
+        }
+        else if (frameDraft is not null)
         {
             DrawFrameDefinitionEditor();
             DrawModalDialog();
@@ -1941,30 +1956,39 @@ public sealed partial class VenueEditorGame : Game
             DrawOutline(bounds, borderWidth, border);
     }
 
-    private void DrawGenrePattern(ScreenRectangle bounds, int pattern, Color secondary)
+    private void DrawGenrePattern(ScreenRectangle bounds, int pattern, Color secondary, byte opacity = 180)
     {
         if (pattern <= 0)
             return;
         var type = (pattern - 1) % 7;
         var densityLevel = (pattern - 1) / 7;
         var spacing = Math.Max(4, 10 - densityLevel * 2);
-        var mark = new Color(secondary.R, secondary.G, secondary.B, (byte)180);
+        var mark = new Color(secondary.R, secondary.G, secondary.B, opacity);
+        void FillPattern(ScreenRectangle rectangle, Color color)
+        {
+            var left = Math.Max(bounds.X, rectangle.X);
+            var top = Math.Max(bounds.Y, rectangle.Y);
+            var right = Math.Min(bounds.X + bounds.Width, rectangle.X + rectangle.Width);
+            var bottom = Math.Min(bounds.Y + bounds.Height, rectangle.Y + rectangle.Height);
+            if (right > left && bottom > top)
+                DrawRectangle(new ScreenRectangle(left, top, right - left, bottom - top), color);
+        }
         if (type is 0 or 3)
         {
             for (var y = bounds.Y + spacing / 2d; y < bounds.Y + bounds.Height; y += spacing)
-                DrawRectangle(new ScreenRectangle(bounds.X, y, bounds.Width, 1d), mark);
+                FillPattern(new ScreenRectangle(bounds.X, y, bounds.Width, 1d), mark);
         }
         if (type == 4)
         {
             var bandHeight = Math.Max(2d, spacing / 2d);
             for (var y = bounds.Y; y < bounds.Y + bounds.Height; y += bandHeight * 2d)
-                DrawRectangle(new ScreenRectangle(bounds.X, y, bounds.Width,
+                FillPattern(new ScreenRectangle(bounds.X, y, bounds.Width,
                     Math.Min(bandHeight, bounds.Y + bounds.Height - y)), mark);
         }
         if (type is 1 or 3)
         {
             for (var x = bounds.X + spacing / 2d; x < bounds.X + bounds.Width; x += spacing)
-                DrawRectangle(new ScreenRectangle(x, bounds.Y, type == 3 ? 1d : 2d, bounds.Height), mark);
+                FillPattern(new ScreenRectangle(x, bounds.Y, type == 3 ? 1d : 2d, bounds.Height), mark);
         }
         if (type is 2 or 5)
         {
@@ -1972,7 +1996,7 @@ public sealed partial class VenueEditorGame : Game
             for (var y = bounds.Y + 3d; y < bounds.Y + bounds.Height - 1d; y += spacing, row++)
             for (var x = bounds.X + 3d + (type == 5 && row % 2 == 1 ? spacing / 2d : 0d);
                  x < bounds.X + bounds.Width - 1d; x += spacing)
-                DrawRectangle(new ScreenRectangle(x, y, type == 2 ? spacing / 2d : 2d,
+                FillPattern(new ScreenRectangle(x, y, type == 2 ? spacing / 2d : 2d,
                     type == 2 ? spacing / 2d : 2d), mark);
         }
         if (type == 6)
@@ -1986,7 +2010,7 @@ public sealed partial class VenueEditorGame : Game
                 {
                     if ((row + column) % 2 != 0)
                         continue;
-                    DrawRectangle(new ScreenRectangle(
+                    FillPattern(new ScreenRectangle(
                         x,
                         y,
                         Math.Min(square, bounds.X + bounds.Width - x),
@@ -2625,7 +2649,10 @@ public sealed partial class VenueEditorGame : Game
             return (true, "dialog_opened");
         }
         if (action == ToolbarAction.EditGenreStyles)
-            return (GenreStyleDialog.ShowEditor(workspace), "genre_styles");
+        {
+            OpenGenreStyleEditor();
+            return (true, "genre_styles");
+        }
         if (action == ToolbarAction.ToggleEvaluationAnalysis)
         {
             showEvaluationAnalysis = !showEvaluationAnalysis;

@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -599,6 +600,63 @@ internal static class Program
         finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; }
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = "[" }));
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = null }));
+    }
+
+    private static void GenreAppearanceDrafts()
+    {
+        var original = CreateProject();
+        var project = original with
+        {
+            Participants = original.Participants.Select(item => item with { GenreId = "G01" }).ToArray(),
+            GenreStyles = [new("G01", "red", "white", "checker"), new("unused", "blue", "white", "solid")],
+        };
+        var draft = new GenreStyleDraft(project);
+        AssertEqual(1, draft.Rows.Count);
+        AssertEqual("thick-grid", draft.Rows[0].Pattern);
+        draft.SetColor(0, true, "#12abef");
+        AssertEqual("#12ABEF", draft.Rows[0].PrimaryColor);
+        AssertEqual("red", project.GenreStyles[0].PrimaryColor);
+        var invalid = false;
+        try { draft.SetColor(0, true, "#NOPE"); } catch (ArgumentException) { invalid = true; }
+        AssertEqual(true, invalid);
+        AssertEqual("#12ABEF", draft.Rows[0].PrimaryColor);
+        draft.SetColor(0, false, "yellow");
+        draft.SetPattern(0, "solid");
+        invalid = false;
+        try { draft.SetColor(0, false, "black"); } catch (InvalidOperationException) { invalid = true; }
+        AssertEqual(true, invalid);
+        draft.SetPattern(0, "thick-horizontal");
+        AssertEqual("uniform-horizontal", draft.Rows[0].Pattern);
+        AssertEqual("yellow", draft.Rows[0].SecondaryColor);
+        var snapshot = draft.Build();
+        AssertEqual(project.GenreStyles[1], snapshot[1]);
+        draft.SetPattern(0, "dots");
+        AssertEqual("uniform-horizontal", snapshot[0].Pattern);
+        var defaults = new GenreStyleDraft(project with
+        {
+            GenreStyles = [],
+            Participants = Enumerable.Range(0, 20).Select(i => new Participant($"p{i}", $"P{i}", 1, new Dictionary<string, double>()) { GenreId = $"G{i:D2}" }).ToArray(),
+        });
+        AssertEqual(20, defaults.Rows.Count);
+        AssertEqual("solid", defaults.Rows[11].Pattern);
+        AssertEqual("horizontal", defaults.Rows[12].Pattern);
+        var directory = Path.Combine(Path.GetTempPath(), $"genre-style-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "event.json");
+            ProjectFileService.Save(path, project);
+            using var remote = DesktopApplication.LoadWorkspace(path);
+            remote.Execute(new CircleSpaceCoordinator.Engine.Model.SetGenreStyles(draft.Build()), selectedPlanEdit: false);
+            AssertEqual("dots", remote.Project.GenreStyles[0].Pattern);
+            remote.Undo();
+            AssertEqual("checker", remote.Project.GenreStyles[0].Pattern);
+            remote.Redo();
+            AssertEqual("#12ABEF", remote.Project.GenreStyles[0].PrimaryColor);
+            ProjectFileService.Save(path, remote.Project);
+            AssertEqual("dots", ProjectFileService.Load(path).GenreStyles[0].Pattern);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 
     private static void FrameDraftEdits()
