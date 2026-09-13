@@ -57,6 +57,8 @@ public sealed partial class VenueEditorGame
             _ = SpaceDefinitions;
             CancelInProgressPointerInteraction();
             catalogChoice = NextSpace?.Id;
+            spaceRequestsTab = false;
+            spaceSelected = Math.Max(0, SpaceDefinitions.Current.Types.ToList().FindIndex(t => t.Id == catalogChoice));
             catalogOrientation = nextDeskOrientation;
             catalogPage = Math.Max(0, SpaceDefinitions.Current.Types.ToList().FindIndex(t => t.Id == catalogChoice)) / 6;
             spaceCatalogOpen = true;
@@ -80,25 +82,60 @@ public sealed partial class VenueEditorGame
         catalogHeight = GraphicsDevice.Viewport.Height;
         var panel = CatalogBounds;
         var cardWidth = (panel.Width * 0.65 - 32) / 3;
-        var cardHeight = (panel.Height - 168) / 2;
+        var cardHeight = (panel.Height - 260) / 2;
         var types = SpaceDefinitions.Current.Types;
-        catalogPage = Math.Clamp(catalogPage, 0, Math.Max(0, (types.Count - 1) / 6));
+        catalogPage = Math.Clamp(catalogPage, 0, Math.Max(0, (SpaceCount - 1) / 6));
         void Button(string label, ScreenRectangle area, Action run, bool enabled = true) =>
             catalogButtons.Add((new IconButtonModel(area, label) { IsEnabled = enabled }, run));
-        foreach (var (type, index) in types.Skip(catalogPage * 6).Take(6).Select((t, i) => (t, i)))
+        for (var index = 0; index < Math.Min(6, SpaceCount - catalogPage * 6); index++)
         {
-            Button(type.Name, new ScreenRectangle(panel.X + 12 + index % 3 * cardWidth, panel.Y + 62 + index / 3 * cardHeight,
-                cardWidth - 6, cardHeight - 8), () => { catalogChoice = type.Id; BuildCatalogButtons(); });
-            catalogButtons[^1].Model.IsSelected = type.Id == catalogChoice;
+            var selectedIndex = catalogPage * 6 + index;
+            var label = spaceRequestsTab ? SpaceDefinitions.Current.Requests[selectedIndex].Value : types[selectedIndex].Name;
+            Button(label, new ScreenRectangle(panel.X + 12 + index % 3 * cardWidth, panel.Y + 110 + index / 3 * cardHeight,
+                cardWidth - 6, cardHeight - 8), () => {
+                    spaceSelected = selectedIndex;
+                    if (!spaceRequestsTab) catalogChoice = types[selectedIndex].Id;
+                    BuildCatalogButtons();
+                });
+            catalogButtons[^1].Model.IsSelected = selectedIndex == spaceSelected;
         }
+        Button("フレーム", new ScreenRectangle(panel.X + 12, panel.Y + 58, 132, 34), () => SelectCatalogTab(false));
+        catalogButtons[^1].Model.IsSelected = !spaceRequestsTab;
+        Button("申込スペース", new ScreenRectangle(panel.X + 152, panel.Y + 58, 150, 34), () => SelectCatalogTab(true));
+        catalogButtons[^1].Model.IsSelected = spaceRequestsTab;
         var right = panel.X + panel.Width * 0.67;
         var controlY = panel.Y + panel.Height - 148;
-        Button("左回転", new ScreenRectangle(right, controlY, 104, 36), () => catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 3) % 4));
-        Button("右回転", new ScreenRectangle(right + 110, controlY, 104, 36), () => catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 1) % 4));
+        if (!spaceRequestsTab)
+        {
+            Button("左回転", new ScreenRectangle(right, controlY, 104, 36), () => catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 3) % 4), SpaceCount > 0);
+            Button("右回転", new ScreenRectangle(right + 110, controlY, 104, 36), () => catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 1) % 4), SpaceCount > 0);
+        }
+        Button("追加", new ScreenRectangle(panel.X + 12, controlY, 80, 36), () => EditSpaceDefinition(true, false));
+        Button("編集", new ScreenRectangle(panel.X + 100, controlY, 80, 36), () => EditSpaceDefinition(false, false), SpaceCount > 0);
+        Button("複製", new ScreenRectangle(panel.X + 188, controlY, 80, 36), () => EditSpaceDefinition(true, true), SpaceCount > 0);
+        Button("削除", new ScreenRectangle(panel.X + 276, controlY, 80, 36), DeleteSpaceDefinition, SpaceCount > 0);
         Button("前のページ", new ScreenRectangle(panel.X + 12, panel.Y + panel.Height - 92, 120, 34), () => { catalogPage--; BuildCatalogButtons(); }, catalogPage > 0);
-        Button("次のページ", new ScreenRectangle(panel.X + 140, panel.Y + panel.Height - 92, 120, 34), () => { catalogPage++; BuildCatalogButtons(); }, (catalogPage + 1) * 6 < types.Count);
+        Button("次のページ", new ScreenRectangle(panel.X + 140, panel.Y + panel.Height - 92, 120, 34), () => { catalogPage++; BuildCatalogButtons(); }, (catalogPage + 1) * 6 < SpaceCount);
         Button("キャンセル", new ScreenRectangle(panel.X + panel.Width - 252, panel.Y + panel.Height - 48, 116, 36), () => CloseSpaceCatalog(false));
-        Button("決定", new ScreenRectangle(panel.X + panel.Width - 128, panel.Y + panel.Height - 48, 116, 36), () => CloseSpaceCatalog(true), catalogChoice is not null);
+        Button("配置に決定", new ScreenRectangle(panel.X + panel.Width - 128, panel.Y + panel.Height - 48, 116, 36), () => CloseSpaceCatalog(true), !spaceRequestsTab && types.Any(t => t.Id == catalogChoice));
+    }
+
+    private void SelectCatalogTab(bool requests)
+    {
+        spaceRequestsTab = requests;
+        spaceSelected = requests ? 0 : Math.Max(0, SpaceDefinitions.Current.Types.ToList().FindIndex(t => t.Id == catalogChoice));
+        catalogPage = spaceSelected / 6;
+        BuildCatalogButtons();
+    }
+
+    private void RefreshCatalogAfterDefinitionEdit()
+    {
+        if (!spaceCatalogOpen) return;
+        spaceSelected = Math.Clamp(spaceSelected, 0, Math.Max(0, SpaceCount - 1));
+        if (!spaceRequestsTab) catalogChoice = SpaceDefinitions.Current.Types.ElementAtOrDefault(spaceSelected)?.Id;
+        catalogPage = spaceSelected / 6;
+        BuildCatalogButtons();
+        spaceCatalogDrain = true;
     }
 
     private void CloseSpaceCatalog(bool accept)
@@ -118,11 +155,12 @@ public sealed partial class VenueEditorGame
             return true;
         }
         if (!spaceCatalogOpen) return false;
+        if (UpdateModalDialog(keyboard, mouse)) return true;
         if (catalogWidth != GraphicsDevice.Viewport.Width || catalogHeight != GraphicsDevice.Viewport.Height) BuildCatalogButtons();
         if (IsPressed(keyboard, Keys.Escape)) { CloseSpaceCatalog(false); return true; }
-        if (IsPressed(keyboard, Keys.Enter) && catalogChoice is not null) { CloseSpaceCatalog(true); return true; }
-        if (IsPressed(keyboard, Keys.Q)) catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 3) % 4);
-        if (IsPressed(keyboard, Keys.E)) catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 1) % 4);
+        if (IsPressed(keyboard, Keys.Enter) && !spaceRequestsTab && SpaceDefinitions.Current.Types.Any(t => t.Id == catalogChoice)) { CloseSpaceCatalog(true); return true; }
+        if (!spaceRequestsTab && IsPressed(keyboard, Keys.Q)) catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 3) % 4);
+        if (!spaceRequestsTab && IsPressed(keyboard, Keys.E)) catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 1) % 4);
         if (mouse.ScrollWheelValue != previousMouse.ScrollWheelValue)
         {
             catalogPage += mouse.ScrollWheelValue < previousMouse.ScrollWheelValue ? 1 : -1;
@@ -156,7 +194,7 @@ public sealed partial class VenueEditorGame
             (area, color) => textRenderer?.Draw(selectionButton.AccessibleName, ToRectangle(area, 4), ToButtonColor(color), 16, true));
         if (NextSpace is not { } type)
         {
-            textRenderer?.Draw("フレーム定義で型を追加", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 60, 204, 40)), Color.LightGray, 16);
+            textRenderer?.Draw("［フレーム選択］から追加", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 60, 204, 40)), Color.LightGray, 16);
             return;
         }
         DrawSpaceTypePreview(type, nextDeskOrientation, new ScreenRectangle(bounds.X + 12, bounds.Y + 35, 90, 80));
@@ -182,7 +220,7 @@ public sealed partial class VenueEditorGame
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
         DrawRectangle(panel, new Color(24, 32, 42));
         DrawOutline(panel, 2, new Color(110, 160, 170));
-        textRenderer?.Draw("フレームカタログ ― 型と方向を選ぶ", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 12, panel.Width - 32, 32)), Color.White, 22, true);
+        textRenderer?.Draw("フレームカタログ（アプリ共通）", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 12, panel.Width - 32, 32)), Color.White, 22, true);
         var types = SpaceDefinitions.Current.Types.Skip(catalogPage * 6).Take(6).ToArray();
         for (var index = 0; index < catalogButtons.Count; index++)
         {
@@ -192,7 +230,7 @@ public sealed partial class VenueEditorGame
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) =>
                 {
-                    if (index < types.Length)
+                    if (!spaceRequestsTab && index < types.Length)
                     {
                         DrawSpaceTypePreview(types[index], QuarterTurn.North, new ScreenRectangle(area.X + 10, area.Y + 10, area.Width - 20, area.Height - 50));
                         textRenderer?.Draw(types[index].Name, ToRectangle(new ScreenRectangle(area.X + 6, area.Y + area.Height - 36, area.Width - 12, 30)), ToButtonColor(color), 15);
@@ -200,13 +238,25 @@ public sealed partial class VenueEditorGame
                     else textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 4), ToButtonColor(color), 16, true);
                 });
         }
-        if (SpaceDefinitions.Current.Types.FirstOrDefault(t => t.Id == catalogChoice) is { } chosen)
+        if (!spaceRequestsTab && SpaceDefinitions.Current.Types.FirstOrDefault(t => t.Id == catalogChoice) is { } chosen)
         {
             var x = panel.X + panel.Width * 0.68;
-            DrawSpaceTypePreview(chosen, catalogOrientation, new ScreenRectangle(x, panel.Y + 90, panel.Width * 0.29, panel.Height - 290));
+            DrawSpaceTypePreview(chosen, catalogOrientation, new ScreenRectangle(x, panel.Y + 110, panel.Width * 0.29, panel.Height - 320));
             textRenderer?.Draw($"{chosen.Name} ／ {FormatOrientation(catalogOrientation)}", ToRectangle(new ScreenRectangle(x, panel.Y + panel.Height - 204, panel.Width * 0.29, 42)), Color.White, 17);
         }
-        DrawStatusBar("型を選び、左回転・右回転（Q / E）で方向を調整。決定 / Enterで反映、Escでキャンセル。Ctrl+Pで撮影。");
+        if (spaceRequestsTab && SpaceDefinitions.Current.Requests.ElementAtOrDefault(spaceSelected) is { } request)
+        {
+            var summary = request.Value + "\n" + request.Description + "\n割当可能な区画\n" + string.Join("\n", request.Targets.Select(target =>
+                $"{SpaceDefinitions.Current.Types.FirstOrDefault(t => t.Id == target.TypeId)?.Name} ／ 区画{target.Area}"));
+            textRenderer?.Draw(summary, ToRectangle(new ScreenRectangle(panel.X + panel.Width * 0.68, panel.Y + 110,
+                panel.Width * 0.29, panel.Height - 270)), Color.White, 16);
+        }
+        if (SpaceCount == 0)
+            textRenderer?.Draw("［追加］から定義を作成してください", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 130, panel.Width * 0.6, 40)), Color.LightGray, 17);
+        textRenderer?.Draw("編集画面の［保存］は全イベント共通。カタログのキャンセルでは戻りません。",
+            ToRectangle(new ScreenRectangle(panel.X + 12, panel.Y + panel.Height - 48, panel.Width - 280, 40)), Color.LightGray, 13);
+        DrawStatusBar(spaceRequestsTab ? "申込スペースを追加・編集できます。フレームの配置は［フレーム］タブから。Escで閉じます。"
+            : "追加・編集は［保存］で共通定義に反映。［配置に決定］/ Enterで次のフレームを選択。Q / Eで回転。");
     }
 
     private void DrawSpaceTypePreview(SpaceTypeDefinition type, QuarterTurn orientation, ScreenRectangle area)

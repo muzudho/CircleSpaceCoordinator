@@ -28,10 +28,10 @@ public sealed partial class VenueEditorGame
         try
         {
             _ = SpaceDefinitions;
-            editorMode = EditorMode.SpaceDefinitions;
+            editorMode = EditorMode.DeskPlacement;
             CancelInProgressPointerInteraction();
             CreateToolbar();
-            BuildSpaceButtons();
+            OpenSpaceCatalog();
         }
         catch (Exception ex) { ShowInAppMessage("フレーム定義を開けません", ex.Message); }
     }
@@ -109,6 +109,7 @@ public sealed partial class VenueEditorGame
             {
                 SaveSpaceDefinitions(requests ? catalog with { Requests = catalog.Requests.Where((_, i) => i != index).ToArray() }
                     : catalog with { Types = catalog.Types.Where((_, i) => i != index).ToArray() });
+                RefreshCatalogAfterDefinitionEdit();
             }
             catch (Exception ex) { ShowInAppMessage("削除できません", ex.Message); }
         });

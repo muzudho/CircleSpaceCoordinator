@@ -790,9 +790,9 @@ public sealed partial class VenueEditorGame : Game
             DrawConfidentialBadge();
             if (ShowVenueAboveRingCover) DrawVenueRingPanelCover();
             if (!toolRingOpen) DrawStatusBar();
-            DrawModalDialog();
             DrawToolRing();
             DrawSpaceCatalog();
+            DrawModalDialog();
         }
         spriteBatch.End();
 
@@ -2456,7 +2456,6 @@ public sealed partial class VenueEditorGame : Game
         var modeActions = new[]
         {
             ToolbarAction.ParticipantDataMode,
-            ToolbarAction.SpaceDefinitionsMode,
             ToolbarAction.DeskPlacementMode,
             ToolbarAction.IslandDefinitionMode,
             ToolbarAction.GenrePlacementMode,
@@ -2627,7 +2626,7 @@ public sealed partial class VenueEditorGame : Game
         if (action == ToolbarAction.SpaceDefinitionsMode)
         {
             OpenSpaceDefinitions();
-            return (editorMode == EditorMode.SpaceDefinitions, "space_definitions");
+            return (spaceCatalogOpen, "space_catalog");
         }
         if (ToolRings.Any(ring => ring.Menu == action))
         {
@@ -3735,12 +3734,7 @@ public sealed partial class VenueEditorGame : Game
             : EditorMode.DeskPlacement;
         if (editorMode == EditorMode.SpaceDefinitions)
         {
-            try { _ = SpaceDefinitions; }
-            catch (Exception ex)
-            {
-                editorMode = EditorMode.DeskPlacement;
-                ShowInAppMessage("フレーム定義を復元できません", ex.Message);
-            }
+            editorMode = EditorMode.DeskPlacement;
         }
         showEvaluationAnalysis = state.Switches?.GetValueOrDefault("evaluationAnalysis") == true;
         activeCanvasTool = editorMode == EditorMode.DeskPlacement

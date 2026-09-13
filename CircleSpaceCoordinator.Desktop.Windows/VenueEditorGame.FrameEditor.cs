@@ -62,6 +62,7 @@ public sealed partial class VenueEditorGame
         frameSave = null;
         frameButtons.Clear();
         frameTargets = [];
+        RefreshCatalogAfterDefinitionEdit();
         spaceScroll = Math.Clamp(spaceSelected - SpaceRows + 1, 0, Math.Max(0, SpaceCount - SpaceRows));
         modalInputDrain = true;
     }
