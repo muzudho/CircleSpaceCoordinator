@@ -165,6 +165,8 @@ public sealed partial class VenueEditorGame : Game
 
     protected override void Update(GameTime gameTime)
     {
+        statusHintTime = gameTime.TotalGameTime.TotalSeconds;
+        if (!ShowsStatusHintTimer) statusHintContext = null;
         try { UpdateEditor(gameTime); }
         catch (InvalidOperationException exception) when (exception.InnerException is Grpc.Core.RpcException)
         {
@@ -3300,11 +3302,20 @@ public sealed partial class VenueEditorGame : Game
             Color.White,
             pixelHeight: 17,
             bold: true);
+        var showHintTimer = toolDescription is null && ShowsStatusHintTimer && statusHintContext is not null;
+        const int hintTimerWidth = 80;
         textRenderer?.Draw(
             toolDescription ?? secondaryStatusMessage,
-            new Rectangle(14, top + 30, Math.Max(1, width - 28), 20),
+            new Rectangle(14, top + 30, Math.Max(1, width - 28 - (showHintTimer ? hintTimerWidth + 12 : 0)), 20),
             new Color(184, 204, 214),
             pixelHeight: 15);
+        if (showHintTimer)
+        {
+            var track = new ScreenRectangle(width - 14 - hintTimerWidth, top + 38, hintTimerWidth, 5);
+            DrawRectangle(track, new Color(57, 75, 84));
+            DrawRectangle(new ScreenRectangle(track.X, track.Y, track.Width * StatusHintProgress, track.Height),
+                new Color(110, 160, 170));
+        }
     }
 
     private void UpdateWindowPresentation()
@@ -3410,7 +3421,9 @@ public sealed partial class VenueEditorGame : Game
             if (orphanCount > 0)
                 details.Add($"⚠ 接続先を失った島接続補助直線: {orphanCount}本");
         }
-        secondaryStatusMessage = details.Count == 0
+        secondaryStatusMessage = ShowsStatusHintTimer
+            ? GetRotatingFrameNumberHint(details)
+            : details.Count == 0
             ? "ツールボタンにマウスを合わせると操作説明を表示します"
             : string.Join("　｜　", details);
     }
