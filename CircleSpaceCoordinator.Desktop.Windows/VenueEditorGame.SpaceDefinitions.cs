@@ -63,11 +63,6 @@ public sealed partial class VenueEditorGame
         spaceSelected = Math.Clamp(spaceSelected, 0, Math.Max(0, SpaceCount - 1));
     }
 
-    private sealed class SpaceDialogOwner : System.Windows.Forms.IWin32Window
-    {
-        public IntPtr Handle => System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
-    }
-
     private void EditSpaceDefinition(bool create, bool duplicate)
     {
         if ((!create || duplicate) && SpaceCount == 0) return;
@@ -77,8 +72,9 @@ public sealed partial class VenueEditorGame
         {
             var source = create && !duplicate ? new SpaceRequestDefinition(Guid.NewGuid().ToString("N"), "", "", []) : catalog.Requests[spaceSelected];
             if (duplicate) source = source with { Id = Guid.NewGuid().ToString("N"), Value = source.Value + "-コピー" };
-            SpaceDefinitionDialog.EditRequest(new SpaceDialogOwner(), source, catalog, updated =>
+            OpenFrameDefinitionEditor(new CircleSpaceCoordinator.Desktop.Core.Interaction.SpaceDefinitionDraft(source), catalog, draft =>
             {
+                var updated = draft.BuildRequest();
                 SaveSpaceDefinitions(catalog with { Requests = create ? [.. catalog.Requests, updated] : catalog.Requests.Select(r => r.Id == updated.Id ? updated : r).ToArray() });
                 if (create) spaceSelected = SpaceCount - 1;
             });
@@ -88,8 +84,9 @@ public sealed partial class VenueEditorGame
             var source = create && !duplicate ? new SpaceTypeDefinition(Guid.NewGuid().ToString("N"), "新しい型", "机", 3, 3,
                 [new(0, 0, 1)], ["開放", "開放", "開放", "開放"]) : catalog.Types[spaceSelected];
             if (duplicate) source = source with { Id = Guid.NewGuid().ToString("N"), Name = source.Name + " コピー" };
-            SpaceDefinitionDialog.EditType(new SpaceDialogOwner(), source, updated =>
+            OpenFrameDefinitionEditor(new CircleSpaceCoordinator.Desktop.Core.Interaction.SpaceDefinitionDraft(source), catalog, draft =>
             {
+                var updated = draft.BuildType();
                 SaveSpaceDefinitions(catalog with { Types = create ? [.. catalog.Types, updated] : catalog.Types.Select(t => t.Id == updated.Id ? updated : t).ToArray() });
                 if (create) spaceSelected = SpaceCount - 1;
             });
@@ -190,7 +187,7 @@ public sealed partial class VenueEditorGame
         foreach (var cell in type.Cells)
         {
             var bounds = new ScreenRectangle(385 + cell.X * cellSize, 338 + cell.Y * cellSize, cellSize - 2, cellSize - 2);
-            var fill = SpaceDefinitionDialog.AreaColor(cell.Area);
+            var fill = FrameAreaColor(cell.Area);
             DrawRectangle(bounds, new Color(fill.R, fill.G, fill.B));
             DrawOutline(bounds, 1, Color.LightGray);
             textRenderer?.Draw(cell.Area == 0 ? "—" : cell.Area.ToString(), ToRectangle(bounds, 3), Color.White, 20, true);

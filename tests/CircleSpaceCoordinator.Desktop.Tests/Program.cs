@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
             ("Catalog spaces place in all directions and preserve snapshots through history and JSON", CatalogSpacesRoundTrip),
@@ -598,6 +599,55 @@ internal static class Program
         finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; }
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = "[" }));
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = null }));
+    }
+
+    private static void FrameDraftEdits()
+    {
+        var catalog = SpaceDefinitionCatalog.CreateDefault();
+        var source = catalog.Types[0];
+        var draft = new SpaceDefinitionDraft(source);
+        draft.Name = "  編集した型  ";
+        draft.Paint(0, 0, 0);
+        draft.Edges[0] = "壁";
+        AssertEqual(1, source.Cells[0].Area);
+        AssertEqual("正面", source.Edges[0]);
+        draft.Resize(1, 1);
+        AssertEqual(1, draft.BuildType().Cells.Count);
+        draft.Resize(2, 1);
+        AssertEqual(2, draft.AreaAt(1, 0));
+        var built = draft.BuildType();
+        AssertEqual("編集した型", built.Name);
+        AssertEqual(0, built.Cells[0].Area);
+        draft.Paint(1, 0, null);
+        AssertEqual(2, built.Cells.Count);
+        var invalid = false;
+        try { (catalog with { Types = catalog.Types.Select(type => type.Id == source.Id ? draft.BuildType() : type).ToArray() }).Validate(); }
+        catch (InvalidDataException) { invalid = true; }
+        AssertEqual(true, invalid);
+        draft.Paint(1, 0, 1);
+        invalid = false;
+        try { (catalog with { Types = catalog.Types.Select(type => type.Id == source.Id ? draft.BuildType() : type).ToArray() }).Validate(); }
+        catch (InvalidDataException) { invalid = true; }
+        AssertEqual(true, invalid); // Existing request still refers to area 2.
+        draft.Paint(0, 0, 1);
+        draft.Paint(1, 0, 2);
+        (catalog with { Types = catalog.Types.Select(type => type.Id == source.Id ? draft.BuildType() : type).ToArray() }).Validate();
+        var requestSource = catalog.Requests[0];
+        var request = new SpaceDefinitionDraft(requestSource);
+        request.Name = "別の申込値";
+        request.Targets.Clear();
+        AssertEqual(2, requestSource.Targets.Count);
+        request.Targets.Add(new SpaceTarget(catalog.Types[1].Id, 1));
+        var savedRequest = request.BuildRequest();
+        request.Targets.Clear();
+        AssertEqual(1, savedRequest.Targets.Count);
+        (catalog with { Requests = [savedRequest, catalog.Requests[1]] }).Validate();
+        foreach (var size in new[] { 0, 13 })
+        {
+            invalid = false;
+            try { draft.Resize(size, 1); } catch (ArgumentOutOfRangeException) { invalid = true; }
+            AssertEqual(true, invalid);
+        }
     }
 
     private static void EventProjectCloseTransitions()

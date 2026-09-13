@@ -193,6 +193,14 @@ public sealed partial class VenueEditorGame : Game
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
+        if (frameDraft is not null)
+        {
+            if (!UpdateModalDialog(keyboard, mouse)) UpdateFrameDefinitionEditor(keyboard, mouse);
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            base.Update(gameTime);
+            return;
+        }
         if (workspace is null)
         {
             if (!UpdateModalDialog(keyboard, mouse)) UpdateEventProjects(keyboard, mouse);
@@ -635,6 +643,9 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedFrameButton?.CancelPress();
+        pressedFrameButton = null;
+        framePainting = false;
         pressedEventButton?.CancelPress();
         pressedEventButton = null;
         foreach (var (button, _) in eventButtons) button.ClearPointerState();
@@ -680,7 +691,12 @@ public sealed partial class VenueEditorGame : Game
 
         // Preserve antialiased text strokes when labels are scaled to fit their bounds.
         spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-        if (workspace is null)
+        if (frameDraft is not null)
+        {
+            DrawFrameDefinitionEditor();
+            DrawModalDialog();
+        }
+        else if (workspace is null)
         {
             DrawEventProjects();
             DrawModalDialog();

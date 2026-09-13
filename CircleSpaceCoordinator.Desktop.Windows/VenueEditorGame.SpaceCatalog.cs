@@ -214,7 +214,7 @@ public sealed partial class VenueEditorGame
         var y = area.Y + (area.Height - rows * size) / 2;
         foreach (var item in cells)
         {
-            var color = SpaceDefinitionDialog.AreaColor(item.Cell.Area);
+            var color = FrameAreaColor(item.Cell.Area);
             var rect = new ScreenRectangle(x + (item.Position.X - minX) * size, y + (item.Position.Y - minY) * size, size - 1, size - 1);
             DrawRectangle(rect, new Color(color.R, color.G, color.B));
             DrawOutline(rect, 1, Color.LightGray);
