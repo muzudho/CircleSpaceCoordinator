@@ -186,6 +186,8 @@ rg -n 'System\.Windows\.Forms|UseWindowsForms|MessageBox|ShowDialog' CircleSpace
 
 ## 実装結果と引継ぎ（2026-09-14）
 
+利用者確認（2026-09-14）：起動順序の修正後にアプリが起動し、画面全体の統一感が良くなったとの報告を得た。以下の「実機未確認」は各操作・IME・共有の網羅的確認を指し、起動成功の確認とは区別する。
+
 ### 変更した入口と配置先
 
 `CircleSpaceCoordinator.Desktop.Windows/` 内の接続先は以下。旧 Windows フォーム12ファイルを削除した（利用中9、未使用3）。以前に削除した `PlanNameDialog` はこの12件には含まない。
