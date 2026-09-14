@@ -1,5 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
+using CircleSpaceCoordinator.Desktop.Core.Interaction;
+
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Desktop.Core;
 using CircleSpaceCoordinator.Engine.Model;
@@ -119,12 +121,18 @@ public sealed partial class VenueEditorGame
             else if (Contains(ChannelButton(1), pointer) && IsWeightChannelSelected) EditChannelDefinition(create: false);
             else if (Contains(ChannelButton(2), pointer) && IsWeightChannelSelected)
             {
-                if (System.Windows.Forms.MessageBox.Show("チャンネルとその重み・列の対応を削除しますか？", "チャンネルの削除",
-                    System.Windows.Forms.MessageBoxButtons.OKCancel) == System.Windows.Forms.DialogResult.OK)
+                var id = selectedChannelId!;
+                OpenModal(new StationeryUI.Controls.ModalDialogModel(StationeryUI.Controls.ModalDialogKind.Confirmation,
+                    "チャンネルの削除", "チャンネルとその重み・列の対応を削除しますか？"), action =>
                 {
-                    workspace.Execute(new RemoveChannel(selectedChannelId!), selectedPlanEdit: false);
-                    selectedChannelId = null;
-                }
+                    if (action != StationeryUI.Controls.ModalDialogAction.Accept) return;
+                    try
+                    {
+                        workspace.Execute(new RemoveChannel(id), selectedPlanEdit: false);
+                        selectedChannelId = null;
+                    }
+                    catch (Exception exception) { ShowChannelError(exception); }
+                });
             }
             else
             {
@@ -149,13 +157,28 @@ public sealed partial class VenueEditorGame
         if (workspace is null) return;
         var feature = create ? null : workspace.Project.Evaluation.Features.Single(item => item.Id == selectedChannelId);
         var columns = workspace.Project.Participants.SelectMany(item => item.SourceValues.Keys).Distinct(StringComparer.Ordinal).ToArray();
-        var result = ChannelDialog.Show(feature?.Name ?? "", feature?.SourceColumn, columns);
-        if (result is null) return;
         var id = feature?.Id ?? $"channel-{Guid.NewGuid():N}";
-        workspace.Execute(new UpsertChannel(id, result.Value.Name, result.Value.Column), selectedPlanEdit: false);
-        selectedChannelId = id;
-        channelScroll = Math.Max(0, workspace.Project.Evaluation.Features.Count + 3 - VisibleChannelRows);
-        activeCanvasTool = ToolbarAction.EditSeatName;
+        var name = feature?.Name ?? "";
+        var column = feature?.SourceColumn;
+        void ShowDraft() => OpenSelection("チャンネルの名前・列対応", [$"名前：{name}", $"列：{column ?? "（対応なし：0点）"}", "保存"], 0, index =>
+        {
+            if (index == 0)
+            {
+                OpenUnderlineInput("チャンネル名", name, value => { name = value; ShowDraft(); },
+                "番地以外のチャンネル名を入力してください（100 文字まで）。", validate: EditorDialogValidation.ChannelName, cancelled: ShowDraft); return;
+            }
+            if (index == 1)
+            {
+                OpenSelection("取込み列（未取込みの場合は対応なし）", new[] { "（対応なし：0点）" }.Concat(columns).ToArray(),
+                Array.IndexOf(columns, column) + 1, selected => { column = selected == 0 ? null : columns[selected - 1]; ShowDraft(); }, ShowDraft); return;
+            }
+            if (string.IsNullOrWhiteSpace(name) || name == "番地") { ShowNotice("チャンネル名", "番地以外のチャンネル名を入力してください。", ShowDraft); return; }
+            workspace.Execute(new UpsertChannel(id, name, column), selectedPlanEdit: false);
+            selectedChannelId = id;
+            channelScroll = Math.Max(0, workspace.Project.Evaluation.Features.Count + 3 - VisibleChannelRows);
+            activeCanvasTool = ToolbarAction.EditSeatName;
+        });
+        ShowDraft();
     }
 
     private void EditChannelWeight(GridPosition cell)
@@ -166,15 +189,24 @@ public sealed partial class VenueEditorGame
         var cells = selectedCellRange is { } range && range.Contains(cell)
             ? deskCells.Where(range.Contains).ToArray() : [cell];
         var map = workspace.Project.Evaluation.WeightMaps.Single(item => item.FeatureId == selectedChannelId);
-        var value = ChannelDialog.ShowWeight(map.GetWeight(cell));
-        if (value is null) return;
-        try
+        var channelId = selectedChannelId!;
+        var planId = workspace.SelectedPlanId;
+        var value = (decimal)Math.Clamp(map.GetWeight(cell), 0, 1);
+        void ShowDraft() => OpenSelection("セルの重み（0～1、小数6桁）",
+            [$"値を入力：{value:0.######}", "− 0.1", "＋ 0.1", $"{cells.Length} セルに適用"], 0, index =>
         {
-            workspace.Execute(new SetChannelWeights(workspace.SelectedPlanId, selectedChannelId!, cells, value.Value));
+            if (index == 0)
+            {
+                OpenUnderlineInput("セルの重み", value.ToString("0.######"), input => { value = decimal.Parse(input); ShowDraft(); },
+                "0～1 の数値を小数点以下6桁までで入力してください。", 32,
+                validate: EditorDialogValidation.Weight, cancelled: ShowDraft); return;
+            }
+            if (index < 3) { value = Math.Clamp(value + (index == 1 ? -0.1m : 0.1m), 0, 1); ShowDraft(); return; }
+            workspace.Execute(new SetChannelWeights(planId, channelId, cells, (double)value));
             rangeSwapStatus = $"{cells.Length} セルの重みを変更しました";
             Log("channel_weight_edit", success: true, detail: $"cells={cells.Length}");
-        }
-        catch (Exception exception) { ShowChannelError(exception); }
+        });
+        ShowDraft();
     }
 
     private void DrawChannelWeights()
@@ -191,6 +223,5 @@ public sealed partial class VenueEditorGame
         }
     }
 
-    private static void ShowChannelError(Exception exception) => System.Windows.Forms.MessageBox.Show(exception.Message,
-        "チャンネルの編集", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+    private void ShowChannelError(Exception exception) => ShowInAppMessage("チャンネルの編集", exception.Message);
 }

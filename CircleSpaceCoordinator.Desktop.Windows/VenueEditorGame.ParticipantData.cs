@@ -145,20 +145,7 @@ public sealed partial class VenueEditorGame
     private void ShowParticipantCell(int row, int column)
     {
         var table = GetParticipantTable();
-        using var form = new System.Windows.Forms.Form
-        {
-            Text = $"{row + 1} 行 / {column + 1} 列: {table.Headers[column]}（閲覧専用）",
-            Width = 760, Height = 400, StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
-            MinimizeBox = false, ShowInTaskbar = false,
-        };
-        var valueBox = new System.Windows.Forms.TextBox
-        {
-            Multiline = true, ReadOnly = true, WordWrap = false,
-            ScrollBars = System.Windows.Forms.ScrollBars.Both, Dock = System.Windows.Forms.DockStyle.Fill,
-            Text = table.GetValue(row, column), Font = new System.Drawing.Font("Meiryo", 12),
-        };
-        form.Controls.Add(valueBox);
-        form.ShowDialog();
+        OpenTextViewer($"{row + 1} 行 / {column + 1} 列: {table.Headers[column]}（閲覧専用）", table.GetValue(row, column));
     }
 
     private void DrawParticipantData()

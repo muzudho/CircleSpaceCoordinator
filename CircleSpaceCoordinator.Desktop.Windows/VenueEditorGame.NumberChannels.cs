@@ -6,12 +6,24 @@ using CircleSpaceCoordinator.Desktop.Core;
 using CircleSpaceCoordinator.Desktop.Core.Interaction;
 using Microsoft.Xna.Framework;
 using StationeryUI.Canvas;
+using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
     private CircleSpaceProject? numberGapsProject;
     private string? numberGapsPlanId;
     private NumberChannelGaps? numberGaps;
+
+    private void OpenNumberInput(string field, string? initial, bool confirmOverwrite, Action<string> accepted)
+    {
+        void Edit() => OpenUnderlineInput(field + "を変更", initial ?? "", accepted,
+            "番号を入力してください（80 文字まで）。\n空欄で確定すると削除します。キャンセルでは変更しません。", 80, allowEmpty: true);
+        if (!confirmOverwrite) { Edit(); return; }
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "番号入力",
+            $"選択範囲には異なる{field}が入っています。まとめて変更しますか？"), action =>
+            { if (action == ModalDialogAction.Accept) Edit(); },
+            [("キャンセル", ModalDialogAction.Cancel), ("変更する", ModalDialogAction.Accept)]);
+    }
 
     private NumberChannelGaps GetNumberChannelGaps()
     {
@@ -56,24 +68,28 @@ public sealed partial class VenueEditorGame
         var labels = plan.SeatLabels.ToDictionary(label => (label.DeskPlacementId, label.RelativeCell));
         var values = targets.Select(target => labels.TryGetValue((target.DeskPlacementId, target.RelativeCell), out var label)
             ? selectedNumberChannel == 0 ? label.BlockName : label.SeatName : "").Distinct().ToArray();
-        if (values.Length > 1 && System.Windows.Forms.MessageBox.Show(
-                $"選択範囲には異なる{NumberChannelName}が入っています。まとめて変更しますか？", "番号入力",
-                System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Warning,
-                System.Windows.Forms.MessageBoxDefaultButton.Button2) != System.Windows.Forms.DialogResult.Yes)
-            return EditorCommandResult.NoTarget;
-        var edit = DeskNumberDialog.Show(values.Length == 1 ? values[0] : "", NumberChannelName);
-        if (edit is null) return EditorCommandResult.NoTarget;
-        foreach (var target in targets)
+        var channel = selectedNumberChannel;
+        var editingWorkspace = workspace;
+        var planId = workspace.SelectedPlanId;
+        OpenNumberInput(NumberChannelName, values.Length == 1 ? values[0] : "", values.Length > 1, value =>
         {
-            var key = (target.DeskPlacementId, target.RelativeCell);
-            var previous = labels.GetValueOrDefault(key) ?? new DeskSeatLabel(target.DeskPlacementId, target.RelativeCell, "", "");
-            var updated = selectedNumberChannel == 0
-                ? previous with { BlockName = edit.DeskNumber ?? "" }
-                : previous with { SeatName = edit.DeskNumber ?? "" };
-            if (string.IsNullOrWhiteSpace(updated.BlockName) && string.IsNullOrWhiteSpace(updated.SeatName)) labels.Remove(key);
-            else labels[key] = updated;
-        }
-        return commandController.ReplaceSeatLabels(labels.Values.ToArray());
+            if (workspace != editingWorkspace || workspace.SelectedPlanId != planId)
+                throw new InvalidOperationException("編集対象が変わりました。選び直してください。");
+            foreach (var target in targets)
+            {
+                var key = (target.DeskPlacementId, target.RelativeCell);
+                var previous = labels.GetValueOrDefault(key) ?? new DeskSeatLabel(target.DeskPlacementId, target.RelativeCell, "", "");
+                var updated = channel == 0
+                    ? previous with { BlockName = value }
+                    : previous with { SeatName = value };
+                if (string.IsNullOrWhiteSpace(updated.BlockName) && string.IsNullOrWhiteSpace(updated.SeatName)) labels.Remove(key);
+                else labels[key] = updated;
+            }
+            var result = commandController.ReplaceSeatLabels(labels.Values.ToArray());
+            Log("number_edit", result.Applied);
+            if (!result.Applied) ShowInAppMessage("番号入力", "番号を変更できませんでした。");
+        });
+        return EditorCommandResult.Success;
     }
 
     private void DrawNumberLabels()

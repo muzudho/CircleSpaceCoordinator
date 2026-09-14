@@ -17,18 +17,22 @@ public sealed partial class VenueEditorGame
     private string compositionText = "";
     private bool suppressTextConfirmation;
     private bool selectingUnderlineText;
+    private Func<string, string?>? underlineValidation;
 
-    private void OpenUnderlineInput(string title, string initial, Action<string> accepted, string? message = null, int maxLength = 100)
+    private void OpenUnderlineInput(string title, string initial, Action<string> accepted, string? message = null, int maxLength = 100,
+        bool allowEmpty = false, Func<string, string?>? validate = null, Action? cancelled = null, bool trim = true)
     {
         var editor = new UnderlineTextEditor(initial, maxLength);
         OpenModal(new ModalDialogModel(ModalDialogKind.Text, title,
             message ?? "選択した配置の名前を変更します。\n新しい名前を入力し、［確定］を選んでください（100 文字まで）。\n［キャンセル］を選ぶと、元の名前を残します。"), action =>
         {
-            if (action != ModalDialogAction.Accept) return;
-            try { accepted(editor.Text.Trim()); }
-            catch (Exception exception) { ShowInAppMessage(title, exception.Message); }
+            if (action != ModalDialogAction.Accept) { cancelled?.Invoke(); return; }
+            try { accepted(trim ? editor.Text.Trim() : editor.Text); }
+            catch (Exception exception) { ShowNotice(title, exception.Message,
+                () => OpenUnderlineInput(title, editor.Text, accepted, message, maxLength, allowEmpty, validate, cancelled, trim)); }
         });
         underlineEditor = editor;
+        underlineValidation = validate ?? (value => CircleSpaceCoordinator.Desktop.Core.Interaction.EditorDialogValidation.Name(value, allowEmpty));
         compositionText = "";
         suppressTextConfirmation = false;
         textInputService ??= new WindowsTextInputService(Window.Handle);
@@ -102,7 +106,9 @@ public sealed partial class VenueEditorGame
         if (IsPressed(keyboard, Keys.Tab))
         {
             selectingUnderlineText = false;
-            modalFocus = modalFocus >= modalButtons.Count - 1 ? -1 : modalFocus + 1;
+            var reverse = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
+            modalFocus = reverse ? (modalFocus <= TextInputFocus ? modalButtons.Count - 1 : modalFocus - 1)
+                : modalFocus >= modalButtons.Count - 1 ? TextInputFocus : modalFocus + 1;
             if (modalFocus == TextInputFocus) textInputService.Start(); else textInputService.Stop();
         }
         if (!suppressTextConfirmation && modalFocus != NoModalFocus &&
@@ -182,9 +188,9 @@ public sealed partial class VenueEditorGame
 
     private void ConfirmUnderlineInput(ModalDialogAction action)
     {
-        if (action == ModalDialogAction.Accept && string.IsNullOrWhiteSpace(underlineEditor?.Text))
+        if (action == ModalDialogAction.Accept && underlineValidation?.Invoke(underlineEditor?.Text.Trim() ?? "") is { } error)
         {
-            modalDialog!.Message = "名前を入力してください。空白だけの名前は使用できません。";
+            modalDialog!.Message = error;
             modalFocus = TextInputFocus;
             textInputService?.Start();
             return;

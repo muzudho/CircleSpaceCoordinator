@@ -24,6 +24,8 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Dialog validation distinguishes clearing numbers from empty names and rejects invalid weights", DialogValidation),
+            ("Participant cell selection preserves Unicode and copies reversed multiline ranges", ParticipantCellSelection),
             ("Frame numbers support bulk input and clearing with one undo", BulkFrameNumbers),
             ("Frame layout order survives remote operations, history and save without changing bindings", FrameLayoutOrder),
             ("Space totals sum requests and count each frame layout independently of assignments and history", SpaceTotals),
@@ -1314,6 +1316,34 @@ internal static class Program
         AssertEqual(new GridPosition(2, 0), restored.SelectedPlan.Assignments.Single().ScoringPosition);
         restored.SelectPlan("plan-1");
         AssertEqual(new GridPosition(2, 0), restored.SelectedPlan.Assignments.Single().ScoringPosition);
+    }
+
+    private static void DialogValidation()
+    {
+        AssertEqual(true, EditorDialogValidation.Name("  ") is not null);
+        AssertEqual<string?>(null, EditorDialogValidation.Name("  ", allowEmpty: true));
+        AssertEqual(true, EditorDialogValidation.ChannelName(" 番地 ") is not null);
+        AssertEqual<string?>(null, EditorDialogValidation.ChannelName("優先度"));
+        foreach (var value in new[] { "0", "1", 0.123456m.ToString() }) AssertEqual<string?>(null, EditorDialogValidation.Weight(value));
+        foreach (var value in new[] { "", "NaN", "-1", "2", 0.0000001m.ToString() }) AssertEqual(true, EditorDialogValidation.Weight(value) is not null);
+        AssertEqual<string?>(null, EditorDialogValidation.CircleIdPattern(""));
+        AssertEqual<string?>(null, EditorDialogValidation.CircleIdPattern("^(.*)$"));
+        AssertEqual(true, EditorDialogValidation.CircleIdPattern("[") is not null);
+    }
+
+    private static void ParticipantCellSelection()
+    {
+        var content = new ParticipantCellText("A😀e\u0301\r\n日本語\r\n");
+        AssertEqual(3, content.Lines.Count);
+        AssertEqual((0, 1), content.ClampPosition((0, 2)));
+        AssertEqual((0, 3), content.ClampPosition((0, 4)));
+        AssertEqual("😀e\u0301" + Environment.NewLine + "日本", content.Select((1, 2), (0, 1)));
+        AssertEqual("", content.Select((0, 0), (0, 0)));
+        AssertEqual("A😀e\u0301" + Environment.NewLine + "日本語" + Environment.NewLine, content.Select((-1, 0), (99, 99)));
+        var empty = new ParticipantCellText("");
+        AssertEqual("", empty.Select((0, 0), (10, 10)));
+        var longLine = new ParticipantCellText(new string('a', 100000) + "終");
+        AssertEqual("終", longLine.Select((0, 100000), (0, 100001)));
     }
 
     private static void BulkFrameNumbers()

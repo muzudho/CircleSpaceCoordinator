@@ -79,8 +79,7 @@ public sealed partial class VenueEditorGame
         {
             if (Contains(CircleRegexButtonBounds(), pointer))
             {
-                var result = CircleLabelDisplayDialog.Show(CurrentCircleDisplay);
-                if (result is not null) SaveCircleDisplay(result);
+                OpenCircleRegexSettings();
                 return true;
             }
             var channels = GetCircleDisplayChannels();

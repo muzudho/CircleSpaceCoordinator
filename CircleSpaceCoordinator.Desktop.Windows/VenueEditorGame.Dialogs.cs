@@ -31,6 +31,10 @@ public sealed partial class VenueEditorGame
     {
         textInputService?.Stop();
         underlineEditor = null;
+        selectionLabels = null;
+        viewerLines = null;
+        viewerDocument = null;
+        previewSheet = null;
         CancelInProgressPointerInteraction();
         modalDialog = dialog;
         modalChoices = choices;
@@ -47,6 +51,7 @@ public sealed partial class VenueEditorGame
 
     private bool UpdateModalDialog(KeyboardState keyboard, MouseState mouse)
     {
+        if (backgroundOperation is not null) return true;
         if (modalInputDrain)
         {
             if (mouse.LeftButton == ButtonState.Released && keyboard.GetPressedKeys().Length == 0)
@@ -56,6 +61,9 @@ public sealed partial class VenueEditorGame
         if (modalDialog is null) return false;
         EnsureModalButtons();
         if (modalDialog.Kind == ModalDialogKind.Text) return UpdateUnderlineInput(keyboard, mouse);
+        UpdateSelection(keyboard, mouse);
+        UpdateTextViewer(keyboard, mouse);
+        if (UpdateTablePreview(keyboard, mouse)) return true;
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         foreach (var (button, _) in modalButtons) button.UpdatePointer(pointer);
         if (IsPressed(keyboard, Keys.Escape))
@@ -64,7 +72,7 @@ public sealed partial class VenueEditorGame
             return true;
         }
         if (IsPressed(keyboard, Keys.Tab))
-            modalFocus = (modalFocus + 1) % modalButtons.Count;
+            modalFocus = (modalFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? modalButtons.Count - 1 : 1)) % modalButtons.Count;
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
             ApplyModalAction(modalButtons[modalFocus].Action);
@@ -93,6 +101,7 @@ public sealed partial class VenueEditorGame
     private void ApplyModalAction(ModalDialogAction action)
     {
         if (modalDialog is null) return;
+        if (selectionLabels is { Length: 0 } && action == ModalDialogAction.Accept) return;
         // Custom choices use the existing model's closing transition; preserve the chosen result.
         var customChoice = modalChoices?.Any(choice => choice.Action == action) == true;
         var outcome = modalDialog.Apply(customChoice && action != ModalDialogAction.Cancel ? ModalDialogAction.Accept : action);
@@ -118,8 +127,9 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle ModalBounds()
     {
         var availableHeight = GraphicsDevice.Viewport.Height - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
-        var width = Math.Min(720d, GraphicsDevice.Viewport.Width - 16d);
-        var height = Math.Min(350d, Math.Max(1, availableHeight - 16d));
+        var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null;
+        var width = Math.Min(large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
+        var height = Math.Min(large ? 620d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
             (availableHeight - height) / 2d, width, height);
     }
@@ -145,7 +155,7 @@ public sealed partial class VenueEditorGame
             for (var index = 0; index < choices.Length; index++)
                 Add(choices[index].Label, choices[index].Action,
                     bounds.X + 20 + index * (choiceWidth + 12), bottom, choiceWidth);
-            if (initializeFocus) modalFocus = Math.Max(0, Array.FindIndex(choices, choice => choice.Action == ModalDialogAction.Cancel));
+            if (initializeFocus) modalFocus = selectionLabels is not null ? 1 : Math.Max(0, Array.FindIndex(choices, choice => choice.Action == ModalDialogAction.Cancel));
             return;
         }
         if (modalDialog.Kind == ModalDialogKind.Minutes)
@@ -190,11 +200,14 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw($"{modalDialog.Minutes} 分（1～120）", ToRectangle(new ScreenRectangle(bounds.X + 78, bounds.Y + bounds.Height - 120,
                 bounds.Width - 156, 38)), Color.White, 22, true);
         if (modalDialog.Kind == ModalDialogKind.Text) DrawUnderlineInput();
+        DrawSelection();
+        DrawTextViewer();
+        DrawTablePreview();
         for (var index = 0; index < modalButtons.Count; index++)
         {
             var button = modalButtons[index].Button;
             button.IsSelected = index == modalFocus;
-            button.IsEnabled = !modalDialog.StopRequested;
+            button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !(selectionLabels is { Length: 0 } && modalButtons[index].Action == ModalDialogAction.Accept);
             StationeryButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),

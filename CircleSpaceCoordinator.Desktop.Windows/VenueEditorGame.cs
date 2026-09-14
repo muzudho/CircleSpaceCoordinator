@@ -60,7 +60,7 @@ public sealed partial class VenueEditorGame : Game
     private EditorCommandController? commandController;
     private ParticipantPlacementController? participantController;
     private readonly IOperationLogger operationLogger;
-    private readonly ApplicationSettingsService? settings;
+    private ApplicationSettingsService? settings;
     private string? projectSavePath;
     private readonly List<ToolbarButton> toolbarButtons = [];
     private readonly List<double> toolbarSeparators = [];
@@ -106,17 +106,23 @@ public sealed partial class VenueEditorGame : Game
     private GridPosition? topologyFirstCell;
     private GridPosition? topologyFirstCorner;
     private bool showEvaluationAnalysis;
+    private readonly bool startEngines;
+    private EngineRuntime? ownedEngineRuntime;
 
     public VenueEditorGame(
         RemoteWorkspace? workspace = null,
         IOperationLogger? operationLogger = null,
         string? projectSavePath = null,
-        ApplicationSettingsService? settings = null)
+        ApplicationSettingsService? settings = null,
+        bool startEngines = false)
     {
         this.workspace = workspace;
+        this.startEngines = startEngines;
         this.operationLogger = operationLogger ?? NullOperationLogger.Instance;
         this.projectSavePath = projectSavePath;
-        this.settings = settings ?? new ApplicationSettingsService(Path.Combine(AppContext.BaseDirectory, "application-settings.json"));
+        // Settings migration can read project metadata through EditorConnection too.
+        this.settings = settings ?? (startEngines ? null
+            : new ApplicationSettingsService(Path.Combine(AppContext.BaseDirectory, "application-settings.json")));
         dragController = workspace is null ? null : new DeskDragController(workspace, viewport);
         commandController = workspace is null ? null : new EditorCommandController(workspace);
         participantController = workspace is null ? null : new ParticipantPlacementController(workspace);
@@ -144,13 +150,28 @@ public sealed partial class VenueEditorGame : Game
         CreateToolbar();
         previousMouse = Mouse.GetState();
         previousKeyboard = Keyboard.GetState();
-        RefreshEventProjects(this.settings?.Current.LastProjectPath);
-        if (workspace is null && projectSavePath is { } initialPath)
+        // Catalog metadata is decoded by the editor engine. During asynchronous startup
+        // its connection does not exist yet; keep the list empty until it is ready.
+        if (!startEngines) RefreshEventProjects(this.settings?.Current.LastProjectPath);
+        if (!startEngines && workspace is null && projectSavePath is { } initialPath)
         {
             projectSavePath = null;
             OpenEventProject(initialPath);
         }
         base.Initialize();
+        if (startEngines)
+        {
+            RunBackground("エンジンの起動", () => ownedEngineRuntime = EngineRuntime.StartAsync(AppContext.BaseDirectory).GetAwaiter().GetResult(), runtime =>
+            {
+                EditorConnection.Current = runtime.Connection;
+                this.settings ??= new ApplicationSettingsService(Path.Combine(AppContext.BaseDirectory, "application-settings.json"));
+                RefreshEventProjects(this.settings?.Current.LastProjectPath);
+                modalDialog = null;
+                modalButtons.Clear();
+                modalInputDrain = true;
+                if (projectSavePath is { } path) { projectSavePath = null; OpenEventProject(path); }
+            }, exception => OpenModal(new ModalDialogModel(ModalDialogKind.Message, "エンジンの起動に失敗しました", exception.Message), _ => Exit()));
+        }
     }
 
     protected override void LoadContent()
@@ -166,6 +187,7 @@ public sealed partial class VenueEditorGame : Game
     protected override void Update(GameTime gameTime)
     {
         statusHintTime = gameTime.TotalGameTime.TotalSeconds;
+        pollBackgroundOperation?.Invoke();
         if (!ShowsStatusHintTimer) statusHintContext = null;
         try { UpdateEditor(gameTime); }
         catch (InvalidOperationException exception) when (exception.InnerException is Grpc.Core.RpcException)
@@ -429,16 +451,15 @@ public sealed partial class VenueEditorGame : Game
             }
             else if (hoveredDeskLayoutParent)
             {
-                var target = LayoutBindingDialog.Show(workspace!.Project.DeskLayouts, workspace.SelectedDeskLayoutId,
-                    "表示するフレーム配置");
-                if (target is not null && target != workspace.SelectedDeskLayoutId)
+                OpenLayoutSelection("表示するフレーム配置", workspace!.SelectedDeskLayoutId, target =>
                 {
+                    if (target == workspace.SelectedDeskLayoutId) return;
                     dragController?.Cancel();
                     workspace.SelectDeskLayout(target);
                     planScroll = 0;
                     hoveredPlanId = null;
                     LogPointer("desk_layout_select", pointer, true, $"deskLayoutId={target}");
-                }
+                });
             }
             else if (hoveredLayoutBind)
             {
@@ -668,6 +689,8 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        viewerDragging = false;
+        selectionPressed = -1;
         pressedGenreButton?.CancelPress();
         pressedGenreButton = null;
         pressedFrameButton?.CancelPress();
@@ -2681,28 +2704,27 @@ public sealed partial class VenueEditorGame : Game
             return ChangeEditorMode(EditorMode.GenreData);
         if (action == ToolbarAction.ImportParticipants)
         {
-            var count = ParticipantImportForm.ShowImport(workspace, settings);
-            return count is null ? (false, "cancelled") : (true, $"participants={count.Value}");
+            OpenParticipantImport();
+            return (true, "dialog_opened");
         }
         if (action == ToolbarAction.SelectExportPlan)
         {
-            var choice = ExportPlanDialog.Show(workspace.Project);
-            if (choice is null) return (false, "cancelled");
-            workspace.Execute(new SetExportPlan(choice.Id), selectedPlanEdit: false);
-            return (true, choice.Id is null ? "export_plan_undecided" : "export_plan_decided");
+            var plans = workspace.Project.Plans.ToArray();
+            OpenSelection("配置決定案を選択する", new[] { "配置案　未決定" }.Concat(plans.Select(plan => $"{plan.Name}（{plan.Id}）")).ToArray(),
+                Array.FindIndex(plans, plan => plan.Id == workspace.Project.ExportPlanId) + 1,
+                index => workspace.Execute(new SetExportPlan(index == 0 ? null : plans[index - 1].Id), selectedPlanEdit: false));
+            return (true, "dialog_opened");
         }
         if (action == ToolbarAction.ExportSeatAssignments)
         {
             try
             {
-                var result = CircleSeatExportForm.ShowExport(BuildCircleSeatExportRows(), settings);
-                return result is null
-                    ? (false, "cancelled")
-                    : (true, $"updatedRows={result.UpdatedRowCount};missingCircles={result.MissingCircleCount}");
+                OpenSeatExport();
+                return (true, "dialog_opened");
             }
             catch (InvalidOperationException exception)
             {
-                System.Windows.Forms.MessageBox.Show(exception.Message, "Excelへ書き出し", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                ShowInAppMessage("Excelへ書き出し", exception.Message);
                 return (false, "export_validation_failed");
             }
         }
@@ -2859,16 +2881,19 @@ public sealed partial class VenueEditorGame : Game
                 ? workspace.SelectedPlan.DeskPlacements.Where(item => selectedFrameIds.Contains(item.Id)).ToArray()
                 : [placement];
             var values = targets.Select(item => item.DeskNumber).Distinct().ToArray();
-            if (values.Length > 1 && System.Windows.Forms.MessageBox.Show(
-                    "選択したフレームには異なるフレーム番号が入っています。まとめて変更しますか？", "番号入力",
-                    System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Warning,
-                    System.Windows.Forms.MessageBoxDefaultButton.Button2) != System.Windows.Forms.DialogResult.Yes)
-                return EditorCommandResult.NoTarget;
-            var edit = DeskNumberDialog.Show(values.Length == 1 ? values[0] : "",
-                targets.Length > 1 ? $"フレーム番号（{targets.Length} フレーム）" : "フレーム番号");
-            return edit is null
-                ? EditorCommandResult.NoTarget
-                : commandController.SetDeskNumbers(targets.Select(item => item.Id).ToArray(), edit.DeskNumber);
+            var editingWorkspace = workspace;
+            var planId = workspace.SelectedPlanId;
+            var ids = targets.Select(item => item.Id).ToArray();
+            OpenNumberInput(targets.Length > 1 ? $"フレーム番号（{targets.Length} フレーム）" : "フレーム番号",
+                values.Length == 1 ? values[0] : "", values.Length > 1, value =>
+                {
+                    if (workspace != editingWorkspace || workspace.SelectedPlanId != planId)
+                        throw new InvalidOperationException("編集対象が変わりました。選び直してください。");
+                    var result = commandController.SetDeskNumbers(ids, string.IsNullOrEmpty(value) ? null : value);
+                    Log("frame_number_edit", result.Applied);
+                    if (!result.Applied) ShowInAppMessage("番号入力", "番号を変更できませんでした。");
+                });
+            return EditorCommandResult.Success;
         }
 
         EditorCommandResult RemoveTopologyAt(ScreenPoint point, GridPosition position)
@@ -3618,20 +3643,14 @@ public sealed partial class VenueEditorGame : Game
     {
         if (workspace is null) return (false, "workspace_unavailable");
         var circle = workspace.Project.CircleLayouts.Single(item => item.Id == workspace.SelectedPlanId);
-        var target = LayoutBindingDialog.Show(workspace.Project.DeskLayouts, circle.DeskLayoutId);
-        if (target is null || target == circle.DeskLayoutId) return (false, "cancelled");
-        try
+        OpenLayoutSelection("紐付け先のフレーム配置", circle.DeskLayoutId, target =>
         {
+            if (target == circle.DeskLayoutId) return;
             workspace.Execute(new LayoutCatalogServiceReassignCircleLayout( circle.Id, target), selectedPlanEdit: false);
             workspace.SelectPlan(circle.Id);
-            return (true, $"deskLayoutId={target}");
-        }
-        catch (Exception exception)
-        {
-            System.Windows.Forms.MessageBox.Show("このサークル配置は選択したフレーム配置へ収まりません。\n" + exception.Message,
-                "紐付けを変更", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-            return (false, $"error={exception.GetType().Name}");
-        }
+            Log("circle_layout_rebind", true);
+        });
+        return (true, "dialog_opened");
     }
 
     private string SelectedDeskLayoutId() => workspace!.SelectedDeskLayoutId;
@@ -3689,32 +3708,41 @@ public sealed partial class VenueEditorGame : Game
     {
         if (workspace is null || commandController is null)
             return (false, "workspace_unavailable");
-        try
+        var plans = workspace.Project.Plans.ToArray();
+        if (plans.Length < 2) { ShowInAppMessage("色んなコピー", "コピーには二つ以上の配置案が必要です。"); return (false, "too_few_plans"); }
+        var source = 0;
+        var destination = 1;
+        void ShowDraft() => OpenSelection("色んなコピー：フレーム配置だけコピー",
+            [$"コピー元：{plans[source].Name}（{plans[source].Id}）", $"コピー先：{plans[destination].Name}（{plans[destination].Id}）", "この内容でコピーする"], 0, index =>
         {
-            var request = PlanCopyDialog.Show(workspace.Project.Plans);
-            if (request is null)
-                return (false, "cancelled");
-            var result = commandController.CopyDeskLayout(request.SourcePlanId, request.DestinationPlanId);
-            if (!result.Applied)
+            if (index < 2)
             {
-                var message = result.Issues.Any(issue => issue.Code == "assignment.cell.withoutDesk")
-                    ? "コピー先のサークル配置が、コピー元のフレーム配置に収まりません。\nサークルを先に移動または解除してからコピーしてください。"
-                    : "フレーム配置をコピーできませんでした。\nコピー元・コピー先の内容を確認してください。";
-                System.Windows.Forms.MessageBox.Show(message, "色んなコピー",
-                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                OpenSelection(index == 0 ? "コピー元" : "コピー先", plans.Select(plan => $"{plan.Name}（{plan.Id}）").ToArray(),
+                    index == 0 ? source : destination, chosen => { if (index == 0) source = chosen; else destination = chosen; ShowDraft(); }, ShowDraft);
+                return;
             }
-            return FormatOutcome(result);
-        }
-        catch (Exception exception)
-        {
-            Log("plan_copy", success: false, detail: $"error={exception.GetType().Name}");
-            System.Windows.Forms.MessageBox.Show(
-                "コピー画面を開けませんでした。操作ログを確認してください。",
-                "色んなコピー",
-                System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Error);
-            return (false, $"error={exception.GetType().Name}");
-        }
+            if (source == destination) { ShowNotice("色んなコピー", "別のコピー元・コピー先を選んでください。", ShowDraft); return; }
+            OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "コピーの確認",
+                "フレーム・セル番・島定義をコピーします。\nコピー先のサークル配置は維持します。収まらない場合は変更しません。"), action =>
+            {
+                if (action != ModalDialogAction.Accept) { ShowDraft(); return; }
+                try
+                {
+                    var result = commandController.CopyDeskLayout(plans[source].Id, plans[destination].Id);
+                    if (!result.Applied)
+                    {
+                        var message = result.Issues.Any(issue => issue.Code == "assignment.cell.withoutDesk")
+                            ? "コピー先のサークル配置が、コピー元のフレーム配置に収まりません。\nサークルを先に移動または解除してからコピーしてください。"
+                            : "フレーム配置をコピーできませんでした。\nコピー元・コピー先の内容を確認してください。";
+                        ShowNotice("色んなコピー", message, ShowDraft);
+                    }
+                    Log("plan_copy", result.Applied);
+                }
+                catch (Exception exception) { ShowNotice("色んなコピー", exception.Message, ShowDraft); }
+            }, [("キャンセル", ModalDialogAction.Cancel), ("コピー", ModalDialogAction.Accept)]);
+        });
+        ShowDraft();
+        return (true, "dialog_opened");
     }
 
     private (bool Success, string Detail) PromptRenameSelectedPlan()
@@ -3825,9 +3853,11 @@ public sealed partial class VenueEditorGame : Game
     {
         if (disposing)
         {
+            FinishBackgroundOperation();
             textInputService?.Dispose();
             DisposeOptimization();
             workspace?.Dispose();
+            ownedEngineRuntime?.Dispose();
             screenshotShutterSoundInstance?.Dispose();
             screenshotShutterSound?.Dispose();
             textRenderer?.Dispose();
