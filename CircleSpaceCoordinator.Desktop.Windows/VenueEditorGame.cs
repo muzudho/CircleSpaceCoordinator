@@ -3560,12 +3560,11 @@ public sealed partial class VenueEditorGame : Game
     {
         if (workspace is null) return (false, "workspace_unavailable");
         var isDesk = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
-        var name = PlanNameDialog.Show(isDesk ? "フレーム配置を追加" : "サークル配置を追加",
-            isDesk ? $"フレーム配置{workspace.Project.DeskLayouts.Count + 1}" : $"サークル配置{workspace.Project.CircleLayouts.Count + 1}");
-        if (name is null) return (false, "cancelled");
-        var id = $"{(isDesk ? "desk-layout" : "circle-layout")}-{Guid.NewGuid():N}";
-        try
+        var deskLayoutId = SelectedDeskLayoutId();
+        OpenUnderlineInput(isDesk ? "フレーム配置を追加" : "サークル配置を追加",
+            isDesk ? $"フレーム配置{workspace.Project.DeskLayouts.Count + 1}" : $"サークル配置{workspace.Project.CircleLayouts.Count + 1}", name =>
         {
+            var id = $"{(isDesk ? "desk-layout" : "circle-layout")}-{Guid.NewGuid():N}";
             if (isDesk)
             {
                 workspace.Execute(new LayoutCatalogServiceCreateDeskLayout( id, name), selectedPlanEdit: false);
@@ -3573,17 +3572,12 @@ public sealed partial class VenueEditorGame : Game
             }
             else
             {
-                var deskLayoutId = SelectedDeskLayoutId();
                 workspace.Execute(new LayoutCatalogServiceCreateCircleLayout( id, name, deskLayoutId), selectedPlanEdit: false);
                 workspace.SelectPlan(id);
             }
-            return (true, $"id={id}");
-        }
-        catch (Exception exception)
-        {
-            System.Windows.Forms.MessageBox.Show(exception.Message, "配置案の追加", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-            return (false, $"error={exception.GetType().Name}");
-        }
+            Log("layout_create", success: true, detail: $"id={id}");
+        }, "追加する配置の名前を入力してください（100 文字まで）。\n［確定］で作成し、［キャンセル］で取り消します。");
+        return (true, "dialog_opened");
     }
 
     private (bool Success, string Detail) PromptDeleteLayout()
@@ -3663,22 +3657,28 @@ public sealed partial class VenueEditorGame : Game
         if (workspace is null) return (false, "workspace_unavailable");
         if (!ShowsDeskLayouts) return PromptDuplicateSelectedPlan();
         var sourceId = workspace.SelectedDeskLayoutId;
-        var name = PlanNameDialog.Show("フレーム配置を複製", $"{CurrentDeskLayoutName()}2");
-        if (name is null) return (false, "cancelled");
-        var id = $"desk-layout-{Guid.NewGuid():N}";
-        workspace.Execute(new LayoutCatalogServiceDuplicateDeskLayout(sourceId!, id, name), selectedPlanEdit: false);
-        workspace.SelectDeskLayout(id);
-        return (true, $"id={id}");
+        OpenUnderlineInput("フレーム配置を複製", $"{CurrentDeskLayoutName()}2", name =>
+        {
+            var id = $"desk-layout-{Guid.NewGuid():N}";
+            workspace.Execute(new LayoutCatalogServiceDuplicateDeskLayout(sourceId!, id, name), selectedPlanEdit: false);
+            workspace.SelectDeskLayout(id);
+            Log("layout_duplicate", success: true, detail: $"id={id}");
+        }, "複製先の名前を入力してください（100 文字まで）。\n［確定］で複製し、［キャンセル］で取り消します。");
+        return (true, "dialog_opened");
     }
 
     private (bool Success, string Detail) PromptDuplicateSelectedPlan()
     {
         if (workspace is null || commandController is null)
             return (false, "workspace_unavailable");
-        var name = PlanNameDialog.Show("配置案を複製", $"{workspace.SelectedPlan.Name}2");
-        return name is null
-            ? (false, "cancelled")
-            : FormatOutcome(commandController.DuplicateSelectedPlan(name));
+        OpenUnderlineInput("配置案を複製", $"{workspace.SelectedPlan.Name}2", name =>
+        {
+            var result = commandController.DuplicateSelectedPlan(name);
+            var outcome = FormatOutcome(result);
+            Log("plan_duplicate", outcome.Success, outcome.Detail);
+            if (!result.Applied) ShowInAppMessage("配置案を複製", "配置案を複製できませんでした。配置内容を確認してください。");
+        }, "複製先の名前を入力してください（100 文字まで）。\n［確定］で複製し、［キャンセル］で取り消します。");
+        return (true, "dialog_opened");
     }
 
     private IReadOnlyList<CircleSeatExportRow> BuildCircleSeatExportRows() => workspace is null
