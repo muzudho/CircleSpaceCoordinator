@@ -13,7 +13,8 @@ public sealed record ProjectWorkingState(
     double OriginX,
     double OriginY,
     IReadOnlyDictionary<string, bool>? Switches = null,
-    string? SelectedDeskLayoutId = null);
+    string? SelectedDeskLayoutId = null,
+    IReadOnlyList<string>? PinnedExportPlanIds = null);
 
 public sealed record CircleLabelDisplaySettings(
     string DisplayField = "internalId",

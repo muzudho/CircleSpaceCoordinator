@@ -32,6 +32,8 @@ public sealed partial class VenueEditorGame
         textInputService?.Stop();
         underlineEditor = null;
         selectionLabels = null;
+        exportPlanChoices = null;
+        exportPreviewProject = null;
         viewerLines = null;
         viewerDocument = null;
         previewSheet = null;
@@ -61,7 +63,7 @@ public sealed partial class VenueEditorGame
         if (modalDialog is null) return false;
         EnsureModalButtons();
         if (modalDialog.Kind == ModalDialogKind.Text) return UpdateUnderlineInput(keyboard, mouse);
-        UpdateSelection(keyboard, mouse);
+        if (!UpdateExportPlanPins(keyboard, mouse)) UpdateSelection(keyboard, mouse);
         UpdateTextViewer(keyboard, mouse);
         if (UpdateTablePreview(keyboard, mouse)) return true;
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
@@ -128,7 +130,7 @@ public sealed partial class VenueEditorGame
     {
         var availableHeight = GraphicsDevice.Viewport.Height - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
         var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null;
-        var width = Math.Min(large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
+        var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
         var height = Math.Min(large ? 620d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
             (availableHeight - height) / 2d, width, height);
@@ -211,7 +213,8 @@ public sealed partial class VenueEditorGame
             StationeryButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
-                (area, color) => textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 5), ToButtonColor(color), 17, true));
+                (area, color) => textRenderer?.Draw(exportPlanChoices is { } choices && modalButtons[index].Action == ModalDialogAction.Accept && selectionIndex >= choices.Count
+                    ? "未決定に戻す" : button.AccessibleName, ToRectangle(area, 5), ToButtonColor(color), 17, true));
         }
         DrawTextInputHelp();
     }

@@ -14,9 +14,13 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle SelectionArea()
     {
         var bounds = ModalBounds();
+        if (exportPlanChoices is not null)
+            return new ScreenRectangle(bounds.X + bounds.Width / 2 + 10, bounds.Y + 124,
+                (bounds.Width - 60) / 2, Math.Max(1, bounds.Height - 212));
         return new ScreenRectangle(bounds.X + 20, bounds.Y + 60, bounds.Width - 40, Math.Max(32, bounds.Height - 148));
     }
-    private int SelectionPageSize => Math.Max(1, (int)(SelectionArea().Height / 32));
+    private int SelectionRowHeight => exportPlanChoices is null ? 32 : 70;
+    private int SelectionPageSize => Math.Max(1, (int)(SelectionArea().Height / SelectionRowHeight));
 
     private void ShowNotice(string title, string message, Action back) =>
         OpenModal(new ModalDialogModel(ModalDialogKind.Message, title, message), _ => back());
@@ -69,7 +73,7 @@ public sealed partial class VenueEditorGame
         if (wheel != 0) selectionScroll += wheel > 0 ? -3 : 3;
         selectionScroll = Math.Clamp(selectionScroll, 0, Math.Max(0, selectionLabels.Length - page));
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
-        var row = Contains(area, pointer) && pointer.Y < area.Y + page * 32 ? selectionScroll + (int)((pointer.Y - area.Y) / 32) : -1;
+        var row = Contains(area, pointer) && pointer.Y < area.Y + page * SelectionRowHeight ? selectionScroll + (int)((pointer.Y - area.Y) / SelectionRowHeight) : -1;
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
             selectionPressed = row;
@@ -86,6 +90,7 @@ public sealed partial class VenueEditorGame
     private void DrawSelection()
     {
         if (selectionLabels is null) return;
+        if (exportPlanChoices is not null) { DrawExportPlanSelection(); return; }
         var area = SelectionArea();
         if (selectionLabels.Length == 0)
             textRenderer?.Draw("選択できる項目がありません。", ToRectangle(area), Color.White, 18);

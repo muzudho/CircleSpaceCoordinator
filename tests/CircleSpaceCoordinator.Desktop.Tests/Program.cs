@@ -39,6 +39,7 @@ internal static class Program
             ("Catalog spaces place in all directions and preserve snapshots through history and JSON", CatalogSpacesRoundTrip),
             ("Space definitions persist globally and reject broken references and stale saves", SpaceDefinitionsPersist),
             ("Export requires an explicit decision and preserves it independently of editor selection", ExportPlanDecision),
+            ("Export choices rank both scores, retain duplicate names and filter pinned IDs without editing", ExportChoicesAndPins),
             ("Imported table survives remote import, save, undo and redo with ordered duplicate headers", ParticipantTableImportRoundTrip),
             ("Table viewport reaches the last cell of 10000 by 100 without copying values", LargeParticipantTableViewport),
             ("Output table displays destination columns and rows independently of participants", OutputTableView),
@@ -954,7 +955,7 @@ internal static class Program
             var settings = new ApplicationSettingsService(settingsPath);
             settings.SaveWorkingState(new ProjectWorkingState(
                 projectPath, "plan-2", "GenrePlacement", 1.75d, -42d, 88d,
-                new Dictionary<string, bool> { ["evaluationAnalysis"] = true }, "unused-desk"));
+                new Dictionary<string, bool> { ["evaluationAnalysis"] = true }, "unused-desk", ["plan-2", "plan-1"]));
 
             var restored = new ApplicationSettingsService(settingsPath).GetWorkingState(projectPath)!;
             AssertEqual("plan-2", restored.SelectedPlanId);
@@ -962,6 +963,12 @@ internal static class Program
             AssertEqual("GenrePlacement", restored.EditorMode);
             AssertEqual(1.75d, restored.Zoom);
             AssertEqual(true, restored.Switches!["evaluationAnalysis"]);
+            AssertEqual("plan-2,plan-1", string.Join(",", restored.PinnedExportPlanIds!));
+            var otherPath = Path.Combine(directory, "other.json");
+            settings.SaveWorkingState(new ProjectWorkingState(otherPath, "plan-1", "CirclePlacement", 1, 0, 0));
+            var reloaded = new ApplicationSettingsService(settingsPath);
+            AssertEqual<IReadOnlyList<string>?>(null, reloaded.GetWorkingState(otherPath)!.PinnedExportPlanIds);
+            AssertEqual(2, reloaded.GetWorkingState(projectPath)!.PinnedExportPlanIds!.Count);
         }
         finally
         {
@@ -1535,6 +1542,28 @@ internal static class Program
         {
             if (File.Exists(path)) File.Delete(path);
         }
+    }
+
+    private static void ExportChoicesAndPins()
+    {
+        var project = CreateProject();
+        var template = project.Plans[0];
+        project = project with { Plans = [template with { Id = "a", Name = "同名" }, template with { Id = "b", Name = "同名" },
+            template with { Id = "c" }, template with { Id = "d" }], ExportPlanId = "a" };
+        CircleSpaceCoordinator.Application.Plans.RankedPlan Score(string id, double general, double circle) =>
+            new(99, id, "unused", -100, general, circle, true, []);
+        var choices = ExportPlanChoices.Build(project, [Score("a", 10, 2), Score("c", 9, 100), Score("d", 10, 8), Score("b", 10, 8)]);
+        AssertEqual("b,d,a,c", string.Join(",", choices.Select(item => item.Plan.Id)));
+        AssertEqual("同名", choices[0].Plan.Name);
+        var pins = new HashSet<string> { "a", "b", "deleted" };
+        AssertEqual("b,a", string.Join(",", ExportPlanChoices.Filter(choices, pins, true).Select(item => item.Plan.Id)));
+        pins.Remove("b");
+        AssertEqual("a", ExportPlanChoices.Filter(choices, pins, true).Single().Plan.Id);
+        AssertEqual(0, ExportPlanChoices.Filter(choices, new HashSet<string>(), true).Count);
+        AssertEqual(4, ExportPlanChoices.Filter(choices, pins, false).Count);
+        AssertEqual("a", project.ExportPlanId!);
+        AssertEqual("a,b,c,d", string.Join(",", project.Plans.Select(item => item.Id)));
+        AssertEqual(0, ExportPlanChoices.Build(project with { Plans = [] }, []).Count);
     }
 
     private static void ExportPlanDecision()

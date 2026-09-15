@@ -2718,10 +2718,7 @@ public sealed partial class VenueEditorGame : Game
         }
         if (action == ToolbarAction.SelectExportPlan)
         {
-            var plans = workspace.Project.Plans.ToArray();
-            OpenSelection("配置決定案を選択する", new[] { "配置案　未決定" }.Concat(plans.Select(plan => $"{plan.Name}（{plan.Id}）")).ToArray(),
-                Array.FindIndex(plans, plan => plan.Id == workspace.Project.ExportPlanId) + 1,
-                index => workspace.Execute(new SetExportPlan(index == 0 ? null : plans[index - 1].Id), selectedPlanEdit: false));
+            OpenExportPlanSelection();
             return (true, "dialog_opened");
         }
         if (action == ToolbarAction.ExportSeatAssignments)
@@ -3826,7 +3823,7 @@ public sealed partial class VenueEditorGame : Game
             new Dictionary<string, bool>(StringComparer.Ordinal)
             {
                 ["evaluationAnalysis"] = showEvaluationAnalysis,
-            }, workspace.SelectedDeskLayoutId));
+            }, workspace.SelectedDeskLayoutId, GetExportPlanPins().ToArray()));
     }
 
     private static string FormatIssues(IReadOnlyList<CircleSpaceCoordinator.Core.Validation.ValidationIssue> issues) =>
