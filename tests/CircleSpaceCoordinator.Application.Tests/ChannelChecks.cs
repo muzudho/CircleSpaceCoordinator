@@ -69,5 +69,39 @@ internal static class ChannelChecks
         Execute(new SetChannelWeights(workspace.SelectedPlanId, "books", [new(2, 0)], 0.25));
         Equal(0.25, workspace.Project.Evaluation.WeightMaps.Single(item => item.FeatureId == "books").GetWeight(new(2, 0)));
         Equal(1, workspace.Project.CircleLayouts.Count);
+        CheckPlaceableCells(project);
+    }
+
+    private static void CheckPlaceableCells(CircleSpaceProject original)
+    {
+        var type = new DeskType("three", "Three cells", [new(0, 0), new(1, 0), new(2, 0)])
+        {
+            Space = new SpaceTypeDetails("three", "frame", 3, 1,
+                [new(0, 0, 1), new(1, 0, 0), new(2, 0, 2)], []),
+        };
+        foreach (var orientation in Enum.GetValues<QuarterTurn>())
+        {
+            var desk = new DeskPlacement("three", type.Id, new(3, 2), orientation);
+            var plan = new Plan("plan", "Plan", [desk], []);
+            var project = CircleSpaceCoordinator.Application.Editing.ChannelEditor.Upsert(
+                original with { DeskTypes = [type], Plans = [plan] }, "weight", "重み", null);
+            var placeable = desk.GetSeatCells(type).ToArray();
+            var updated = CircleSpaceCoordinator.Application.Editing.ChannelEditor.SetWeights(project, plan.Id, "weight", placeable, 0.375);
+            var map = updated.Evaluation.WeightMaps.Single(item => item.FeatureId == "weight");
+            if (placeable.Any(cell => map.GetWeight(cell) != 0.375)) throw new Exception("Placeable cells were not updated.");
+            var blocked = desk.Anchor + new GridPosition(1, 0).Rotate(orientation);
+            if (map.Cells.ContainsKey(blocked)) throw new Exception("Non-placeable cell received a weight.");
+            foreach (var targets in new[] { new[] { blocked }, new[] { placeable[0], blocked } })
+            {
+                var before = WireJson.Write(updated);
+                try
+                {
+                    CircleSpaceCoordinator.Application.Editing.ChannelEditor.SetWeights(updated, plan.Id, "weight", targets, 1);
+                    throw new Exception("Non-placeable cell was accepted.");
+                }
+                catch (ArgumentException) { }
+                if (before != WireJson.Write(updated)) throw new Exception("Rejected range modified weights.");
+            }
+        }
     }
 }

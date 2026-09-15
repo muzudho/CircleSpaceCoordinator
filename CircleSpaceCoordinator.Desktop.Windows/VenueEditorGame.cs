@@ -1670,6 +1670,8 @@ public sealed partial class VenueEditorGame : Game
 
         var cell = VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer));
         // A click inside a selected seat-name range edits the entire range.
+        if (activeCanvasTool == ToolbarAction.EditSeatName && IsWeightChannelSelected && !GetWeightChannelCells().Contains(cell))
+            return;
         if (IsSeatNameRangeEditing && selectedCellRange is { } range && range.Contains(cell))
         {
             DrawOutline(GetCellRegionBounds(new GridPosition(range.Left, range.Top),

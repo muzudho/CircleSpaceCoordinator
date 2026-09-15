@@ -185,7 +185,7 @@ public sealed partial class VenueEditorGame
     private void EditChannelWeight(GridPosition cell)
     {
         if (workspace is null || !IsWeightChannelSelected) return;
-        var deskCells = workspace.GetSelectedPlanSnapshot().Desks.SelectMany(item => item.OccupiedCells).ToHashSet();
+        var deskCells = GetWeightChannelCells();
         if (!deskCells.Contains(cell)) return;
         var cells = selectedCellRange is { } range && range.Contains(cell)
             ? deskCells.Where(range.Contains).ToArray() : [cell];
@@ -219,7 +219,7 @@ public sealed partial class VenueEditorGame
     {
         if (workspace is null) return;
         var map = workspace.Project.Evaluation.WeightMaps.Single(item => item.FeatureId == selectedChannelId);
-        foreach (var cell in workspace.GetSelectedPlanSnapshot().Desks.SelectMany(item => item.OccupiedCells))
+        foreach (var cell in GetWeightChannelCells())
         {
             var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
             var weight = map.GetWeight(cell);
@@ -239,6 +239,13 @@ public sealed partial class VenueEditorGame
             var foreground = luminance > 0.179 ? Color.Black : Color.White;
             textRenderer?.Draw($"{weight:0.000}", ToRectangle(bounds, 2), foreground, VenueTextSize(12), true);
         }
+    }
+
+    private HashSet<GridPosition> GetWeightChannelCells()
+    {
+        if (workspace is null) return [];
+        var types = workspace.Project.DeskTypes.ToDictionary(type => type.Id);
+        return workspace.SelectedPlan.DeskPlacements.SelectMany(desk => desk.GetSeatCells(types[desk.DeskTypeId])).ToHashSet();
     }
 
     private void ShowChannelError(Exception exception) => ShowInAppMessage("チャンネルの編集", exception.Message);

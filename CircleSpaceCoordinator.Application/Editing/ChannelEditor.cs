@@ -50,9 +50,9 @@ public static class ChannelEditor
             throw new ArgumentOutOfRangeException(nameof(weight), "重みは 0～1 の実数で入力してください。");
         var plan = project.Plans.Single(item => item.Id == planId);
         var types = project.DeskTypes.ToDictionary(item => item.Id);
-        var deskCells = plan.DeskPlacements.SelectMany(desk => desk.GetOccupiedCells(types[desk.DeskTypeId])).ToHashSet();
+        var deskCells = plan.DeskPlacements.SelectMany(desk => desk.GetSeatCells(types[desk.DeskTypeId])).ToHashSet();
         if (cells.Count == 0 || cells.Any(cell => !deskCells.Contains(cell)))
-            throw new ArgumentException("机上のセルを選んでください。");
+            throw new ArgumentException("配置可能セルを選んでください。");
         var map = project.Evaluation.WeightMaps.Single(item => item.FeatureId == id);
         var updated = map.Cells.ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (var cell in cells) updated[cell] = weight;
