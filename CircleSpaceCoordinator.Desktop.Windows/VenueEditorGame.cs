@@ -2563,7 +2563,7 @@ public sealed partial class VenueEditorGame : Game
         var modeSpecificActions = editorMode switch
         {
             EditorMode.ParticipantData => [ToolbarAction.ImportParticipants, ToolbarAction.Undo, ToolbarAction.Redo],
-            EditorMode.CirclePlacementDecision => [ToolbarAction.SelectExportPlan, ToolbarAction.SelectExportTarget, ToolbarAction.ExportSeatAssignments, ToolbarAction.Undo, ToolbarAction.Redo],
+            EditorMode.CirclePlacementDecision => [ToolbarAction.SelectExportPlan, ToolbarAction.SelectExportTarget, ToolbarAction.SelectExportColumns, ToolbarAction.ExportSeatAssignments, ToolbarAction.Undo, ToolbarAction.Redo],
             EditorMode.DeskPlacement => deskActions,
             EditorMode.IslandDefinition => islandActions,
             EditorMode.GenrePlacement => genreActions,
@@ -2585,7 +2585,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportTarget or ToolbarAction.ExportSeatAssignments ? 170d :
+            var buttonWidth = action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
                 action,
@@ -2609,6 +2609,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void UpdateToolbar(ScreenPoint pointer)
     {
+        if (editorMode == EditorMode.CirclePlacementDecision) RefreshExportPreview();
         foreach (var button in toolbarButtons)
         {
             button.Model.IsEnabled = button.Action switch
@@ -2623,7 +2624,8 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.PanViewport or ToolbarAction.FitVenueToWindow => workspace is not null,
                 ToolbarAction.ImportParticipants => workspace is not null,
                 ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget => workspace is not null,
-                ToolbarAction.ExportSeatAssignments => workspace is not null && CircleSeatExportBuilder.GetExportPlan(workspace.Project) is not null,
+                ToolbarAction.SelectExportColumns => workspace is not null && exportTargetSheet is not null,
+                ToolbarAction.ExportSeatAssignments => workspace is not null && exportColumnsConfirmed && preparedExport is not null,
                 ToolbarAction.OptimizeCirclePlacement => workspace?.HasSelectedCircleLayout == true,
                 ToolbarAction.EditGenreStyles => workspace is not null && workspace.Project.Participants.Any(item => !string.IsNullOrWhiteSpace(item.GenreId)),
                 ToolbarAction.ToggleEvaluationAnalysis => workspace is not null,
@@ -2694,6 +2696,11 @@ public sealed partial class VenueEditorGame : Game
             return (false, "no_project");
         if (action == ToolbarAction.CirclePlacementDecisionMode)
             return ChangeEditorMode(EditorMode.CirclePlacementDecision);
+        if (action == ToolbarAction.SelectExportColumns)
+        {
+            OpenExportColumns();
+            return (true, "dialog_opened");
+        }
         if (action == ToolbarAction.SelectExportTarget)
         {
             OpenExportTarget();
@@ -2984,11 +2991,12 @@ public sealed partial class VenueEditorGame : Game
                     var foreground = ToButtonColor(color);
                     if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
-                    else if (button.Action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.ExportSeatAssignments)
+                    else if (button.Action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
                         {
                             ToolbarAction.ImportParticipants => "Excel / CSV 読込",
                             ToolbarAction.SelectExportTarget => "出力先",
+                            ToolbarAction.SelectExportColumns => "出力列",
                             ToolbarAction.SelectExportPlan => "確定する配置案を選択",
                             _ => "書き出す",
                         }, ToRectangle(bounds, 5), foreground, 16, true);
@@ -3283,6 +3291,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.VenueSizeMenu => "会場サイズ：上下左右の辺を伸ばす・縮める",
         ToolbarAction.CirclePlacementDecisionMode => "サークル配置を決定し、出力先の表を確認する",
         ToolbarAction.SelectExportTarget => "出力先の Excel / CSV ファイルとシートを選択する",
+        ToolbarAction.SelectExportColumns => "番号を書き込む列と照合ID列を設定し、書出しプレビューを表示する",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
         ToolbarAction.DeskPlacementMode => "フレーム配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
@@ -3897,6 +3906,7 @@ internal enum ToolbarAction
     FaceWest,
     CirclePlacementDecisionMode,
     SelectExportTarget,
+    SelectExportColumns,
     ParticipantDataMode,
     DeskPlacementMode,
     IslandDefinitionMode,

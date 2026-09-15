@@ -43,6 +43,7 @@ internal static class Program
             ("Imported table survives remote import, save, undo and redo with ordered duplicate headers", ParticipantTableImportRoundTrip),
             ("Table viewport reaches the last cell of 10000 by 100 without copying values", LargeParticipantTableViewport),
             ("Output table displays destination columns and rows independently of participants", OutputTableView),
+            ("New export preserves imported columns and distinguishes source changes from plan changes", NewExportSource),
             ("Dragging previews then commits one desk move", DragPreviewThenCommit),
             ("An invalid desk drop leaves the project unchanged", InvalidDropIsRejected),
             ("Cancelling a drag leaves the project unchanged", CancelLeavesProjectUnchanged),
@@ -1645,6 +1646,37 @@ internal static class Program
         AssertEqual(0, empty.RowCount);
         var oldColumns = new ParticipantTableView(saved with { ParticipantTableSource = null });
         AssertEqual(5, oldColumns.ColumnCount);
+    }
+
+    private static void NewExportSource()
+    {
+        var project = CreateProject();
+        project = project with
+        {
+            ParticipantTableSource = new("input.csv", "入力", ["受付", "", "メモ", "メモ"], ["id", "blank", "memo1", "memo2"]),
+            Participants = project.Participants.Select((participant, index) => participant with
+            {
+                CircleId = $"00{index}",
+                SourceValues = new Dictionary<string, string> { ["id"] = $"00{index}", ["blank"] = "空見出しの値", ["memo1"] = "元の値", ["memo2"] = "別の値" },
+            }).ToArray(),
+        };
+        var result = CircleSeatSourceTable.Build(project);
+        AssertEqual(0, result.Circle);
+        AssertEqual(4, result.Block);
+        AssertEqual(5, result.Seat);
+        AssertEqual("", result.Sheet.Headers[1]);
+        AssertEqual("メモ", result.Sheet.Headers[3]);
+        AssertEqual("別の値", result.Sheet.Rows[0][3]);
+        AssertEqual("", result.Sheet.Rows[0][result.Block]);
+        AssertEqual(4, project.ParticipantTableSource.Headers.Count);
+        var clone = project with { Participants = project.Participants.Select(item => item with { SourceValues = item.SourceValues.ToDictionary(pair => pair.Key, pair => pair.Value) }).ToArray(), ExportPlanId = project.Plans[0].Id };
+        AssertEqual(true, CircleSeatSourceTable.HasSameValues(project, clone));
+        clone = clone with { Participants = clone.Participants.Select(item => item with { SourceValues = new Dictionary<string, string> { ["memo1"] = "変更" } }).ToArray() };
+        AssertEqual(false, CircleSeatSourceTable.HasSameValues(project, clone));
+        var noId = project with { ParticipantTableSource = new("input.csv", "入力", ["メモ"], ["memo1"]) };
+        var withId = CircleSeatSourceTable.Build(noId);
+        AssertEqual(1, withId.Circle);
+        AssertEqual(project.Participants[0].CircleId, withId.Sheet.Rows[0][withId.Circle]);
     }
 
     private static void OutputTableView()

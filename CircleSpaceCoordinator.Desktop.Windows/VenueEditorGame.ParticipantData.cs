@@ -21,7 +21,7 @@ public sealed partial class VenueEditorGame
     {
         if (editorMode == EditorMode.CirclePlacementDecision)
         {
-            EnsureExportTargetOwner();
+            RefreshExportPreview();
             return outputTable;
         }
         if (!ReferenceEquals(tableProject, workspace!.Project))
@@ -38,8 +38,9 @@ public sealed partial class VenueEditorGame
         var width = Math.Max(1, GraphicsDevice.Viewport.Width - 24 - 60 - 18);
         var cellWidth = Math.Min(180d, width);
         var columns = Math.Max(1, (int)(width / cellWidth));
-        var rows = Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - 182 - 30 - 18 - 12) / 28);
-        return (new ScreenRectangle(72, 182, columns * cellWidth, 30 + rows * 28), rows, columns, cellWidth);
+        var top = editorMode == EditorMode.CirclePlacementDecision ? 246 : 182;
+        var rows = Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - top - 30 - 18 - 12) / 28);
+        return (new ScreenRectangle(72, top, columns * cellWidth, 30 + rows * 28), rows, columns, cellWidth);
     }
 
     private void MoveParticipantTable(int row, int column)
@@ -89,7 +90,7 @@ public sealed partial class VenueEditorGame
         if (IsPressed(keyboard, Keys.Home)) { row = 0; if (IsControlDown(keyboard)) column = 0; }
         if (IsPressed(keyboard, Keys.End)) { row = GetParticipantTable().RowCount; if (IsControlDown(keyboard)) column = GetParticipantTable().ColumnCount; }
         var wheel = mouse.ScrollWheelValue - previousMouse.ScrollWheelValue;
-        if (wheel != 0 && pointer.Y >= 182 && pointer.Y < GraphicsDevice.Viewport.Height - StatusBarHeight)
+        if (wheel != 0 && pointer.Y >= layout.Grid.Y && pointer.Y < GraphicsDevice.Viewport.Height - StatusBarHeight)
         {
             var delta = Math.Sign(wheel) * Math.Max(1, Math.Abs(wheel) / 120) * 3;
             if (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift)) column -= delta;
@@ -175,10 +176,16 @@ public sealed partial class VenueEditorGame
         var exportTarget = exportPlan is null ? "配置案　未決定" : $"配置決定案: {exportPlan.Name}";
         tableTextRenderer.Draw($"{exportTarget}　｜　表示: {Math.Min(table.RowCount, tableScroll.Row + 1)}～{Math.Min(table.RowCount, tableScroll.Row + layout.Rows)} 行 / {tableScroll.Column + 1}～{Math.Min(table.ColumnCount, tableScroll.Column + layout.Columns)} 列",
             new Rectangle(12, 150, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 26), ink, 15);
+        if (editorMode == EditorMode.CirclePlacementDecision)
+        {
+            tableTextRenderer.Draw(ExportColumnsSummary, new Rectangle(12, 180, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), new Color(255, 218, 130), 15, true);
+            tableTextRenderer.Draw(exportPreviewStatus, new Rectangle(12, 212, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), ink, 15);
+        }
         for (var c = 0; c < Math.Min(layout.Columns, table.ColumnCount - tableScroll.Column); c++)
         {
             var column = tableScroll.Column + c;
-            DrawTableCell($"{column + 1}: {table.Headers[column]}", new ScreenRectangle(grid.X + c * layout.CellWidth, grid.Y, layout.CellWidth, 30), new Color(29, 88, 82), true);
+            var outputColumn = editorMode == EditorMode.CirclePlacementDecision && exportColumnsConfirmed && (column == exportTargetColumns[0] || column == exportTargetColumns[1]);
+            DrawTableCell($"{column + 1}: {table.Headers[column]}", new ScreenRectangle(grid.X + c * layout.CellWidth, grid.Y, layout.CellWidth, 30), outputColumn ? new Color(125, 91, 32) : new Color(29, 88, 82), true);
         }
         for (var r = 0; r < Math.Min(layout.Rows, table.RowCount - tableScroll.Row); r++)
         {
@@ -193,7 +200,7 @@ public sealed partial class VenueEditorGame
             tableTextRenderer.Draw(editorMode == EditorMode.CirclePlacementDecision
                 ? (exportTargetPath is null ? "［出力先］から Excel / CSV ファイルを選択してください。" : "出力先の表にデータ行がありません。")
                 : "データがありません。左上の［Excel / CSV 読込］から読み込んでください。",
-                new Rectangle(80, 230, Math.Max(1, GraphicsDevice.Viewport.Width - 100), 28), ink, 17);
+                new Rectangle(80, (int)grid.Y + 48, Math.Max(1, GraphicsDevice.Viewport.Width - 100), 28), ink, 17);
         foreach (var vertical in new[] { true, false })
         {
             var bar = GetTableScrollbar(vertical);

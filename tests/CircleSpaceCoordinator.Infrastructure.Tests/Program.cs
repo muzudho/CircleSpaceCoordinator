@@ -45,6 +45,7 @@ internal static class Program
             ("Desk numbers survive JSON round trip", DeskNumbersRoundTrip),
             ("Circle seat values are written to selected Excel columns", CircleSeatValuesAreExported),
             ("CSV export preserves encoding, quoted cells and independent input files", CircleSeatCsvExport),
+            ("New XLSX and CSV export match preview and refuse to overwrite existing files", NewCircleSeatFiles),
         };
 
         var failures = 0;
@@ -368,6 +369,41 @@ internal static class Program
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static void NewCircleSeatFiles()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"new-circle-export-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var source = new ParticipantTableSheet("元の表", ["ID", "メモ", "ブロック", "セル番"],
+                [new[] { "001", "カンマ,と\"引用\"\n改行", "旧", "旧番号" }, new[] { "002", "=文字列", "保持", "保持番号" }]);
+            var prepared = CircleSeatTableWriter.Prepare(source, 2, 3, 0, [new("001", "ア", "03左"), new("999", "イ", "04右")]);
+            AssertEqual("旧", source.Rows[0][2]);
+            AssertEqual(1, prepared.Result.UpdatedRowCount);
+            AssertEqual(1, prepared.Result.MissingCircleCount);
+            foreach (var extension in new[] { ".xlsx", ".csv" })
+            {
+                var path = Path.Combine(directory, "new" + extension);
+                CircleSeatTableWriter.Create(path, prepared.Sheet);
+                var actual = ParticipantTableReader.Read(path).Single();
+                AssertEqual(string.Join("|", source.Headers), string.Join("|", actual.Headers));
+                for (var row = 0; row < actual.Rows.Count; row++)
+                    for (var column = 0; column < actual.Headers.Count; column++)
+                        AssertEqual(prepared.Sheet.Rows[row][column], actual.Rows[row][column]);
+                var original = File.ReadAllBytes(path);
+                try { CircleSeatTableWriter.Create(path, source); throw new Exception("Existing file must be rejected."); }
+                catch (IOException) { }
+                AssertEqual(true, original.SequenceEqual(File.ReadAllBytes(path)));
+            }
+            try { CircleSeatTableWriter.Prepare(source, 0, 0, 1, []); throw new Exception("Overlapping columns must be rejected."); }
+            catch (InvalidOperationException) { }
+            try { CircleSeatTableWriter.Prepare(source, -1, 3, 0, []); throw new Exception("Missing columns must be rejected."); }
+            catch (InvalidOperationException) { }
+            AssertEqual(2, Directory.GetFiles(directory).Length);
+        }
+        finally { Directory.Delete(directory, true); }
     }
 
     private static void CircleSeatCsvExport()
