@@ -41,6 +41,7 @@ internal static class Program
             ("Export requires an explicit decision and preserves it independently of editor selection", ExportPlanDecision),
             ("Imported table survives remote import, save, undo and redo with ordered duplicate headers", ParticipantTableImportRoundTrip),
             ("Table viewport reaches the last cell of 10000 by 100 without copying values", LargeParticipantTableViewport),
+            ("Output table displays destination columns and rows independently of participants", OutputTableView),
             ("Dragging previews then commits one desk move", DragPreviewThenCommit),
             ("An invalid desk drop leaves the project unchanged", InvalidDropIsRejected),
             ("Cancelling a drag leaves the project unchanged", CancelLeavesProjectUnchanged),
@@ -1615,6 +1616,22 @@ internal static class Program
         AssertEqual(0, empty.RowCount);
         var oldColumns = new ParticipantTableView(saved with { ParticipantTableSource = null });
         AssertEqual(5, oldColumns.ColumnCount);
+    }
+
+    private static void OutputTableView()
+    {
+        var table = new ParticipantTableView(["ID", "", "席", "席"],
+            [new[] { "destination-only", "保持", "ア", "10左" }, new[] { "short-row" }], "output.csv");
+        AssertEqual(2, table.RowCount);
+        AssertEqual(4, table.ColumnCount);
+        AssertEqual("", table.Headers[1]);
+        AssertEqual("destination-only", table.GetValue(0, 0));
+        AssertEqual("10左", table.GetValue(0, 3));
+        AssertEqual("", table.GetValue(1, 3));
+        AssertEqual("output.csv", table.SourceDescription);
+        var empty = new ParticipantTableView([], [], "未選択");
+        AssertEqual(0, empty.RowCount);
+        AssertEqual(0, empty.ColumnCount);
     }
 
     private static void LargeParticipantTableViewport()

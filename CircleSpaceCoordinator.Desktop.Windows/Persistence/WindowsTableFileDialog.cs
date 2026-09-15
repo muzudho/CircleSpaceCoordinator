@@ -6,8 +6,8 @@ internal static class WindowsTableFileDialog
     {
         using var dialog = new System.Windows.Forms.OpenFileDialog
         {
-            Title = export ? "書き出し先のExcelを選択" : "参加サークル一覧を開く",
-            Filter = export ? "Excel (*.xlsx;*.xlsm)|*.xlsx;*.xlsm" : "参加サークル一覧 (*.xlsx;*.xlsm;*.csv)|*.xlsx;*.xlsm;*.csv",
+            Title = export ? "出力先の Excel / CSV を選択" : "参加サークル一覧を開く",
+            Filter = "Excel / CSV (*.xlsx;*.xlsm;*.csv)|*.xlsx;*.xlsm;*.csv",
             CheckFileExists = true,
             InitialDirectory = initialDirectory,
         };

@@ -19,6 +19,11 @@ public sealed partial class VenueEditorGame
 
     private ParticipantTableView GetParticipantTable()
     {
+        if (editorMode == EditorMode.CirclePlacementDecision)
+        {
+            EnsureExportTargetOwner();
+            return outputTable;
+        }
         if (!ReferenceEquals(tableProject, workspace!.Project))
         {
             tableProject = workspace.Project;
@@ -185,7 +190,9 @@ public sealed partial class VenueEditorGame
                     row % 2 == 0 ? new Color(30, 37, 47) : new Color(37, 45, 55));
         }
         if (table.RowCount == 0)
-            tableTextRenderer.Draw("データがありません。左上の［Excel / CSV 読込］から読み込んでください。",
+            tableTextRenderer.Draw(editorMode == EditorMode.CirclePlacementDecision
+                ? (exportTargetPath is null ? "［出力先］から Excel / CSV ファイルを選択してください。" : "出力先の表にデータ行がありません。")
+                : "データがありません。左上の［Excel / CSV 読込］から読み込んでください。",
                 new Rectangle(80, 230, Math.Max(1, GraphicsDevice.Viewport.Width - 100), 28), ink, 17);
         foreach (var vertical in new[] { true, false })
         {

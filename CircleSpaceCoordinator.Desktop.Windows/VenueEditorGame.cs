@@ -315,7 +315,7 @@ public sealed partial class VenueEditorGame : Game
             base.Update(gameTime);
             return;
         }
-        if (editorMode == EditorMode.ParticipantData)
+        if (editorMode is EditorMode.ParticipantData or EditorMode.CirclePlacementDecision)
         {
             UpdateParticipantDataInput(keyboard, mouse, pointer);
             previousMouse = mouse;
@@ -764,7 +764,7 @@ public sealed partial class VenueEditorGame : Game
                 DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
             if (editorMode == EditorMode.SpaceDefinitions)
                 DrawSpaceDefinitions();
-            else if (editorMode == EditorMode.ParticipantData)
+            else if (editorMode is EditorMode.ParticipantData or EditorMode.CirclePlacementDecision)
                 DrawParticipantData();
             else if (editorMode == EditorMode.GenreData)
                 DrawGenreDataDashboard();
@@ -2507,6 +2507,7 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.GenrePlacementMode,
             ToolbarAction.CirclePlacementMode,
             ToolbarAction.GenreDataMode,
+            ToolbarAction.CirclePlacementDecisionMode,
         };
         var commonStart = new[]
         {
@@ -2551,17 +2552,18 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.SaveProject,
             ToolbarAction.CaptureScreenshot,
         };
+        const double modeWidth = 158d;
         for (var index = 0; index < modeActions.Length; index++)
         {
             var action = modeActions[index];
             toolbarButtons.Add(new ToolbarButton(
                 action,
-                new IconButtonModel(new ScreenRectangle(12d + index * 150d, 7d, 142d, 40d), GetAccessibleName(action))));
+                new IconButtonModel(new ScreenRectangle(12d + index * modeWidth, 7d, modeWidth - 8d, 40d), GetAccessibleName(action))));
         }
         var modeSpecificActions = editorMode switch
         {
-            EditorMode.ParticipantData => [ToolbarAction.ImportParticipants, ToolbarAction.SelectExportPlan, ToolbarAction.ExportSeatAssignments,
-                ToolbarAction.Undo, ToolbarAction.Redo],
+            EditorMode.ParticipantData => [ToolbarAction.ImportParticipants, ToolbarAction.Undo, ToolbarAction.Redo],
+            EditorMode.CirclePlacementDecision => [ToolbarAction.SelectExportPlan, ToolbarAction.SelectExportTarget, ToolbarAction.ExportSeatAssignments, ToolbarAction.Undo, ToolbarAction.Redo],
             EditorMode.DeskPlacement => deskActions,
             EditorMode.IslandDefinition => islandActions,
             EditorMode.GenrePlacement => genreActions,
@@ -2569,7 +2571,7 @@ public sealed partial class VenueEditorGame : Game
             EditorMode.GenreData => [],
             _ => [],
         };
-        var actions = (editorMode is EditorMode.ParticipantData or EditorMode.SpaceDefinitions ? Array.Empty<ToolbarAction>() : commonStart)
+        var actions = (editorMode is EditorMode.ParticipantData or EditorMode.CirclePlacementDecision or EditorMode.SpaceDefinitions ? Array.Empty<ToolbarAction>() : commonStart)
             .Concat(modeSpecificActions)
             .Concat(editorMode == EditorMode.SpaceDefinitions ? [ToolbarAction.ReturnToEventList, ToolbarAction.CaptureScreenshot] : commonEnd)
             .OrderBy(GetToolbarActionGroup)
@@ -2583,8 +2585,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : editorMode == EditorMode.ParticipantData &&
-                action is ToolbarAction.ImportParticipants or ToolbarAction.ExportSeatAssignments ? 170d :
+            var buttonWidth = action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportTarget or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
                 action,
@@ -2618,10 +2619,10 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.Undo => workspace?.CanUndo == true,
                 ToolbarAction.Redo => workspace?.CanRedo == true,
                 ToolbarAction.DuplicatePlan => workspace?.HasSelectedCircleLayout == true,
-                ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode => workspace is not null,
+                ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode => workspace is not null,
                 ToolbarAction.PanViewport or ToolbarAction.FitVenueToWindow => workspace is not null,
                 ToolbarAction.ImportParticipants => workspace is not null,
-                ToolbarAction.SelectExportPlan => workspace is not null,
+                ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget => workspace is not null,
                 ToolbarAction.ExportSeatAssignments => workspace is not null && CircleSeatExportBuilder.GetExportPlan(workspace.Project) is not null,
                 ToolbarAction.OptimizeCirclePlacement => workspace?.HasSelectedCircleLayout == true,
                 ToolbarAction.EditGenreStyles => workspace is not null && workspace.Project.Participants.Any(item => !string.IsNullOrWhiteSpace(item.GenreId)),
@@ -2645,7 +2646,8 @@ public sealed partial class VenueEditorGame : Game
                 button.Action == ToolbarAction.IslandDefinitionMode && editorMode == EditorMode.IslandDefinition ||
                 button.Action == ToolbarAction.GenrePlacementMode && editorMode == EditorMode.GenrePlacement ||
                 button.Action == ToolbarAction.CirclePlacementMode && editorMode == EditorMode.CirclePlacement ||
-                button.Action == ToolbarAction.GenreDataMode && editorMode == EditorMode.GenreData;
+                button.Action == ToolbarAction.GenreDataMode && editorMode == EditorMode.GenreData ||
+                button.Action == ToolbarAction.CirclePlacementDecisionMode && editorMode == EditorMode.CirclePlacementDecision;
             button.Model.UpdatePointer(pointer);
         }
         var activeButton = toolbarButtons.SingleOrDefault(button => button.Action ==
@@ -2690,6 +2692,13 @@ public sealed partial class VenueEditorGame : Game
             return ReturnToEventList();
         if (commandController is null || workspace is null)
             return (false, "no_project");
+        if (action == ToolbarAction.CirclePlacementDecisionMode)
+            return ChangeEditorMode(EditorMode.CirclePlacementDecision);
+        if (action == ToolbarAction.SelectExportTarget)
+        {
+            OpenExportTarget();
+            return (true, "dialog_opened");
+        }
         if (action == ToolbarAction.ParticipantDataMode)
             return ChangeEditorMode(EditorMode.ParticipantData);
         if (action == ToolbarAction.DeskPlacementMode)
@@ -2790,6 +2799,7 @@ public sealed partial class VenueEditorGame : Game
         (bool Success, string Detail) ChangeEditorMode(EditorMode mode)
         {
             editorMode = mode;
+            tableTextPage = null;
             activeCanvasTool = mode == EditorMode.DeskPlacement
                 ? ToolbarAction.MoveDesk
                 : mode is EditorMode.GenrePlacement or EditorMode.IslandDefinition or EditorMode.GenreData ? ToolbarAction.PanViewport : ToolbarAction.UnassignParticipant;
@@ -2975,13 +2985,14 @@ public sealed partial class VenueEditorGame : Game
                 (bounds, color) =>
                 {
                     var foreground = ToButtonColor(color);
-                    if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode)
+                    if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
-                    else if (editorMode == EditorMode.ParticipantData && button.Action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.ExportSeatAssignments)
+                    else if (button.Action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
                         {
                             ToolbarAction.ImportParticipants => "Excel / CSV 読込",
-                            ToolbarAction.SelectExportPlan => "配置決定案を選択する",
+                            ToolbarAction.SelectExportTarget => "出力先",
+                            ToolbarAction.SelectExportPlan => "確定する配置案を選択",
                             _ => "書き出す",
                         }, ToRectangle(bounds, 5), foreground, 16, true);
                     else if (button.Action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu)
@@ -3273,6 +3284,8 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.DeskMenu => "フレーム：追加・削除を選択",
         ToolbarAction.PillarMenu => "柱：追加・削除を選択",
         ToolbarAction.VenueSizeMenu => "会場サイズ：上下左右の辺を伸ばす・縮める",
+        ToolbarAction.CirclePlacementDecisionMode => "サークル配置を決定し、出力先の表を確認する",
+        ToolbarAction.SelectExportTarget => "出力先の Excel / CSV ファイルとシートを選択する",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
         ToolbarAction.DeskPlacementMode => "フレーム配置モードへ切り替える",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
@@ -3283,7 +3296,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.FitVenueToWindow => "会場全体を画面内に収める",
         ToolbarAction.ImportParticipants => "参加サークル一覧をExcelまたはCSVから読み込む",
         ToolbarAction.SelectExportPlan => "書出しに使う配置決定案を選択する（未決定にも戻せます）",
-        ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・セル番をExcelへ書き出す（未決定の場合はサークルデータで選択）",
+        ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・セル番を出力先の Excel / CSV へ書き出す",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",
         ToolbarAction.EditGenreStyles => "ジャンルと色・網掛けパターンの対応を編集する",
         ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（フレーム上のセルを2回選択）",
@@ -3321,6 +3334,7 @@ public sealed partial class VenueEditorGame : Game
     private static string GetModeLabel(ToolbarAction action) => action switch
     {
         ToolbarAction.SpaceDefinitionsMode => "フレーム定義",
+        ToolbarAction.CirclePlacementDecisionMode => "サークル配置決定",
         ToolbarAction.ParticipantDataMode => "サークルデータ",
         ToolbarAction.DeskPlacementMode => "フレーム配置",
         ToolbarAction.IslandDefinitionMode => "島定義",
@@ -3381,9 +3395,9 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
-        if (editorMode == EditorMode.ParticipantData)
+        if (editorMode is EditorMode.ParticipantData or EditorMode.CirclePlacementDecision)
         {
-            primaryStatusMessage = $"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　サークルデータ（閲覧専用）";
+            primaryStatusMessage = $"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　{(editorMode == EditorMode.CirclePlacementDecision ? "サークル配置決定・出力先の表" : "サークルデータ（閲覧専用）")}";
             secondaryStatusMessage = toolbarButtons.FirstOrDefault(button => button.Model.IsPointerOver)?.Model.AccessibleName
                 ?? "ホイール: 縦スクロール　Shift＋ホイール: 横　矢印 / PageUp・Down / Home・End: 移動　セルクリック: 全文";
             return;
@@ -3884,6 +3898,8 @@ internal enum ToolbarAction
     FaceEast,
     FaceSouth,
     FaceWest,
+    CirclePlacementDecisionMode,
+    SelectExportTarget,
     ParticipantDataMode,
     DeskPlacementMode,
     IslandDefinitionMode,
@@ -3937,6 +3953,7 @@ internal enum EditorMode
     CirclePlacement,
     GenreData,
     ParticipantData,
+    CirclePlacementDecision,
 }
 
 internal sealed record ToolbarButton(ToolbarAction Action, IconButtonModel Model);

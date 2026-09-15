@@ -44,6 +44,7 @@ internal static class Program
             ("Seat labels survive JSON round trip", SeatLabelsRoundTrip),
             ("Desk numbers survive JSON round trip", DeskNumbersRoundTrip),
             ("Circle seat values are written to selected Excel columns", CircleSeatValuesAreExported),
+            ("CSV export preserves encoding, quoted cells and independent input files", CircleSeatCsvExport),
         };
 
         var failures = 0;
@@ -367,6 +368,61 @@ internal static class Program
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static void CircleSeatCsvExport()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"circle-csv-export-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            foreach (var variant in new[] { 0, 1, 2 })
+            {
+                var encoding = variant == 2
+                    ? System.Text.CodePagesEncodingProvider.Instance.GetEncoding(932)!
+                    : new System.Text.UTF8Encoding(variant == 1, true);
+                var csvEncoding = variant == 2 ? ParticipantCsvEncoding.ShiftJis : ParticipantCsvEncoding.Utf8;
+                var input = Path.Combine(directory, "input.csv");
+                var output = Path.Combine(directory, "output.csv");
+                File.WriteAllText(input, "ID,ブロック,席,メモ\r\n001,旧,旧,\"引用\"\"符,と\r\n改行\"\r\n002,残す,残す,そのまま\r\n", encoding);
+                var original = File.ReadAllBytes(input);
+                File.Copy(input, output, true);
+                var result = CircleSeatExcelExporter.Export(output, "output", 1, 2, 0,
+                    [new("001", "ア", "10左"), new("999", "イ", "20右")], csvEncoding);
+                AssertEqual(1, result.UpdatedRowCount);
+                AssertEqual(1, result.MissingCircleCount);
+                AssertEqual(true, original.SequenceEqual(File.ReadAllBytes(input)));
+                AssertEqual(variant == 1, File.ReadAllBytes(output).AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF }));
+                var sheet = ParticipantTableReader.Read(output, csvEncoding).Single();
+                AssertEqual("001", sheet.Rows[0][0]);
+                AssertEqual("ア", sheet.Rows[0][1]);
+                AssertEqual("10左", sheet.Rows[0][2]);
+                AssertEqual("引用\"符,と\r\n改行", sheet.Rows[0][3]);
+                AssertEqual("残す", sheet.Rows[1][1]);
+                // An input file can also be selected as the output destination.
+                CircleSeatExcelExporter.Export(input, "input", 1, 2, 0, [new("001", "ウ", "3右")], csvEncoding);
+                AssertEqual("ウ", ParticipantTableReader.Read(input, csvEncoding).Single().Rows[0][1]);
+                var beforeFailure = File.ReadAllBytes(output);
+                try
+                {
+                    CircleSeatExcelExporter.Export(output, "output", 1, 1, 0, [new("001", "ア", "1")], csvEncoding);
+                    throw new Exception("Duplicate columns must be rejected.");
+                }
+                catch (InvalidOperationException) { }
+                AssertEqual(true, beforeFailure.SequenceEqual(File.ReadAllBytes(output)));
+                if (variant == 2)
+                {
+                    try
+                    {
+                        CircleSeatExcelExporter.Export(output, "output", 1, 2, 0, [new("001", "😀", "1")], csvEncoding);
+                        throw new Exception("Unencodable text must be rejected.");
+                    }
+                    catch (System.Text.EncoderFallbackException) { }
+                    AssertEqual(true, beforeFailure.SequenceEqual(File.ReadAllBytes(output)));
+                }
+            }
+        }
+        finally { Directory.Delete(directory, true); }
     }
 
     private static void CircleSeatValuesAreExported()

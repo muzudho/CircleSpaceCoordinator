@@ -113,54 +113,114 @@ public sealed partial class VenueEditorGame
         Load();
     }
 
-    private void OpenSeatExport()
+    private object? exportTargetOwner;
+    private string? exportTargetPath;
+    private ParticipantTableSheet? exportTargetSheet;
+    private ParticipantCsvEncoding exportTargetEncoding;
+    private int[] exportTargetColumns = [0, 0, 0];
+    private CircleSpaceCoordinator.Desktop.Core.Interaction.ParticipantTableView outputTable = new([], [], "出力先：未選択");
+
+    private void EnsureExportTargetOwner()
     {
-        var rows = BuildCircleSeatExportRows();
+        if (ReferenceEquals(exportTargetOwner, workspace)) return;
+        exportTargetOwner = workspace;
+        exportTargetPath = null;
+        exportTargetSheet = null;
+        outputTable = new([], [], "出力先：未選択");
+        tableTextPage = null;
+    }
+
+    private void SetOutputTable(string path, ParticipantTableSheet sheet)
+    {
+        exportTargetPath = path;
+        exportTargetSheet = sheet;
+        outputTable = new(sheet.Headers, sheet.Rows, $"出力先：{path}　シート：{sheet.Name}");
+        tableTextPage = null;
+        MoveParticipantTable(0, 0);
+    }
+
+    private void OpenExportTarget()
+    {
+        EnsureExportTargetOwner();
+        var owner = workspace;
         var path = WindowsTableFileDialog.Select(true, settings?.Current.CircleSeatExportDirectory);
         if (path is null) return;
-        settings?.RememberCircleSeatExportPath(path);
-        RunBackground("Excelファイルの読込み", () => ParticipantTableReader.Read(path), sheets =>
+        var csv = Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase);
+        void Load(ParticipantCsvEncoding encoding)
         {
-            if (sheets.Count == 0) throw new InvalidDataException("列見出しのあるシートがありません。");
-            var selectedSheet = 0;
-            int?[] columns = [0, 0, 0];
-            string[] names = ["ブロック番号列", "セル番列", "サークルID列"];
-            void Guess()
+            RunBackground("出力先の読込み", () => ParticipantTableReader.Read(path, encoding), sheets =>
             {
-                var headers = sheets[selectedSheet].Headers;
-                string[][] hints = [["ブロック"], ["席"], ["サークル", "circle", "id"]];
-                columns = hints.Select(hint => (int?)Math.Max(0, headers.ToList().FindIndex(header => hint.All(word => header.Contains(word, StringComparison.OrdinalIgnoreCase))))).ToArray();
-            }
-            void ShowDraft() => OpenSelection("Excelへ書き出し：" + Path.GetFileName(path),
-                new[] { "シート：" + sheets[selectedSheet].Name }.Concat(names.Select((name, index) => $"{name}：{columns[index] + 1}: {sheets[selectedSheet].Headers[columns[index]!.Value]}"))
-                    .Concat(["プレビュー表を開く", "この対応で書き出す"]).ToArray(), 0, index =>
-            {
-                if (index == 0)
+                if (workspace != owner) return;
+                if (sheets.Count == 0 || sheets.All(sheet => sheet.Headers.Count == 0))
                 {
-                    OpenSelection("シート", sheets.Select(sheet => sheet.Name).ToArray(), selectedSheet,
-                    chosen => { selectedSheet = chosen; Guess(); ShowDraft(); }, ShowDraft); return;
+                    ShowInAppMessage("出力先", "列見出しのあるシートがありません。");
+                    return;
                 }
-                if (index <= 3)
+                void SelectSheet(int index)
                 {
-                    var field = index - 1; ChooseColumn(names[field], sheets[selectedSheet].Headers, columns[field], false,
-                    chosen => { columns[field] = chosen; ShowDraft(); }, ShowDraft); return;
+                    var sheet = sheets[index];
+                    exportTargetEncoding = encoding;
+                    string[][] hints = [["ブロック"], ["セル番", "席"], ["サークルID", "circle", "id"]];
+                    exportTargetColumns = hints.Select(hint => Math.Max(0, sheet.Headers.ToList().FindIndex(header => hint.Any(word => header.Contains(word, StringComparison.OrdinalIgnoreCase))))).ToArray();
+                    SetOutputTable(path, sheet);
+                    settings?.RememberCircleSeatExportPath(path);
+                    ApplyModalAction(ModalDialogAction.Accept);
                 }
-                if (index == 4) { OpenTablePreview(sheets[selectedSheet], ShowDraft); return; }
-                var sheetName = sheets[selectedSheet].Name;
-                var block = columns[0]!.Value;
-                var seat = columns[1]!.Value;
-                var circle = columns[2]!.Value;
-                OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "Excelへの書出し",
-                    "選択したExcelを更新します。\n配置済みでセル番のあるサークルを書き出します。該当しない行は変更しません。"), action =>
-                {
-                    if (action != ModalDialogAction.Accept) { ShowDraft(); return; }
-                    RunBackground("Excelへ書き出しています", () => CircleSeatExcelExporter.Export(path, sheetName, block, seat, circle, rows),
-                        result => { ShowInAppMessage("書出し完了", $"{result.UpdatedRowCount} 行へ書き出しました。\nExcel内で見つからないサークルID: {result.MissingCircleCount} 件"); Log("seat_export", true); },
-                        exception => ShowNotice("書出しエラー", exception.Message, ShowDraft));
-                }, [("キャンセル", ModalDialogAction.Cancel), ("書き出す", ModalDialogAction.Accept)]);
+                if (sheets.Count == 1) SelectSheet(0);
+                else OpenSelection("出力先のシート", sheets.Select(sheet => sheet.Name).ToArray(), 0, SelectSheet);
             });
-            Guess();
-            ShowDraft();
+        }
+        if (csv)
+            OpenSelection("出力先 CSV の文字コード", ["UTF-8（BOMあり／なし）", "Shift-JIS（CP932）"], 0,
+                index => Load(index == 0 ? ParticipantCsvEncoding.Utf8 : ParticipantCsvEncoding.ShiftJis));
+        else Load(ParticipantCsvEncoding.Utf8);
+    }
+
+    private void OpenSeatExport()
+    {
+        EnsureExportTargetOwner();
+        if (exportTargetPath is null || exportTargetSheet is null)
+        {
+            OpenExportTarget();
+            return;
+        }
+        var rows = BuildCircleSeatExportRows();
+        var path = exportTargetPath;
+        var sheet = exportTargetSheet;
+        var encoding = exportTargetEncoding;
+        var columns = exportTargetColumns.ToArray();
+        string[] names = ["ブロック番号列", "セル番列", "サークルID列"];
+        void ShowDraft() => OpenSelection("出力先へ書き出し：" + Path.GetFileName(path),
+            names.Select((name, index) => $"{name}：{columns[index] + 1}: {sheet.Headers[columns[index]]}")
+                .Concat(["この対応で書き出す"]).ToArray(), 0, index =>
+        {
+            if (index < 3)
+            {
+                ChooseColumn(names[index], sheet.Headers, columns[index], false,
+                    chosen => { columns[index] = chosen!.Value; ShowDraft(); }, ShowDraft);
+                return;
+            }
+            OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "出力先への書出し",
+                $"{path}\nシート：{sheet.Name}\n選択したファイルを更新します。\n配置済みでセル番のあるサークルを書き出します。該当しない行は変更しません。"), action =>
+            {
+                if (action != ModalDialogAction.Accept) { ShowDraft(); return; }
+                RunBackground("出力先へ書き出しています", () =>
+                {
+                    var result = CircleSeatExcelExporter.Export(path, sheet.Name, columns[0], columns[1], columns[2], rows, encoding);
+                    return result;
+                }, result =>
+                {
+                    exportTargetColumns = columns;
+                    Log("seat_export", true);
+                    RunBackground("出力先の表を更新", () => ParticipantTableReader.Read(path, encoding).Single(item => item.Name == sheet.Name),
+                        updated =>
+                        {
+                            SetOutputTable(path, updated);
+                            ShowInAppMessage("書出し完了", $"{result.UpdatedRowCount} 行へ書き出しました。\n出力先で見つからないサークルID: {result.MissingCircleCount} 件");
+                        }, exception => ShowInAppMessage("書出し完了・再読込み失敗", "ファイルへの書出しは完了しました。\n" + exception.Message));
+                }, exception => ShowNotice("書出しエラー", exception.Message, ShowDraft));
+            }, [("キャンセル", ModalDialogAction.Cancel), ("書き出す", ModalDialogAction.Accept)]);
         });
+        ShowDraft();
     }
 }

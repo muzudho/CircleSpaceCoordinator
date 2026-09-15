@@ -5,11 +5,12 @@ using CircleSpaceCoordinator.Core.Model;
 /// <summary>A read-only view over existing values; never copies the cell matrix.</summary>
 public sealed class ParticipantTableView
 {
+    private readonly IReadOnlyList<IReadOnlyList<string>>? tableRows;
     private readonly IReadOnlyList<Participant> participants;
     private readonly IReadOnlyList<string> keys;
     private readonly bool usesSourceValues;
     public IReadOnlyList<string> Headers { get; }
-    public int RowCount => participants.Count;
+    public int RowCount => tableRows?.Count ?? participants.Count;
     public int ColumnCount => Headers.Count;
     public string SourceDescription { get; }
 
@@ -34,8 +35,18 @@ public sealed class ParticipantTableView
         }
     }
 
+    public ParticipantTableView(IReadOnlyList<string> headers, IReadOnlyList<IReadOnlyList<string>> rows, string description)
+    {
+        participants = [];
+        keys = [];
+        Headers = headers;
+        tableRows = rows;
+        SourceDescription = description;
+    }
+
     public string GetValue(int row, int column)
     {
+        if (tableRows is not null) return tableRows[row].ElementAtOrDefault(column) ?? "";
         var participant = participants[row];
         if (usesSourceValues)
             return participant.SourceValues.TryGetValue(keys[column], out var value) ? value : "";
