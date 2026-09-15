@@ -44,6 +44,8 @@ internal static class Program
             ("Table viewport reaches the last cell of 10000 by 100 without copying values", LargeParticipantTableViewport),
             ("Output table displays destination columns and rows independently of participants", OutputTableView),
             ("New export preserves imported columns and distinguishes source changes from plan changes", NewExportSource),
+            ("Export column drafts move bindings, append columns and leave cancelled sources untouched", ExportColumnDrafts),
+            ("Space numbers use full-frame occupancy and mark partial multi-cell assignments undefined", FullFrameSpaceNumbers),
             ("Dragging previews then commits one desk move", DragPreviewThenCommit),
             ("An invalid desk drop leaves the project unchanged", InvalidDropIsRejected),
             ("Cancelling a drag leaves the project unchanged", CancelLeavesProjectUnchanged),
@@ -1646,6 +1648,57 @@ internal static class Program
         AssertEqual(0, empty.RowCount);
         var oldColumns = new ParticipantTableView(saved with { ParticipantTableSource = null });
         AssertEqual(5, oldColumns.ColumnCount);
+    }
+
+    private static void ExportColumnDrafts()
+    {
+        var source = new CircleSpaceCoordinator.Infrastructure.Tabular.ParticipantTableSheet("入力", ["ID", "同名", "同名"], [new[] { "001", "残す1", "残す2" }]);
+        var draft = new ExportColumnDraft(source, [-1, -1, 0]);
+        draft.Assign(0, 1);
+        draft.Assign(1, 1);
+        AssertEqual(-1, draft.Columns[0]);
+        AssertEqual(1, draft.Columns[1]);
+        draft.Assign(0, 2);
+        AssertEqual(true, draft.IsComplete);
+        draft.Assign(0, -1);
+        AssertEqual(false, draft.IsComplete);
+        draft.AddNumberColumn(0);
+        draft.AddNumberColumn(1);
+        draft.AddNumberColumn(0); // The unused first addition is discarded on apply.
+        var built = draft.Build();
+        AssertEqual(5, built.Sheet.Headers.Count);
+        AssertEqual("セル番号", built.Sheet.Headers[3]);
+        AssertEqual("ブロック番号 (2)", built.Sheet.Headers[4]);
+        AssertEqual("4,3,0", string.Join(",", built.Columns));
+        AssertEqual("残す2", built.Sheet.Rows[0][2]);
+        AssertEqual("", built.Sheet.Rows[0][3]);
+        AssertEqual(3, source.Headers.Count);
+        AssertEqual(3, source.Rows[0].Count);
+    }
+
+    private static void FullFrameSpaceNumbers()
+    {
+        var project = CreateProject();
+        var cells = new HashSet<GridPosition> { new(0, 0), new(1, 0), new(2, 0) };
+        var type = new DeskType("three", "３セル", cells.ToArray());
+        var desk = new DeskPlacement("frame", "three", new(0, 0), QuarterTurn.North) { DeskNumber = "F03" };
+        var circle = new Participant("a", "A", 3, new Dictionary<string, double>());
+        var plan = new Plan("test", "test", [desk], [new("a", cells, new(0, 0))])
+        {
+            SeatLabels = cells.Select(cell => new DeskSeatLabel("frame", cell, "B", $"S{cell.X + 1}")).ToArray(),
+        };
+        project = project with { DeskTypes = [type], Participants = [circle], Plans = [plan] };
+        AssertEqual("F03", CircleSeatExportBuilder.Build(project, plan).Single().SeatName);
+        plan = plan with { Assignments = [new("a", new HashSet<GridPosition> { new(0, 0), new(1, 0) }, new(0, 0)), new("b", new HashSet<GridPosition> { new(2, 0) }, new(2, 0))] };
+        project = project with { Participants = [circle with { RequiredCellCount = 2 }, circle with { Id = "b", CircleId = "b", RequiredCellCount = 1 }], Plans = [plan] };
+        var rows = CircleSeatExportBuilder.Build(project, plan);
+        AssertEqual(CircleSeatExportBuilder.UndefinedSpaceNumber, rows[0].SeatName);
+        AssertEqual("S3", rows[1].SeatName);
+        var one = type with { Footprint = [new(0, 0)] };
+        plan = plan with { Assignments = [new("b", new HashSet<GridPosition> { new(0, 0) }, new(0, 0))] };
+        AssertEqual("F03", CircleSeatExportBuilder.Build(project with { DeskTypes = [one] }, plan).Single().SeatName);
+        plan = plan with { SeatLabels = [] };
+        AssertEqual("#MISSING_BLOCK_NUMBER", CircleSeatExportBuilder.Build(project with { DeskTypes = [one] }, plan).Single().BlockName);
     }
 
     private static void NewExportSource()

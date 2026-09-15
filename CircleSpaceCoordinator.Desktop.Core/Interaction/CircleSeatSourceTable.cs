@@ -42,9 +42,9 @@ public static class CircleSeatSourceTable
             for (var row = 0; row < rows.Length; row++) rows[row].Add(project.Participants[row].CircleId);
         }
         var block = headers.Count;
-        headers.Add(Unique("出力ブロック番号"));
+        headers.Add(Unique("ブロック番号"));
         var seat = headers.Count;
-        headers.Add(Unique("出力セル番"));
+        headers.Add(Unique("セル番号"));
         foreach (var row in rows) { row.Add(""); row.Add(""); }
         return (new("サークル一覧", headers, rows.Select(row => (IReadOnlyList<string>)row).ToArray()), block, seat, circle);
     }

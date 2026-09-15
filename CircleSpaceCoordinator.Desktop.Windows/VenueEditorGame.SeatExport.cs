@@ -53,9 +53,10 @@ public sealed partial class VenueEditorGame
         {
             try
             {
-                preparedExport = CircleSeatTableWriter.Prepare(exportTargetSheet, exportTargetColumns[0], exportTargetColumns[1], exportTargetColumns[2],
-                    CircleSeatExportBuilder.BuildDecided(workspace.Project));
-                exportPreviewStatus = $"書出し予定：{preparedExport.Result.UpdatedRowCount} 行 ／ 出力先にないID：{preparedExport.Result.MissingCircleCount} 件";
+                var rows = CircleSeatExportBuilder.BuildDecided(workspace.Project);
+                preparedExport = CircleSeatTableWriter.Prepare(exportTargetSheet, exportTargetColumns[0], exportTargetColumns[1], exportTargetColumns[2], rows);
+                var errors = rows.Count(row => row.SeatName == CircleSeatExportBuilder.UndefinedSpaceNumber || row.BlockName == "#MISSING_BLOCK_NUMBER");
+                exportPreviewStatus = $"書出し予定：{preparedExport.Result.UpdatedRowCount} 行 ／ 出力先にないID：{preparedExport.Result.MissingCircleCount} 件 ／ エラー番号：{errors} 件";
             }
             catch (InvalidOperationException exception) { exportPreviewStatus = exception.Message.Replace('\n', ' '); }
         }
@@ -123,32 +124,6 @@ public sealed partial class VenueEditorGame
 
     private string ExportColumnsSummary => $"書込先　ブロック番号 → {ExportColumnDescription(exportTargetColumns[0])}　／　セル番 → {ExportColumnDescription(exportTargetColumns[1])}　／　照合ID → {ExportColumnDescription(exportTargetColumns[2])}";
 
-    private void OpenExportColumns()
-    {
-        EnsureExportTargetOwner();
-        if (exportTargetSheet is not { } sheet) { OpenExportTarget(); return; }
-        var columns = exportTargetColumns.ToArray();
-        string[] names = ["ブロック番号の書込先", "セル番の書込先", "照合するサークルID列"];
-        void ShowDraft() => OpenSelection("出力列を設定（ここでは保存しません）",
-            names.Select((name, index) => $"{name}：{ExportColumnDescription(columns[index])}").Append("この出力列でプレビューを表示").ToArray(), 0, index =>
-            {
-                if (index < 3)
-                {
-                    ChooseColumn(names[index], sheet.Headers, columns[index] < 0 ? null : columns[index], false,
-                        chosen => { columns[index] = chosen!.Value; ShowDraft(); }, ShowDraft);
-                    return;
-                }
-                try { CircleSeatTableWriter.Prepare(sheet, columns[0], columns[1], columns[2], []); }
-                catch (InvalidOperationException exception) { ShowNotice("出力列", exception.Message, ShowDraft); return; }
-                exportTargetColumns = columns;
-                exportColumnsConfirmed = true;
-                exportPreviewSourceProject = null;
-                RefreshExportPreview();
-                Log("seat_export_columns_confirmed", true);
-            });
-        ShowDraft();
-    }
-
     private void OpenSeatExport()
     {
         RefreshExportPreview();
@@ -171,7 +146,7 @@ public sealed partial class VenueEditorGame
             RunBackground("書き出しています", () =>
             {
                 if (newFile) { CircleSeatTableWriter.Create(path, prepared.Sheet); return prepared.Result; }
-                return CircleSeatExcelExporter.Export(path, sheet.Name, columns[0], columns[1], columns[2], rows, encoding);
+                return CircleSeatExcelExporter.Export(path, sheet.Name, columns[0], columns[1], columns[2], rows, encoding, sheet.Headers);
             }, result =>
             {
                 Log(newFile ? "seat_export_new_complete" : "seat_export_existing_complete", true);

@@ -17,7 +17,8 @@ public static class CircleSeatExcelExporter
         int seatColumnIndex,
         int circleIdColumnIndex,
         IReadOnlyList<CircleSeatExportRow> rows,
-        ParticipantCsvEncoding csvEncoding = ParticipantCsvEncoding.Utf8)
+        ParticipantCsvEncoding csvEncoding = ParticipantCsvEncoding.Utf8,
+        IReadOnlyList<string>? outputHeaders = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentException.ThrowIfNullOrWhiteSpace(sheetName);
@@ -32,7 +33,7 @@ public static class CircleSeatExcelExporter
             .GroupBy(row => row.CircleId.Trim(), StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
         if (Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
-            return ExportCsv(path, blockColumnIndex, seatColumnIndex, circleIdColumnIndex, byCircleId, csvEncoding);
+            return ExportCsv(path, blockColumnIndex, seatColumnIndex, circleIdColumnIndex, byCircleId, csvEncoding, outputHeaders);
         using var workbook = new XLWorkbook(path);
         var worksheet = workbook.Worksheet(sheetName);
         var used = worksheet.RangeUsed() ?? throw new InvalidOperationException("選択したシートに見出し行がありません。");
@@ -40,6 +41,17 @@ public static class CircleSeatExcelExporter
         var firstColumn = used.FirstColumn().ColumnNumber();
         var lastRow = used.LastRow().RowNumber();
         var lastColumn = used.LastColumn().ColumnNumber();
+        if (outputHeaders is not null)
+        {
+            var originalWidth = lastColumn - firstColumn + 1;
+            if (outputHeaders.Count < originalWidth) throw new InvalidOperationException("出力先の列が変更されています。読み直してください。");
+            for (var index = 0; index < originalWidth; index++)
+                if (worksheet.Cell(firstRow, firstColumn + index).GetFormattedString().Trim() != outputHeaders[index])
+                    throw new InvalidOperationException("出力先の見出しが変更されています。読み直してください。");
+            for (var index = originalWidth; index < outputHeaders.Count; index++)
+                worksheet.Cell(firstRow, firstColumn + index).Value = outputHeaders[index];
+            lastColumn = firstColumn + outputHeaders.Count - 1;
+        }
         var columns = new[] { blockColumnIndex, seatColumnIndex, circleIdColumnIndex };
         if (columns.Any(index => firstColumn + index > lastColumn))
             throw new InvalidOperationException("選択した列がシートの範囲外です。");
@@ -61,7 +73,7 @@ public static class CircleSeatExcelExporter
     }
 
     private static CircleSeatExportResult ExportCsv(string path, int block, int seat, int circle,
-        IReadOnlyDictionary<string, CircleSeatExportRow> byCircleId, ParticipantCsvEncoding csvEncoding)
+        IReadOnlyDictionary<string, CircleSeatExportRow> byCircleId, ParticipantCsvEncoding csvEncoding, IReadOnlyList<string>? outputHeaders)
     {
         var bytes = File.ReadAllBytes(path);
         var bom = bytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF });
@@ -83,6 +95,16 @@ public static class CircleSeatExcelExporter
         parser.SetDelimiters(",");
         var records = new List<string[]>();
         while (!parser.EndOfData) records.Add(parser.ReadFields() ?? []);
+        if (outputHeaders is not null && records.Count > 0)
+        {
+            var originalWidth = records.Max(record => record.Length);
+            if (outputHeaders.Count < originalWidth || Enumerable.Range(0, originalWidth).Any(index =>
+                (records[0].ElementAtOrDefault(index) ?? "").Trim() != outputHeaders[index]))
+                throw new InvalidOperationException("出力先の見出しが変更されています。読み直してください。");
+            records[0] = Enumerable.Range(0, outputHeaders.Count).Select(index => index < records[0].Length ? records[0][index] : outputHeaders[index]).ToArray();
+            for (var i = 1; i < records.Count; i++)
+                records[i] = Enumerable.Range(0, outputHeaders.Count).Select(index => records[i].ElementAtOrDefault(index) ?? "").ToArray();
+        }
         if (records.Count == 0 || new[] { block, seat, circle }.Any(index => index >= records[0].Length))
             throw new InvalidOperationException("選択した列が CSV の見出しの範囲外です。");
         var found = new HashSet<string>(StringComparer.Ordinal);

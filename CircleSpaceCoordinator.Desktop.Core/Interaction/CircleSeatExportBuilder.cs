@@ -5,6 +5,7 @@ using CircleSpaceCoordinator.Infrastructure.Tabular;
 
 public static class CircleSeatExportBuilder
 {
+    public const string UndefinedSpaceNumber = "#UNDEFINED_SPACE_NUMBER";
     public static Plan? GetExportPlan(CircleSpaceProject project) =>
         project.ExportPlanId is { } id ? project.Plans.FirstOrDefault(plan => plan.Id == id) : null;
 
@@ -36,15 +37,16 @@ public static class CircleSeatExportBuilder
             .ToDictionary(item => item.Cell, item => item.Placement);
         var participants = project.Participants.ToDictionary(item => item.Id, StringComparer.Ordinal);
         return plan.Assignments
-            .Where(assignment => participants.ContainsKey(assignment.ParticipantId) && labelsByCell.ContainsKey(assignment.ScoringPosition))
+            .Where(assignment => participants.ContainsKey(assignment.ParticipantId))
             .Select(assignment =>
             {
-                var label = labelsByCell[assignment.ScoringPosition];
+                labelsByCell.TryGetValue(assignment.ScoringPosition, out var label);
                 var participant = participants[assignment.ParticipantId];
-                var seatName = participant.RequiredCellCount == 2
-                    ? desksByCell[assignment.ScoringPosition].DeskNumber!
-                    : label.SeatName;
-                return new CircleSeatExportRow(participant.CircleId, label.BlockName, seatName);
+                desksByCell.TryGetValue(assignment.ScoringPosition, out var desk);
+                var fullFrame = desk is not null && assignment.OccupiedCells.SetEquals(desk.GetSeatCells(deskTypes[desk.DeskTypeId]));
+                var seatName = fullFrame ? desk!.DeskNumber!
+                    : assignment.OccupiedCells.Count == 1 && !string.IsNullOrWhiteSpace(label?.SeatName) ? label.SeatName : UndefinedSpaceNumber;
+                return new CircleSeatExportRow(participant.CircleId, string.IsNullOrWhiteSpace(label?.BlockName) ? "#MISSING_BLOCK_NUMBER" : label.BlockName, seatName);
             })
             .ToArray();
     }

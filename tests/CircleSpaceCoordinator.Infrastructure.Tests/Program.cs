@@ -46,6 +46,7 @@ internal static class Program
             ("Circle seat values are written to selected Excel columns", CircleSeatValuesAreExported),
             ("CSV export preserves encoding, quoted cells and independent input files", CircleSeatCsvExport),
             ("New XLSX and CSV export match preview and refuse to overwrite existing files", NewCircleSeatFiles),
+            ("Existing XLSX and CSV can append number columns without changing unrelated cells", AppendCircleSeatColumns),
         };
 
         var failures = 0;
@@ -369,6 +370,57 @@ internal static class Program
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static void AppendCircleSeatColumns()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"append-circle-export-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            foreach (var extension in new[] { ".xlsx", ".csv" })
+            {
+                var path = Path.Combine(directory, "target" + extension);
+                if (extension == ".csv") File.WriteAllText(path, "ID,メモ\r\n001,残す\r\n002,そのまま\r\n", new System.Text.UTF8Encoding(true));
+                else
+                {
+                    using var book = new XLWorkbook();
+                    var sheet = book.AddWorksheet("target");
+                    sheet.Cell(2, 2).Value = "ID";
+                    sheet.Cell(2, 3).Value = "メモ";
+                    sheet.Cell(3, 2).Value = "001";
+                    sheet.Cell(3, 3).Value = "残す";
+                    sheet.Cell(3, 3).Style.Fill.BackgroundColor = XLColor.Red;
+                    sheet.Cell(4, 2).Value = "002";
+                    sheet.Cell(4, 3).Value = "そのまま";
+                    book.AddWorksheet("別シート").Cell(1, 1).FormulaA1 = "1+2";
+                    book.SaveAs(path);
+                }
+                var result = CircleSeatExcelExporter.Export(path, "target", 2, 3, 0, [new("001", "B", "#UNDEFINED_SPACE_NUMBER")],
+                    outputHeaders: ["ID", "メモ", "ブロック番号", "セル番号"]);
+                AssertEqual(1, result.UpdatedRowCount);
+                var loaded = ParticipantTableReader.Read(path).First();
+                AssertEqual("セル番号", loaded.Headers[3]);
+                AssertEqual("#UNDEFINED_SPACE_NUMBER", loaded.Rows[0][3]);
+                AssertEqual("そのまま", loaded.Rows[1][1]);
+                AssertEqual("", loaded.Rows[1][3]);
+                if (extension == ".xlsx")
+                {
+                    using var book = new XLWorkbook(path);
+                    AssertEqual(XLColor.Red, book.Worksheet("target").Cell(3, 3).Style.Fill.BackgroundColor);
+                    AssertEqual("1+2", book.Worksheet("別シート").Cell(1, 1).FormulaA1);
+                }
+                var before = File.ReadAllBytes(path);
+                try
+                {
+                    CircleSeatExcelExporter.Export(path, "target", 2, 3, 0, [], outputHeaders: ["違うID", "メモ", "ブロック番号", "セル番号"]);
+                    throw new Exception("Changed header must be rejected.");
+                }
+                catch (InvalidOperationException) { }
+                AssertEqual(true, before.SequenceEqual(File.ReadAllBytes(path)));
+            }
+        }
+        finally { Directory.Delete(directory, true); }
     }
 
     private static void NewCircleSeatFiles()

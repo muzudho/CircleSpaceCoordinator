@@ -32,6 +32,7 @@ public sealed partial class VenueEditorGame
         textInputService?.Stop();
         underlineEditor = null;
         selectionLabels = null;
+        exportColumnDraft = null;
         exportPlanChoices = null;
         exportPreviewProject = null;
         viewerLines = null;
@@ -63,6 +64,7 @@ public sealed partial class VenueEditorGame
         if (modalDialog is null) return false;
         EnsureModalButtons();
         if (modalDialog.Kind == ModalDialogKind.Text) return UpdateUnderlineInput(keyboard, mouse);
+        if (UpdateExportColumns(keyboard, mouse)) return true;
         if (!UpdateExportPlanPins(keyboard, mouse)) UpdateSelection(keyboard, mouse);
         UpdateTextViewer(keyboard, mouse);
         if (UpdateTablePreview(keyboard, mouse)) return true;
@@ -103,6 +105,7 @@ public sealed partial class VenueEditorGame
     private void ApplyModalAction(ModalDialogAction action)
     {
         if (modalDialog is null) return;
+        if (exportColumnDraft is { IsComplete: false } && action == ModalDialogAction.Accept) return;
         if (selectionLabels is { Length: 0 } && action == ModalDialogAction.Accept) return;
         // Custom choices use the existing model's closing transition; preserve the chosen result.
         var customChoice = modalChoices?.Any(choice => choice.Action == action) == true;
@@ -129,7 +132,7 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle ModalBounds()
     {
         var availableHeight = GraphicsDevice.Viewport.Height - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
-        var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null;
+        var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null;
         var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
         var height = Math.Min(large ? 620d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
@@ -205,11 +208,12 @@ public sealed partial class VenueEditorGame
         DrawSelection();
         DrawTextViewer();
         DrawTablePreview();
+        DrawExportColumns();
         for (var index = 0; index < modalButtons.Count; index++)
         {
             var button = modalButtons[index].Button;
             button.IsSelected = index == modalFocus;
-            button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !(selectionLabels is { Length: 0 } && modalButtons[index].Action == ModalDialogAction.Accept);
+            button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
             StationeryButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
