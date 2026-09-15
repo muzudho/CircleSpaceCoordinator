@@ -79,7 +79,7 @@ public sealed partial class VenueEditorGame
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
             textRenderer?.Draw(feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点",
                 new Rectangle((int)row.X + 6, (int)row.Y + 1, missing ? (int)row.Width - 36 : 240, 27), Color.White, 15, selected);
-            textRenderer?.Draw(feature is null ? index == 1 ? "フレーム単位で入力（採点なし）" : "席のセル単位で入力（採点なし）" : $"列: {feature.SourceColumn ?? "（対応なし）"}",
+            textRenderer?.Draw(feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列" : $"重み（0～1）：{feature.SourceColumn ?? "（対応なし）"}",
                 new Rectangle((int)row.X + 6, (int)row.Y + 26, 240, 20), new Color(184, 204, 214), 11);
         }
         textRenderer?.Draw($"サークル配置評価値: {evaluation.TotalScore:0.###}",
@@ -191,22 +191,27 @@ public sealed partial class VenueEditorGame
         var map = workspace.Project.Evaluation.WeightMaps.Single(item => item.FeatureId == selectedChannelId);
         var channelId = selectedChannelId!;
         var planId = workspace.SelectedPlanId;
-        var value = (decimal)Math.Clamp(map.GetWeight(cell), 0, 1);
-        void ShowDraft() => OpenSelection("セルの重み（0～1、小数6桁）",
-            [$"値を入力：{value:0.######}", "− 0.1", "＋ 0.1", $"{cells.Length} セルに適用"], 0, index =>
+        var value = decimal.Round((decimal)Math.Clamp(map.GetWeight(cell), 0, 1), 3);
+        var owner = workspace;
+        OpenWeightInput(value, cells.Length, weight =>
         {
-            if (index == 0)
-            {
-                OpenUnderlineInput("セルの重み", value.ToString("0.######"), input => { value = decimal.Parse(input); ShowDraft(); },
-                "0～1 の数値を小数点以下6桁までで入力してください。", 32,
-                validate: EditorDialogValidation.Weight, cancelled: ShowDraft); return;
-            }
-            if (index < 3) { value = Math.Clamp(value + (index == 1 ? -0.1m : 0.1m), 0, 1); ShowDraft(); return; }
-            workspace.Execute(new SetChannelWeights(planId, channelId, cells, (double)value));
-            rangeSwapStatus = $"{cells.Length} セルの重みを変更しました";
-            Log("channel_weight_edit", success: true, detail: $"cells={cells.Length}");
+            if (workspace != owner || workspace.SelectedPlanId != planId)
+                throw new InvalidOperationException("編集対象が変わりました。選び直してください。");
+            workspace.Execute(new SetChannelWeights(planId, channelId, cells, (double)weight));
+            Log("channel_weight_edit", success: true);
         });
-        ShowDraft();
+    }
+
+    private void OpenWeightInput(decimal initial, int cellCount, Action<decimal> accepted)
+    {
+        OpenUnderlineInput($"重みを入力（{cellCount} セル）", initial.ToString("0.000"), input =>
+        {
+            if (!EditorDialogValidation.TryParseWeight(input, out var weight))
+                throw new InvalidOperationException(EditorDialogValidation.Weight(input));
+            accepted(weight);
+            rangeSwapStatus = $"{cellCount} セルの重みを {weight:0.000} に変更しました";
+        }, "0.000～1.000、小数点以下3桁までで入力してください。\n空欄で確定すると0になります。キャンセルでは変更しません。", 32,
+            allowEmpty: true, validate: EditorDialogValidation.Weight);
     }
 
     private void DrawChannelWeights()
@@ -219,7 +224,7 @@ public sealed partial class VenueEditorGame
             var weight = map.GetWeight(cell);
             DrawRectangle(bounds, Color.Lerp(new Color(35, 40, 54), new Color(35, 166, 134), (float)Math.Clamp(weight, 0, 1)));
             DrawOutline(bounds, 1, new Color(106, 129, 145));
-            textRenderer?.Draw($"{weight:0.######}", ToRectangle(bounds, 2), Color.White, VenueTextSize(12), true);
+            textRenderer?.Draw($"{weight:0.000}", ToRectangle(bounds, 2), Color.White, VenueTextSize(12), true);
         }
     }
 
