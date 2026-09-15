@@ -324,7 +324,7 @@ public sealed partial class VenueEditorGame : Game
             base.Update(gameTime);
             return;
         }
-        if (HandlePlanScrollbarInput(mouse, pointer))
+        if (HandleChannelScrollbarInput(mouse, pointer) || HandlePlanScrollbarInput(mouse, pointer))
         {
             hoveredPlanId = null;
             previousMouse = mouse;
@@ -715,6 +715,7 @@ public sealed partial class VenueEditorGame : Game
         selectingUnderlineText = false;
         tableScrollDragVertical = null;
         draggingPlanScrollbar = false;
+        capturingChannelScrollbar = draggingChannelScrollbar = false;
         foreach (var button in toolbarButtons) button.Model.ClearPointerState();
         hoveredPlanId = null;
         hoveredPlanCopy = hoveredPlanRename = false;

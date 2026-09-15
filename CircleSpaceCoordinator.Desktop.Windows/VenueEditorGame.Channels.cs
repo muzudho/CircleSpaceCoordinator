@@ -40,7 +40,7 @@ public sealed partial class VenueEditorGame
     {
         var panel = GetChannelPanelBounds();
         var rowHeight = editorMode == EditorMode.CirclePlacement ? 38 : 48;
-        return new ScreenRectangle(panel.X + 6, panel.Y + 66 + index * rowHeight, panel.Width - 12, rowHeight - 2);
+        return new ScreenRectangle(panel.X + 6, panel.Y + 66 + index * rowHeight, panel.Width - 32, rowHeight - 2);
     }
 
     private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - 114) /
@@ -78,10 +78,11 @@ public sealed partial class VenueEditorGame
             }
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
             textRenderer?.Draw(feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点",
-                new Rectangle((int)row.X + 6, (int)row.Y + 1, missing ? (int)row.Width - 36 : 240, 27), Color.White, 15, selected);
+                new Rectangle((int)row.X + 6, (int)row.Y + 1, (int)row.Width - (missing ? 36 : 12), 27), Color.White, 15, selected);
             textRenderer?.Draw(feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列" : $"重み（0～1）：{feature.SourceColumn ?? "（対応なし）"}",
-                new Rectangle((int)row.X + 6, (int)row.Y + 26, 240, 20), new Color(184, 204, 214), 11);
+                new Rectangle((int)row.X + 6, (int)row.Y + 26, (int)row.Width - 12, 20), new Color(184, 204, 214), 11);
         }
+        DrawChannelScrollbar();
         textRenderer?.Draw($"サークル配置評価値: {evaluation.TotalScore:0.###}",
             new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - 44, 245, 21), new Color(244, 208, 111), 15);
         textRenderer?.Draw("セルをクリックで入力 / リストはホイールで移動",

@@ -63,8 +63,9 @@ public sealed partial class VenueEditorGame
             var selected = display.DisplayField == item.Field && (item.Field != "channel" || display.ChannelId == item.ChannelId);
             var row = ChannelRow(rowIndex);
             DrawRectangle(row, selected ? new Color(35, 126, 111) : new Color(29, 36, 45));
-            textRenderer?.Draw(item.Name, new Rectangle((int)row.X + 6, (int)row.Y + 2, 240, 32), Color.White, 16, selected);
+            textRenderer?.Draw(item.Name, new Rectangle((int)row.X + 6, (int)row.Y + 2, (int)row.Width - 12, 32), Color.White, 16, selected);
         }
+        DrawChannelScrollbar();
         var selectedChannel = channels.First(item => item.Field == display.DisplayField &&
             (item.Field != "channel" || item.ChannelId == display.ChannelId));
         textRenderer?.Draw(selectedChannel.Detail, new Rectangle((int)panel.X + 8,
