@@ -3334,7 +3334,7 @@ public sealed partial class VenueEditorGame : Game
     private static string GetModeLabel(ToolbarAction action) => action switch
     {
         ToolbarAction.SpaceDefinitionsMode => "フレーム定義",
-        ToolbarAction.CirclePlacementDecisionMode => "サークル配置決定",
+        ToolbarAction.CirclePlacementDecisionMode => "スペース番号書き出し",
         ToolbarAction.ParticipantDataMode => "サークルデータ",
         ToolbarAction.DeskPlacementMode => "フレーム配置",
         ToolbarAction.IslandDefinitionMode => "島定義",
@@ -3397,7 +3397,7 @@ public sealed partial class VenueEditorGame : Game
 
         if (editorMode is EditorMode.ParticipantData or EditorMode.CirclePlacementDecision)
         {
-            primaryStatusMessage = $"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　{(editorMode == EditorMode.CirclePlacementDecision ? "サークル配置決定・出力先の表" : "サークルデータ（閲覧専用）")}";
+            primaryStatusMessage = $"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　{(editorMode == EditorMode.CirclePlacementDecision ? "スペース番号書き出し・出力先の表" : "サークルデータ（閲覧専用）")}";
             secondaryStatusMessage = toolbarButtons.FirstOrDefault(button => button.Model.IsPointerOver)?.Model.AccessibleName
                 ?? "ホイール: 縦スクロール　Shift＋ホイール: 横　矢印 / PageUp・Down / Home・End: 移動　セルクリック: 全文";
             return;
