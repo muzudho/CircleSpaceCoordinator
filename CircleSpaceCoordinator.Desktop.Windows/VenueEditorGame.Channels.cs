@@ -222,9 +222,21 @@ public sealed partial class VenueEditorGame
         {
             var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
             var weight = map.GetWeight(cell);
-            DrawRectangle(bounds, Color.Lerp(new Color(35, 40, 54), new Color(35, 166, 134), (float)Math.Clamp(weight, 0, 1)));
+            var normalized = (float)Math.Clamp(weight, 0, 1);
+            var background = normalized <= 0.5f
+                ? Color.Lerp(Color.Blue, Color.White, normalized * 2)
+                : Color.Lerp(Color.White, Color.Red, (normalized - 0.5f) * 2);
+            DrawRectangle(bounds, background);
             DrawOutline(bounds, 1, new Color(106, 129, 145));
-            textRenderer?.Draw($"{weight:0.000}", ToRectangle(bounds, 2), Color.White, VenueTextSize(12), true);
+            // Choose the higher-contrast text color using relative luminance.
+            static double Linear(byte channel)
+            {
+                var value = channel / 255d;
+                return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+            }
+            var luminance = 0.2126 * Linear(background.R) + 0.7152 * Linear(background.G) + 0.0722 * Linear(background.B);
+            var foreground = luminance > 0.179 ? Color.Black : Color.White;
+            textRenderer?.Draw($"{weight:0.000}", ToRectangle(bounds, 2), foreground, VenueTextSize(12), true);
         }
     }
 
