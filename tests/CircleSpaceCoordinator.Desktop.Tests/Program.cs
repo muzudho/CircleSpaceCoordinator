@@ -1506,6 +1506,20 @@ internal static class Program
     {
         var catalog = SpaceDefinitionCatalog.CreateDefault();
         var source = catalog.Types[0];
+        var edges = new SpaceDefinitionDraft(source);
+        edges.SetEdge(1, "壁");
+        edges.SetEdge(2, "入口");
+        edges.SetEdge(3, "正面");
+        AssertEqual("開放", edges.Edges[0]);
+        AssertEqual("壁", edges.Edges[1]);
+        AssertEqual("入口", edges.Edges[2]);
+        AssertEqual("正面", edges.Edges[3]);
+        AssertEqual("正面", source.Edges[0]);
+        edges.SetEdge(2, "正面");
+        AssertEqual("開放", edges.Edges[3]);
+        AssertEqual(1, edges.BuildType().Edges.Count(edge => edge == "正面"));
+        edges.SetEdge(2, "開放");
+        AssertEqual(0, edges.BuildType().Edges.Count(edge => edge == "正面"));
         var draft = new SpaceDefinitionDraft(source);
         draft.Name = "  編集した型  ";
         draft.Paint(0, 0, 0);

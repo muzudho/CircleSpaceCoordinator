@@ -57,6 +57,16 @@ public sealed class SpaceDefinitionDraft
         Height = height;
     }
 
+    public void SetEdge(int index, string value)
+    {
+        if (index < 0 || index >= Edges.Length) throw new ArgumentOutOfRangeException(nameof(index));
+        if (value is not ("開放" or "壁" or "入口" or "正面")) throw new ArgumentException("未対応の辺設定です。", nameof(value));
+        if (value == "正面")
+            for (var edge = 0; edge < Edges.Length; edge++)
+                if (edge != index && Edges[edge] == "正面") Edges[edge] = "開放";
+        Edges[index] = value;
+    }
+
     public int AreaAt(int x, int y) => cells.GetValueOrDefault((x, y));
 
     public void ToggleCell(int x, int y) => Paint(x, y, AreaAt(x, y) > 0 ? 0 : 1);

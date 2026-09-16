@@ -124,7 +124,7 @@ public sealed partial class VenueEditorGame
                     _ => new ScreenPoint(grid.X - 162, 360 - 18),
                 };
                 Add(FrameEdgeNames[edge] + "：" + draft.Edges[edge] + " ▸", position.X, position.Y, 150,
-                    () => draft.Edges[index] = FrameEdgeValues[(Array.IndexOf(FrameEdgeValues, draft.Edges[index]) + 1) % FrameEdgeValues.Length]);
+                    () => draft.SetEdge(index, FrameEdgeValues[(Array.IndexOf(FrameEdgeValues, draft.Edges[index]) + 1) % FrameEdgeValues.Length]));
             }
             Add("接続を編集", 710, 390, 270, () =>
             {
