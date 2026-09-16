@@ -101,21 +101,30 @@ public sealed partial class VenueEditorGame
         textRenderer?.Draw("一般参加者評価値 ↓ ／ 同点はサークル評価値 ↓",
             ToRectangle(new ScreenRectangle(area.X, bounds.Y + 58, area.Width, 26)), Color.LightGray, 14);
         var filter = ExportPinFilterBounds();
-        DrawRectangle(filter, exportPinnedOnly ? new Color(45, 95, 100) : new Color(48, 56, 68));
+        var mouse = Mouse.GetState();
+        var pointer = new ScreenPoint(mouse.X, mouse.Y);
+        DrawRectangle(filter, exportPinnedOnly ? new Color(35, 126, 111) : new Color(48, 56, 68));
+        if (Contains(filter, pointer)) DrawOutline(filter, 2, OperationTargetColor);
         textRenderer?.Draw($"{(exportPinnedOnly ? "☑" : "□")} ピンのみ（F）", ToRectangle(filter, 4), Color.White, 15);
         for (var row = 0; row < SelectionPageSize && selectionScroll + row < selectionLabels!.Length; row++)
         {
             var index = selectionScroll + row;
             var rect = new ScreenRectangle(area.X, area.Y + row * SelectionRowHeight, area.Width, SelectionRowHeight - 4);
-            DrawRectangle(rect, index == selectionIndex ? new Color(45, 95, 100) : new Color(32, 40, 49));
+            var selected = index < choices.Count ? choices[index].Plan.Id == project.ExportPlanId : project.ExportPlanId is null;
+            DrawRectangle(rect, selected ? new Color(35, 126, 111) : new Color(32, 40, 49));
+            var pinBounds = new ScreenRectangle(rect.X + rect.Width - 64, rect.Y + 4, 60, 27);
+            var overPin = index < choices.Count && Contains(pinBounds, pointer);
+            if (index == selectionIndex || Contains(rect, pointer) && !overPin)
+                DrawOutline(rect, 2, OperationTargetColor);
             if (index < choices.Count)
             {
                 var choice = choices[index];
                 var mark = choice.Plan.Id == project.ExportPlanId ? "［確定中］" : "";
                 textRenderer?.Draw($"{index + 1}. {choice.Plan.Name} {mark}",
                     ToRectangle(new ScreenRectangle(rect.X + 6, rect.Y + 4, rect.Width - 78, 27)), Color.White, 17, true);
-                var pin = new ScreenRectangle(rect.X + rect.Width - 64, rect.Y + 4, 60, 27);
-                DrawRectangle(pin, GetExportPlanPins().Contains(choice.Plan.Id) ? new Color(142, 110, 35) : new Color(58, 66, 77));
+                var pin = pinBounds;
+                DrawRectangle(pin, GetExportPlanPins().Contains(choice.Plan.Id) ? new Color(35, 126, 111) : new Color(58, 66, 77));
+                if (overPin) DrawOutline(pin, 2, OperationTargetColor);
                 textRenderer?.Draw(GetExportPlanPins().Contains(choice.Plan.Id) ? "ピン済" : "ピン", ToRectangle(pin, 3), Color.White, 14);
                 textRenderer?.Draw($"一般参加者評価値：{choice.Evaluation.GeneralAttendeeScore:0.##}　サークル評価値：{choice.Evaluation.CircleParticipantScore:0.##}",
                     ToRectangle(new ScreenRectangle(rect.X + 6, rect.Y + 33, rect.Width - 12, 24)), Color.LightGray, 14);
