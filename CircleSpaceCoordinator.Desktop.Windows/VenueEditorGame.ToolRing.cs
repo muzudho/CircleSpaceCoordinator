@@ -23,7 +23,7 @@ public sealed partial class VenueEditorGame
         new(ToolbarAction.DeskMenu,
         [
             new(ToolbarAction.AddDesk, "フレーム追加", "フレーム追加：選択後、会場のセルをクリックしてフレームを追加します"),
-            new(ToolbarAction.RemoveDesk, "フレーム削除", "フレーム削除：選択後、フレームをクリックして削除します（サークルが割り当てられたフレームは削除できません）"),
+            new(ToolbarAction.RemoveDesk, "フレーム削除", "フレーム削除：選択後、フレーム本体をクリックして削除します。サークル配置中は未配置へ戻す確認を表示します。"),
             CancelRingEntry,
         ]),
         new(ToolbarAction.PillarMenu,

@@ -1610,24 +1610,21 @@ public sealed partial class VenueEditorGame : Game
         }
 
         var snapshot = workspace.GetSelectedPlanSnapshot();
-        var assignedCells = snapshot.Assignments.SelectMany(assignment => assignment.OccupiedCells).ToHashSet();
         foreach (var desk in snapshot.Desks)
         {
-            var deletionDisabled = activeCanvasTool == ToolbarAction.RemoveDesk &&
-                desk.OccupiedCells.Any(assignedCells.Contains);
             var placed = workspace.SelectedPlan.DeskPlacements.Single(p => p.Id == desk.Id);
             var definition = workspace.Project.DeskTypes.Single(t => t.Id == placed.DeskTypeId);
             if (definition.Space is { } space)
             {
-                DrawSpaceOnCanvas(space, placed.Anchor, placed.Orientation, false, deletionDisabled);
+                DrawSpaceOnCanvas(space, placed.Anchor, placed.Orientation, false, false);
                 continue;
             }
             DrawDesk(
                 desk.OccupiedCells,
                 desk.Orientation,
-                deletionDisabled ? new Color(104, 108, 112) : new Color(198, 145, 54),
-                deletionDisabled ? new Color(57, 60, 64) : new Color(92, 60, 23),
-                deletionDisabled ? new Color(76, 80, 84) : new Color(145, 98, 38));
+                new Color(198, 145, 54),
+                new Color(92, 60, 23),
+                new Color(145, 98, 38));
         }
 
         if (dragController?.PreviewAnchor is { } previewAnchor && dragController.DraggedDeskId is { } deskId)
@@ -2562,6 +2559,7 @@ public sealed partial class VenueEditorGame : Game
         {
             ToolbarAction.MoveDesk,
             ToolbarAction.DeskMenu,
+            ToolbarAction.RemoveDesk,
             ToolbarAction.EditSeatName,
             ToolbarAction.SwapAddresses,
             ToolbarAction.PillarMenu,
@@ -2901,7 +2899,7 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.RotateLeft => commandController.RotateDeskAt(cell, clockwise: false),
             ToolbarAction.RotateRight => commandController.RotateDeskAt(cell, clockwise: true),
             ToolbarAction.AddDesk => NextSpaceType is { } type ? commandController.AddDeskAt(cell, nextDeskOrientation, type) : EditorCommandResult.NoTarget,
-            ToolbarAction.RemoveDesk => commandController.RemoveDeskAt(cell),
+            ToolbarAction.RemoveDesk => RemoveFrameAt(cell),
             ToolbarAction.EditSeatName => selectedNumberChannel == 1 ? EditDeskNumberAt(cell) : EditSeatNameAt(cell),
             ToolbarAction.EditDeskNumber => EditDeskNumberAt(cell),
             ToolbarAction.AddPillar => commandController.AddPillarAt(cell),
@@ -2919,6 +2917,34 @@ public sealed partial class VenueEditorGame : Game
             : result.Issues.Count == 0
                 ? (false, "target=none")
                 : (false, $"issues={FormatIssues(result.Issues)}");
+
+        EditorCommandResult RemoveFrameAt(GridPosition position, bool unassignParticipants = false)
+        {
+            var removal = commandController.RemoveDeskAt(position, unassignParticipants);
+            if (removal.Applied)
+            {
+                selectedCellRange = null;
+                selectedFrameIds.Clear();
+                rangeSwapStatus = "フレーム本体を削除しました。Ctrl＋Zで元に戻せます。";
+            }
+            else if (!unassignParticipants && removal.Issues.Any(issue => issue.Code == "assignment.cell.withoutDesk"))
+            {
+                var owner = workspace;
+                var project = workspace!.Project;
+                var planId = workspace.SelectedPlanId;
+                OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "フレーム本体を削除",
+                    "このフレームにはサークルが配置されています。\nフレームを共有するすべての配置案で、該当サークルを未配置に戻して削除しますか？\n\nフレームの番地・接続も削除します。サークルの登録情報は残ります。\nCtrl＋Zで元に戻せます。"), action =>
+                {
+                    if (action != ModalDialogAction.Accept) return;
+                    if (workspace != owner || workspace.SelectedPlanId != planId || !ReferenceEquals(workspace.Project, project))
+                    { ShowInAppMessage("フレーム削除", "編集対象が変わりました。削除するフレームを選び直してください。"); return; }
+                    RemoveFrameAt(position, unassignParticipants: true);
+                }, [("キャンセル", ModalDialogAction.Cancel), ("未配置に戻して削除", ModalDialogAction.Accept)]);
+            }
+            else if (removal.Issues.Count > 0)
+                ShowInAppMessage("フレームを削除できません", string.Join("\n", removal.Issues.Select(issue => issue.Message)));
+            return removal;
+        }
 
         EditorCommandResult AddIslandConnectorAt(GridPosition position)
         {

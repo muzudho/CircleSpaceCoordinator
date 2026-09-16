@@ -37,7 +37,8 @@ public static class PlanDeskEditor
     public static CircleSpaceProject RemoveDesk(
         CircleSpaceProject project,
         string planId,
-        string deskPlacementId)
+        string deskPlacementId,
+        bool unassignParticipants = false)
     {
         ArgumentNullException.ThrowIfNull(project);
         ArgumentException.ThrowIfNullOrWhiteSpace(planId);
@@ -50,11 +51,31 @@ public static class PlanDeskEditor
             deskPlacementId,
             placement => placement.Id,
             "desk placement");
-        return ReplacePlan(project, planIndex, plan with
+        var removedCells = plan.DeskPlacements[placementIndex].GetOccupiedCells(
+            project.DeskTypes.Single(type => type.Id == plan.DeskPlacements[placementIndex].DeskTypeId));
+        var layoutId = project.CircleLayouts.FirstOrDefault(layout => layout.Id == planId)?.DeskLayoutId;
+        var affectedPlans = project.CircleLayouts.Where(layout => layoutId is not null && layout.DeskLayoutId == layoutId)
+            .Select(layout => layout.Id).Append(planId).ToHashSet(StringComparer.Ordinal);
+        Plan RemoveFrom(Plan current)
         {
-            DeskPlacements = plan.DeskPlacements.Where((_, index) => index != placementIndex).ToArray(),
-            SeatLabels = plan.SeatLabels.Where(item => item.DeskPlacementId != deskPlacementId).ToArray(),
-        });
+            var combined = current.Assignments.Where(item => item.OccupiedCells.Overlaps(removedCells))
+                .Select(item => item.CombinedSpaceId).OfType<string>().ToHashSet(StringComparer.Ordinal);
+            return current with
+            {
+                DeskPlacements = current.DeskPlacements.Where(item => item.Id != deskPlacementId).ToArray(),
+                SeatLabels = current.SeatLabels.Where(item => item.DeskPlacementId != deskPlacementId).ToArray(),
+                IslandConnectors = current.IslandConnectors.Where(item => item.FirstDeskId != deskPlacementId && item.SecondDeskId != deskPlacementId).ToArray(),
+                DisabledIslandConnections = current.DisabledIslandConnections.Where(item => !removedCells.Contains(item.FirstCell) && !removedCells.Contains(item.SecondCell)).ToArray(),
+                Assignments = unassignParticipants ? current.Assignments.Where(item => !item.OccupiedCells.Overlaps(removedCells) &&
+                    (item.CombinedSpaceId is null || !combined.Contains(item.CombinedSpaceId))).ToArray() : current.Assignments,
+                TemporaryPlacements = unassignParticipants ? current.TemporaryPlacements.Where(item =>
+                    item.CombinedSpaceId is null || !combined.Contains(item.CombinedSpaceId)).ToArray() : current.TemporaryPlacements,
+            };
+        }
+        var result = project with { Plans = project.Plans.Select(item => affectedPlans.Contains(item.Id) ? RemoveFrom(item) : item).ToArray() };
+        var issues = ProjectValidator.Validate(result);
+        if (issues.Count > 0) throw new ProjectValidationException(issues);
+        return result;
     }
 
     public static CircleSpaceProject MoveDesk(

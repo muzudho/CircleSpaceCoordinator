@@ -140,12 +140,12 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
         return result.Applied ? result with { AffectedOrientation = orientation } : result;
     }
 
-    public EditorCommandResult RemoveDeskAt(GridPosition cell)
+    public EditorCommandResult RemoveDeskAt(GridPosition cell, bool unassignParticipants = false)
     {
         var desk = workspace.GetSelectedPlanSnapshot().Desks.LastOrDefault(item => item.OccupiedCells.Contains(cell));
         return desk is null
             ? EditorCommandResult.NoTarget
-            : Apply( new PlanDeskEditorRemoveDesk( workspace.SelectedPlanId, desk.Id));
+            : Apply( new PlanDeskEditorRemoveDesk( workspace.SelectedPlanId, desk.Id, unassignParticipants));
     }
 
     public EditorCommandResult SetDeskNumber(string deskPlacementId, string? deskNumber) => Apply(

@@ -41,6 +41,7 @@ internal static class Program
             ("Island paths use seat cells while facing rectangles retain physical cells", IslandPathsUseSeats),
             ("Frame-defined connections survive editing, rotation, catalog and event persistence", FrameDefinedConnections),
             ("Address swaps preserve other channels and physical frames through remote history and JSON", AddressSwaps),
+            ("Deleting an occupied frame can unassign circles across shared layouts and undo all changes", OccupiedFrameDeletion),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -1050,6 +1051,52 @@ internal static class Program
             catch (CircleSpaceCoordinator.Core.Validation.ProjectValidationException) { rejected = true; }
             AssertEqual(true, rejected);
         }
+    }
+
+    private static void OccupiedFrameDeletion()
+    {
+        var source = CreateAssignmentProject(1);
+        var project = source with
+        {
+            Plans = [source.Plans[0] with
+            {
+                SeatLabels = [new("desk-1", new(0, 0), "A", "1"), new("desk-2", new(0, 0), "B", "2")],
+                IslandConnectors = [new("link", "desk-1", "desk-2", new(1, 0), new(2, 0))],
+                DisabledIslandConnections = [new(new(0, 0), new(1, 0))],
+            }],
+        };
+        var directory = Path.Combine(Path.GetTempPath(), $"frame-deletion-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "event.json");
+            ProjectFileService.Save(path, project);
+            using var remote = DesktopApplication.LoadWorkspace(path);
+            var commands = new EditorCommandController(remote);
+            AssertEqual(true, commands.DuplicateSelectedPlan().Applied);
+            var before = ProjectJsonSerializer.Save(remote.Project);
+            AssertEqual(false, commands.RemoveDeskAt(new(0, 0)).Applied);
+            AssertEqual(before, ProjectJsonSerializer.Save(remote.Project));
+            AssertEqual(true, commands.RemoveDeskAt(new(0, 0), unassignParticipants: true).Applied);
+            AssertEqual(2, remote.Project.Plans.Count);
+            foreach (var plan in remote.Project.Plans)
+            {
+                AssertEqual("desk-2", plan.DeskPlacements.Single().Id);
+                AssertEqual(0, plan.Assignments.Count);
+                AssertEqual("desk-2", plan.SeatLabels.Single().DeskPlacementId);
+                AssertEqual(0, plan.IslandConnectors.Count);
+                AssertEqual(0, plan.DisabledIslandConnections.Count);
+            }
+            AssertEqual(source.Participants.Count, remote.Project.Participants.Count);
+            var after = ProjectJsonSerializer.Save(remote.Project);
+            remote.Undo();
+            AssertEqual(before, ProjectJsonSerializer.Save(remote.Project));
+            remote.Redo();
+            AssertEqual(after, ProjectJsonSerializer.Save(remote.Project));
+            ProjectFileService.Save(path, remote.Project);
+            AssertEqual(after, ProjectJsonSerializer.Save(ProjectFileService.Load(path)));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 
     private static void BlockChannelDisplay()
