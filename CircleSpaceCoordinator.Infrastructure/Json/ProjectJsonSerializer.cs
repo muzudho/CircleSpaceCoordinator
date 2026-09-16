@@ -169,6 +169,7 @@ public static class ProjectJsonSerializer
             ParticipantTableSource = source.ParticipantTableSource,
             ExportPlanId = source.ExportPlanId,
             IsConfidential = source.Project.IsConfidential,
+            BlockStyles = source.BlockStyles.OrderBy(item => item.BlockNumber, StringComparer.Ordinal).ToArray(),
             GenreStyles = source.GenreStyles.Select(item => new GenreStyleDefinition(
                 item.GenreId,
                 item.PrimaryColor,
@@ -214,6 +215,7 @@ public static class ProjectJsonSerializer
             SecondaryColor = item.SecondaryColor,
             Pattern = item.Pattern,
         }).OrderBy(item => item.GenreId, StringComparer.Ordinal).ToList(),
+        BlockStyles = source.BlockStyles.OrderBy(item => item.BlockNumber, StringComparer.Ordinal).ToList(),
         Venue = new VenueDocument
         {
             Id = source.Venue.Id,
@@ -406,6 +408,7 @@ public static class ProjectJsonSerializer
         public ParticipantTableSource? ParticipantTableSource { get; set; }
         public string? ExportPlanId { get; set; }
         public List<GenreStyleDocument> GenreStyles { get; set; } = [];
+        public List<BlockStyleDefinition> BlockStyles { get; set; } = [];
         public VenueDocument Venue { get; set; } = new();
         public List<DeskTypeDocument> DeskTypes { get; set; } = [];
         public List<ParticipantDocument> Participants { get; set; } = [];

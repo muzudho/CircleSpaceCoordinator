@@ -46,6 +46,15 @@ public sealed partial class VenueEditorGame
     private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - 114) /
         (editorMode == EditorMode.CirclePlacement ? 38 : 48));
 
+    private bool ShowsBlockStyleButton => editorMode == EditorMode.DeskPlacement &&
+        selectedChannelId is null && selectedNumberChannel == 0;
+
+    private ScreenRectangle BlockStyleButton()
+    {
+        var panel = GetChannelPanelBounds();
+        return new ScreenRectangle(panel.X + 8, panel.Y + panel.Height - 27, panel.Width - 16, 23);
+    }
+
     private void DrawChannels()
     {
         if (!ShowsChannels || workspace is null) return;
@@ -84,8 +93,9 @@ public sealed partial class VenueEditorGame
         }
         DrawChannelScrollbar();
         textRenderer?.Draw($"サークル配置評価値: {evaluation.TotalScore:0.###}",
-            new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - 44, 245, 21), new Color(244, 208, 111), 15);
-        textRenderer?.Draw("セルをクリックで入力 / リストはホイールで移動",
+            new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - (ShowsBlockStyleButton ? 50 : 44), 245, 21), new Color(244, 208, 111), 15);
+        if (ShowsBlockStyleButton) DrawLayoutButton(BlockStyleButton(), "色・網掛けの対応", false);
+        else textRenderer?.Draw("セルをクリックで入力 / リストはホイールで移動",
             new Rectangle((int)panel.X + 8, (int)(panel.Y + panel.Height) - 22, 248, 18), Color.LightGray, 11);
     }
 
@@ -118,7 +128,8 @@ public sealed partial class VenueEditorGame
         if (editorMode == EditorMode.CirclePlacement) return HandleCircleDisplayChannelClick(pointer);
         try
         {
-            if (Contains(ChannelButton(0), pointer)) EditChannelDefinition(create: true);
+            if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer)) OpenBlockStyleEditor();
+            else if (Contains(ChannelButton(0), pointer)) EditChannelDefinition(create: true);
             else if (Contains(ChannelButton(1), pointer) && IsWeightChannelSelected) EditChannelDefinition(create: false);
             else if (Contains(ChannelButton(2), pointer) && IsWeightChannelSelected)
             {

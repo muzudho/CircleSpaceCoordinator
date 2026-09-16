@@ -50,6 +50,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(PlanCatalogServiceAddOptimizedPlan), "PlanCatalogService.AddOptimizedPlan")]
 [JsonDerivedType(typeof(PlanCatalogServiceCopyDeskLayout), "PlanCatalogService.CopyDeskLayout")]
 [JsonDerivedType(typeof(SetGenreStyles), "SetGenreStyles")]
+[JsonDerivedType(typeof(SetBlockStyles), "SetBlockStyles")]
 [JsonDerivedType(typeof(UpsertChannel), "UpsertChannel")]
 [JsonDerivedType(typeof(RemoveChannel), "RemoveChannel")]
 [JsonDerivedType(typeof(SetChannelWeights), "SetChannelWeights")]
@@ -101,6 +102,7 @@ public sealed record PlanCatalogServiceDuplicatePlan(string sourcePlanId, string
 public sealed record PlanCatalogServiceAddOptimizedPlan(Plan optimizedPlan, string newPlanId, string newPlanName) : EditorOperation;
 public sealed record PlanCatalogServiceCopyDeskLayout(string sourcePlanId, string destinationPlanId) : EditorOperation;
 public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) : EditorOperation;
+public sealed record SetBlockStyles(IReadOnlyList<BlockStyleDefinition> styles) : EditorOperation;
 public sealed record SetExportPlan(string? planId) : EditorOperation;
 public sealed record UpsertChannel(string id, string name, string? sourceColumn) : EditorOperation;
 public sealed record RemoveChannel(string id) : EditorOperation;

@@ -34,6 +34,7 @@ internal static class Program
             ("A missing circle layout reports the reason and creating one enables placement", MissingCircleLayoutCanBeCreated),
             ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
             ("Shared appearance mappings accept block numbers and preserve isolated edits and unused styles", BlockAppearanceDrafts),
+            ("Block mappings collect frame labels and survive remote history and JSON", BlockStylesRoundTrip),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -788,6 +789,49 @@ internal static class Program
         rejected = false;
         try { invalid.Build(); } catch (InvalidDataException ex) { rejected = ex.Message.Contains("東A"); }
         AssertEqual(true, rejected);
+    }
+
+    private static void BlockStylesRoundTrip()
+    {
+        var original = CreateProject();
+        var plan = original.Plans[0];
+        var labels = new DeskSeatLabel[] { new(plan.DeskPlacements[0].Id, new(0, 0), "A", "1") };
+        var project = original with
+        {
+            Plans = [plan with { SeatLabels = labels }],
+            BlockStyles = [new("A", "blue", "white", "solid"), new("unused", "red", "white", "dots")],
+        };
+        AssertEqual("A", new BlockStyleDraft(project).Mapping.Rows.Single().Key);
+        var separated = project with
+        {
+            DeskLayouts = [new("frames", "Frames", plan.DeskPlacements) { SeatLabels = [labels[0] with { BlockName = "B" }] }],
+        };
+        AssertEqual("B", new BlockStyleDraft(separated).Mapping.Rows.Single().Key);
+        AssertEqual(0, new BlockStyleDraft(original).Mapping.Rows.Count);
+        var directory = Path.Combine(Path.GetTempPath(), $"block-style-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "event.json");
+            ProjectFileService.Save(path, project);
+            using var remote = DesktopApplication.LoadWorkspace(path);
+            var draft = new BlockStyleDraft(remote.Project).Mapping;
+            draft.SetPattern(0, "checkerboard");
+            AssertEqual("solid", remote.Project.BlockStyles[0].Pattern);
+            remote.Execute(new CircleSpaceCoordinator.Engine.Model.SetBlockStyles(draft.Build().Select(style =>
+                new BlockStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)).ToArray()), selectedPlanEdit: false);
+            AssertEqual("checkerboard", remote.Project.BlockStyles[0].Pattern);
+            remote.Undo();
+            AssertEqual("solid", remote.Project.BlockStyles[0].Pattern);
+            remote.Redo();
+            AssertEqual("checkerboard", remote.Project.BlockStyles[0].Pattern);
+            AssertEqual(project.BlockStyles[1], remote.Project.BlockStyles[1]);
+            ProjectFileService.Save(path, remote.Project);
+            var saved = ProjectFileService.Load(path);
+            AssertEqual(true, saved.BlockStyles.SequenceEqual(remote.Project.BlockStyles));
+            AssertEqual(true, saved.GenreStyles.SequenceEqual(project.GenreStyles));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 
     private static void GenreAppearanceDrafts()

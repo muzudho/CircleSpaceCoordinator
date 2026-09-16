@@ -18,6 +18,7 @@ public sealed record CircleSpaceProject(
     public bool IsConfidential { get; init; }
 
     public IReadOnlyList<GenreStyleDefinition> GenreStyles { get; init; } = [];
+    public IReadOnlyList<BlockStyleDefinition> BlockStyles { get; init; } = [];
 
     public EditorViewState? EditorView { get; init; }
 
