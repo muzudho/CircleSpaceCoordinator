@@ -44,7 +44,7 @@ public sealed partial class VenueEditorGame
         return new ScreenRectangle(panel.X + 6, panel.Y + 66 + index * rowHeight, panel.Width - 32, rowHeight - 2);
     }
 
-    private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - (ShowsBlockStyleButton ? 138 : 114)) /
+    private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - (ShowsChannelFooterButton ? 138 : 114)) /
         (editorMode == EditorMode.CirclePlacement ? 38 : 48));
 
     private bool ShowsBlockStyleButton => editorMode == EditorMode.DeskPlacement &&
@@ -104,8 +104,9 @@ public sealed partial class VenueEditorGame
         }
         DrawChannelScrollbar();
         textRenderer?.Draw($"サークル配置評価値: {evaluation.TotalScore:0.###}",
-            new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - (ShowsBlockStyleButton ? 72 : 44), 245, 21), new Color(244, 208, 111), 15);
+            new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - (ShowsChannelFooterButton ? 72 : 44), 245, 21), new Color(244, 208, 111), 15);
         if (ShowsBlockStyleButton) DrawBlockStyleButton();
+        else if (ShowsCellNumberWizardButton) DrawCellNumberWizardButton();
         else textRenderer?.Draw("セルをクリックで入力 / リストはホイールで移動",
             new Rectangle((int)panel.X + 8, (int)(panel.Y + panel.Height) - 22, 248, 18), Color.LightGray, 11);
     }
@@ -140,6 +141,7 @@ public sealed partial class VenueEditorGame
         try
         {
             if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer)) OpenBlockStyleEditor();
+            else if (ShowsCellNumberWizardButton && Contains(BlockStyleButton(), pointer)) OpenCellNumberWizard();
             else if (Contains(ChannelButton(0), pointer)) EditChannelDefinition(create: true);
             else if (Contains(ChannelButton(1), pointer) && IsWeightChannelSelected) EditChannelDefinition(create: false);
             else if (Contains(ChannelButton(2), pointer) && IsWeightChannelSelected)

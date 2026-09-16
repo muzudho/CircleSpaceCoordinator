@@ -36,6 +36,7 @@ internal static class Program
             ("Shared appearance mappings accept block numbers and preserve isolated edits and unused styles", BlockAppearanceDrafts),
             ("Block mappings collect frame labels and survive remote history and JSON", BlockStylesRoundTrip),
             ("Block view repeats labels every four cells and respects rotated seat footprints", BlockChannelDisplay),
+            ("Cell number wizard orders rotated cells, validates lists and applies one undoable edit", CellNumberWizardEdits),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -790,6 +791,48 @@ internal static class Program
         rejected = false;
         try { invalid.Build(); } catch (InvalidDataException ex) { rejected = ex.Message.Contains("東A"); }
         AssertEqual(true, rejected);
+    }
+
+    private static void CellNumberWizardEdits()
+    {
+        var original = CreateProject();
+        var placement = original.Plans[0].DeskPlacements[0] with { Anchor = new(1, 0), Orientation = QuarterTurn.South, DeskNumber = "frame" };
+        var plan = original.Plans[0] with
+        {
+            DeskPlacements = [placement],
+            Assignments = [],
+            SeatLabels = [new(placement.Id, new(0, 0), "A", "old1"), new(placement.Id, new(1, 0), "A", "old2")],
+        };
+        var project = original with { Plans = [plan] };
+        var draft = new CellNumberWizard(project, plan);
+        AssertEqual(2, draft.Count);
+        AssertEqual("1, 2", draft.DefaultNumbers);
+        AssertEqual(new GridPosition(0, 0), draft.Targets(CellNumberOrder.VenueTopLeft)[0].Cell);
+        AssertEqual(new GridPosition(1, 0), draft.Targets(CellNumberOrder.FrameTopLeft)[0].Cell);
+        var updated = draft.Build(CellNumberOrder.FrameTopLeft, " 01, 02 ");
+        AssertEqual("01", updated.Single(label => label.RelativeCell == new GridPosition(0, 0)).SeatName);
+        AssertEqual(true, updated.All(label => label.BlockName == "A"));
+        AssertEqual("old1", plan.SeatLabels[0].SeatName);
+        foreach (var input in new[] { "1", "1,2,3", "1, ", "1," + new string('x', 81) })
+        {
+            var rejected = false;
+            try { draft.Build(CellNumberOrder.VenueTopLeft, input); } catch (ArgumentException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
+        var partial = new CellNumberWizard(project, plan, cell => cell.X == 0);
+        var partialLabels = partial.Build(CellNumberOrder.FrameTopLeft, "X");
+        AssertEqual("old1", partialLabels.Single(label => label.RelativeCell == new GridPosition(0, 0)).SeatName);
+        AssertEqual("X", partialLabels.Single(label => label.RelativeCell == new GridPosition(1, 0)).SeatName);
+        var workspace = new ProjectWorkspace(project);
+        var commands = new EditorCommandController(workspace);
+        AssertEqual(true, commands.ReplaceSeatLabels(updated).Applied);
+        AssertEqual("frame", workspace.SelectedPlan.DeskPlacements[0].DeskNumber);
+        AssertEqual(true, commands.Undo());
+        AssertEqual("old1", workspace.SelectedPlan.SeatLabels[0].SeatName);
+        AssertEqual(true, commands.Redo());
+        AssertEqual("01", workspace.SelectedPlan.SeatLabels.Single(label => label.RelativeCell == new GridPosition(0, 0)).SeatName);
+        var reloaded = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project));
+        AssertEqual("01", reloaded.Plans[0].SeatLabels.Single(label => label.RelativeCell == new GridPosition(0, 0)).SeatName);
     }
 
     private static void BlockChannelDisplay()
