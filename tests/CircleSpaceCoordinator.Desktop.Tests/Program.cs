@@ -37,6 +37,7 @@ internal static class Program
             ("Block mappings collect frame labels and survive remote history and JSON", BlockStylesRoundTrip),
             ("Block view repeats labels every four cells and respects rotated seat footprints", BlockChannelDisplay),
             ("Cell number wizard orders rotated cells, validates lists and applies one undoable edit", CellNumberWizardEdits),
+            ("Cell numbering restarts per frame even when venue order interleaves frames", CellNumberFrameRepeat),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -833,6 +834,44 @@ internal static class Program
         AssertEqual("01", workspace.SelectedPlan.SeatLabels.Single(label => label.RelativeCell == new GridPosition(0, 0)).SeatName);
         var reloaded = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project));
         AssertEqual("01", reloaded.Plans[0].SeatLabels.Single(label => label.RelativeCell == new GridPosition(0, 0)).SeatName);
+    }
+
+    private static void CellNumberFrameRepeat()
+    {
+        var project = CreateProject();
+        var source = project.Plans[0];
+        var frames = Enumerable.Range(0, 3).Select(index => source.DeskPlacements[0] with
+        {
+            Id = $"frame-{index}", Anchor = new(index * 2, 0), Orientation = QuarterTurn.East,
+        }).ToArray();
+        var plan = source with { DeskPlacements = frames, Assignments = [], SeatLabels = [] };
+        var draft = new CellNumberWizard(project, plan);
+        AssertEqual(6, draft.Count);
+        AssertEqual("1, 2", draft.DefaultFrameNumbers);
+        foreach (var order in Enum.GetValues<CellNumberOrder>())
+        {
+            var built = draft.Build(order, "01, 02", repeatPerFrame: true);
+            foreach (var frame in frames)
+            {
+                AssertEqual("01", built.Single(label => label.DeskPlacementId == frame.Id && label.RelativeCell == new GridPosition(0, 0)).SeatName);
+                AssertEqual("02", built.Single(label => label.DeskPlacementId == frame.Id && label.RelativeCell == new GridPosition(1, 0)).SeatName);
+            }
+            var assigned = draft.AssignedNumbers(order, "01, 02", true);
+            var targets = draft.Targets(order);
+            for (var i = 0; i < targets.Count; i++)
+                AssertEqual(assigned[i], built.Single(label => label.DeskPlacementId == targets[i].FrameId && label.RelativeCell == targets[i].RelativeCell).SeatName);
+        }
+        var partial = new CellNumberWizard(project, plan, cell => cell.X == 0 || cell.Y == 0);
+        AssertEqual(4, partial.Count);
+        AssertEqual(2, partial.NumbersPerFrame);
+        AssertEqual("01", partial.Build(CellNumberOrder.VenueTopLeft, "01,02", true).Single(label => label.DeskPlacementId == "frame-1").SeatName);
+        foreach (var text in new[] { "1", "1,2,3", "1," })
+        {
+            var rejected = false;
+            try { draft.Build(CellNumberOrder.FrameTopLeft, text, true); } catch (ArgumentException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
+        AssertEqual(0, plan.SeatLabels.Count);
     }
 
     private static void BlockChannelDisplay()

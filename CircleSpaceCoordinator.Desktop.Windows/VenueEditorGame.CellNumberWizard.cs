@@ -41,33 +41,42 @@ public sealed partial class VenueEditorGame
         if (draft.Count == 0) { ShowInAppMessage("セル番号入力ウィザード", "対象の配置可能セルがありません。"); return; }
         var numbers = draft.DefaultNumbers;
         var order = CellNumberOrder.VenueTopLeft;
+        var repeatPerFrame = false;
         var scope = range is null ? "現在のフレーム配置全体" : "選択したセル範囲";
-        void ChooseOrder() => OpenSelection($"セル番号入力ウィザード 1/3：並び順（{draft.Count}セル）",
+        void ChooseMode() => OpenSelection("セル番号入力ウィザード 1/4：番号の割り当て",
+            ["対象全体で通し番号", "フレームごとに繰り返す（1, 2 ／ 1, 2 ／ …）"], repeatPerFrame ? 1 : 0, index =>
+            {
+                var repeat = index == 1;
+                if (repeat != repeatPerFrame) numbers = repeat ? draft.DefaultFrameNumbers : draft.DefaultNumbers;
+                repeatPerFrame = repeat;
+                ChooseOrder();
+            });
+        void ChooseOrder() => OpenSelection($"セル番号入力ウィザード 2/4：並び順（{draft.Count}セル）",
             ["会場の左上を先頭とする（左→右、上→下）", "セルが上向きのときの左上を先頭とする（フレームごと）"],
-            (int)order, index => { order = (CellNumberOrder)index; EditNumbers(); });
-        void EditNumbers() => OpenUnderlineInput("セル番号入力ウィザード 2/3：番号リスト", numbers, value =>
+            (int)order, index => { order = (CellNumberOrder)index; EditNumbers(); }, ChooseMode);
+        void EditNumbers() => OpenUnderlineInput("セル番号入力ウィザード 3/4：番号リスト", numbers, value =>
         {
-            draft.ParseNumbers(value);
+            draft.ParseNumbers(value, repeatPerFrame);
             numbers = value;
             Preview();
-        }, $"対象：{scope}、{draft.Count}セル。カンマ区切りで{draft.Count}個指定します。\n例：1, 2, 3 ／ 01, 02, 03 ／ A, B, C\nフレーム順は会場の上→下・左→右。番号は途中でリセットしません。",
+        }, $"対象：{scope}、{draft.Count}セル。カンマ区切りで{(repeatPerFrame ? draft.NumbersPerFrame : draft.Count)}個指定します。\n例：1, 2, 3 ／ 01, 02, 03 ／ A, B, C\nフレーム順は会場の上→下・左→右。{(repeatPerFrame ? "各フレームの対象セルで先頭から使います。小さいフレームは先頭部分だけを使います。" : "番号は途中でリセットしません。")}",
             Math.Max(4096, draft.Count * 82), cancelled: ChooseOrder);
         void Preview()
         {
-            var values = draft.ParseNumbers(numbers);
+            var values = draft.AssignedNumbers(order, numbers, repeatPerFrame);
             var targets = draft.Targets(order);
             var lines = targets.Take(6).Select((target, index) =>
                 $"セル ({target.Cell.X}, {target.Cell.Y}) → {values[index]}");
-            var message = $"対象：{scope}、{draft.Count}セル\n並び順：{(order == CellNumberOrder.VenueTopLeft ? "会場の左上" : "フレーム内の左上（上向き基準）")}\n既存のセル番号を置き換えます。ブロック番号・フレーム番号は保持します。\n\n" +
+            var message = $"対象：{scope}、{draft.Count}セル\n割り当て：{(repeatPerFrame ? "フレームごとに繰り返す" : "全体で通し番号")}\n並び順：{(order == CellNumberOrder.VenueTopLeft ? "会場の左上" : "フレーム内の左上（上向き基準）")}\n既存のセル番号を置き換えます。ブロック番号・フレーム番号は保持します。\n\n" +
                 string.Join("\n", lines) + (draft.Count > 6 ? $"\nほか{draft.Count - 6}セル" : "") + "\n\n適用後は1回のUndoで戻せます。";
-            OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "セル番号入力ウィザード 3/3：確認", message), action =>
+            OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "セル番号入力ウィザード 4/4：確認", message), action =>
             {
                 if (action != ModalDialogAction.Accept) { EditNumbers(); return; }
                 try
                 {
                     if (workspace != owner || owner.SelectedPlanId != plan.Id || !ReferenceEquals(owner.Project, sourceProject))
                         throw new InvalidOperationException("編集対象が変わりました。ウィザードを開き直してください。");
-                    var result = commands.ReplaceSeatLabels(draft.Build(order, numbers));
+                    var result = commands.ReplaceSeatLabels(draft.Build(order, numbers, repeatPerFrame));
                     if (!result.Applied)
                         throw new InvalidOperationException("セル番号を変更できませんでした。\n" + FormatIssues(result.Issues));
                     rangeSwapStatus = $"{draft.Count}セルの番号を一括入力しました";
@@ -75,6 +84,6 @@ public sealed partial class VenueEditorGame
                 catch (Exception exception) { ShowNotice("セル番号入力ウィザード", exception.Message, EditNumbers); }
             }, [("戻る", ModalDialogAction.Cancel), ("適用", ModalDialogAction.Accept)]);
         }
-        ChooseOrder();
+        ChooseMode();
     }
 }
