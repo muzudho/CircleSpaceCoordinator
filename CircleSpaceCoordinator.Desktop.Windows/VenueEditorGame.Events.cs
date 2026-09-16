@@ -153,9 +153,11 @@ public sealed partial class VenueEditorGame
             var item = eventProjects[index];
             var bounds = EventRowBounds(row);
             var button = new IconButtonModel(bounds, item.Project.DisplayName) { IsSelected = index == eventSelection };
-            StationeryButtonRenderer.Draw(button,
+            button.UpdatePointer(new ScreenPoint(previousMouse.X, previousMouse.Y));
+            OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)), (_, _) => { });
+            if (eventFocus < 0 && index == eventSelection) DrawOutline(bounds, 2, OperationTargetColor);
             Text((item.Confidential ? "（秘） " : "") + item.Project.DisplayName, new(bounds.X + 10, bounds.Y + 5, bounds.Width - 20, 24), 19, true);
             var detail = !item.Exists ? "ファイルが見つかりません：" + item.Project.Path : item.Error ?? item.Project.Path;
             var maxCharacters = Math.Max(12, (int)((bounds.Width - 20) / 8));
@@ -171,11 +173,12 @@ public sealed partial class VenueEditorGame
         for (var index = 0; index < eventButtons.Count; index++)
         {
             var button = eventButtons[index].Button;
-            button.IsSelected = eventFocus == index;
-            StationeryButtonRenderer.Draw(button,
+            button.IsSelected = false;
+            OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 5), ToButtonColor(color), 17, true));
+            if (eventFocus == index && button.IsEnabled) DrawOutline(button.Bounds, 2, OperationTargetColor);
         }
         Text($"{eventProjects.Count} 件　↑↓：選択　Enter：開く　Tab：操作へ移動　ホイール：スクロール",
             new(24, GraphicsDevice.Viewport.Height - 48, GraphicsDevice.Viewport.Width - 48, 28), 16);

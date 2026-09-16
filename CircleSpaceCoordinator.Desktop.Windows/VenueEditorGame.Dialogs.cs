@@ -213,13 +213,14 @@ public sealed partial class VenueEditorGame
         for (var index = 0; index < modalButtons.Count; index++)
         {
             var button = modalButtons[index].Button;
-            button.IsSelected = index == modalFocus;
+            button.IsSelected = false;
             button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
-            StationeryButtonRenderer.Draw(button,
+            OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => textRenderer?.Draw(exportPlanChoices is { } choices && modalButtons[index].Action == ModalDialogAction.Accept && selectionIndex >= choices.Count
                     ? "未決定に戻す" : button.AccessibleName, ToRectangle(area, 5), ToButtonColor(color), 17, true));
+            if (index == modalFocus && button.IsEnabled) DrawOutline(button.Bounds, 2, OperationTargetColor);
         }
         DrawTextInputHelp();
     }

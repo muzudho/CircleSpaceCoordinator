@@ -175,7 +175,7 @@ public sealed partial class VenueEditorGame
             var button = toolRingButtons[index];
             // Ring entries choose a tool; keyboard focus is not an active-tool selection.
             button.IsSelected = false;
-            StationeryButtonRenderer.Draw(button,
+            OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) =>

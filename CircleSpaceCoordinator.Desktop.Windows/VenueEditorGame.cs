@@ -2953,7 +2953,7 @@ public sealed partial class VenueEditorGame : Game
             DrawRectangle(new ScreenRectangle(separatorX, 65d, 1d, 32d), new Color(80, 87, 98));
         foreach (var button in toolbarButtons)
         {
-            StationeryButtonRenderer.Draw(button.Model,
+            OperationButtonRenderer.Draw(button.Model,
                 (bounds, color) => DrawRectangle(bounds, ToButtonColor(color)),
                 (bounds, thickness, color) => DrawOutline(bounds, thickness, ToButtonColor(color)),
                 (bounds, color) =>

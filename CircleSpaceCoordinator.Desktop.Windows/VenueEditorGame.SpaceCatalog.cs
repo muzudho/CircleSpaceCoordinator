@@ -188,7 +188,7 @@ public sealed partial class VenueEditorGame
         textRenderer?.Draw("次に配置", ToRectangle(new ScreenRectangle(bounds.X + 8, bounds.Y + 5, 204, 26)), Color.White, 18, true);
         var selectionButton = NextSpaceSelectionButton;
         selectionButton.UpdatePointer(CanShowEditorHover ? new ScreenPoint(Mouse.GetState().X, Mouse.GetState().Y) : new ScreenPoint(-1, -1));
-        StationeryButtonRenderer.Draw(selectionButton,
+        OperationButtonRenderer.Draw(selectionButton,
             (area, color) => DrawRectangle(area, ToButtonColor(color)),
             (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
             (area, color) => textRenderer?.Draw(selectionButton.AccessibleName, ToRectangle(area, 4), ToButtonColor(color), 16, true));
@@ -202,7 +202,7 @@ public sealed partial class VenueEditorGame
         textRenderer?.Draw(FormatOrientation(nextDeskOrientation), ToRectangle(new ScreenRectangle(bounds.X + 110, bounds.Y + 94, 100, 22)), Color.LightGray, 15);
         var button = NextDirectionButton;
         button.UpdatePointer(CanShowEditorHover ? new ScreenPoint(Mouse.GetState().X, Mouse.GetState().Y) : new ScreenPoint(-1, -1));
-        StationeryButtonRenderer.Draw(button,
+        OperationButtonRenderer.Draw(button,
             (area, color) => DrawRectangle(area, ToButtonColor(color)),
             (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
             (area, color) =>
@@ -225,7 +225,7 @@ public sealed partial class VenueEditorGame
         for (var index = 0; index < catalogButtons.Count; index++)
         {
             var button = catalogButtons[index].Model;
-            StationeryButtonRenderer.Draw(button,
+            OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) =>

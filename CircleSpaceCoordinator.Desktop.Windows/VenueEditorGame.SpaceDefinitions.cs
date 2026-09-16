@@ -150,7 +150,7 @@ public sealed partial class VenueEditorGame
     {
         if (spaceButtons.Count == 0) BuildSpaceButtons();
         foreach (var item in spaceButtons)
-            StationeryButtonRenderer.Draw(item.Button,
+            OperationButtonRenderer.Draw(item.Button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => textRenderer?.Draw(item.Button.AccessibleName, ToRectangle(area, 4), ToButtonColor(color), 17, true));

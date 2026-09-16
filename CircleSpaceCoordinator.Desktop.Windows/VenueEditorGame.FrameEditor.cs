@@ -304,7 +304,7 @@ public sealed partial class VenueEditorGame
                 DrawRectangle(bounds, FrameCellColor);
                 DrawOutline(bounds, 1, Color.Gray);
                 if (area > 0) DrawFrameCellMarker(bounds);
-                if (frameFocus < 0 && x == frameX && y == frameY) DrawOutline(bounds, 2, Color.White);
+                if (frameFocus < 0 && x == frameX && y == frameY) DrawOutline(bounds, 2, OperationTargetColor);
             }
             ScreenPoint Centre(GridPosition cell)
             {
@@ -330,11 +330,11 @@ public sealed partial class VenueEditorGame
         for (var i = 0; i < frameButtons.Count; i++)
         {
             var button = frameButtons[i].Button;
-            StationeryButtonRenderer.Draw(button,
+            OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 3), ToButtonColor(color), Math.Max(10, (int)(17 * FrameScale)), true));
-            if (frameFocus == i) DrawOutline(button.Bounds, 2, Color.White);
+            if (frameFocus == i && button.IsEnabled) DrawOutline(button.Bounds, 2, OperationTargetColor);
         }
     }
 }

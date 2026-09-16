@@ -25,10 +25,9 @@ public sealed partial class VenueEditorGame
             var x = 20 + slot % FrameTargetColumns * 224;
             var y = 206 + slot / FrameTargetColumns * 164;
             var bounds = FrameTargetCard(slot);
-            DrawRectangle(bounds, selected ? new Color(26, 82, 73) : new Color(35, 43, 54));
-            DrawOutline(bounds, 1, selected ? Color.Teal : new Color(65, 76, 92));
+            DrawRectangle(bounds, selected ? new Color(35, 126, 111) : new Color(35, 43, 54));
             if (Contains(bounds, pointer) || frameFocus < 0 && index == frameTargetSelection)
-                DrawOutline(bounds, 2, Color.Turquoise);
+                DrawOutline(bounds, 2, OperationTargetColor);
             DrawSpaceTypePreview(item.Type, QuarterTurn.North, FrameBounds(x + 12, y + 8, 190, 86));
             var count = item.Type.Cells.Count(cell => cell.Area > 0);
             Text($"{(selected ? "☑" : "☐")} 配置可能 {count}セル", FrameBounds(x + 10, y + 97, 194, 23), 16);

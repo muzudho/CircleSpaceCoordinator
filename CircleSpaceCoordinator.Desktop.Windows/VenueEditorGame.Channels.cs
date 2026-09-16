@@ -60,7 +60,7 @@ public sealed partial class VenueEditorGame
     {
         var button = new IconButtonModel(BlockStyleButton(), "ブロック番号と色・網掛けパターンの対応を編集する");
         button.UpdatePointer(CanShowEditorHover ? new ScreenPoint(previousMouse.X, previousMouse.Y) : new ScreenPoint(-1, -1));
-        StationeryButtonRenderer.Draw(button,
+        OperationButtonRenderer.Draw(button,
             (bounds, color) => DrawRectangle(bounds, ToButtonColor(color)),
             (bounds, thickness, color) => DrawOutline(bounds, thickness, ToButtonColor(color)),
             (bounds, color) => DrawToolbarIcon(ToolbarAction.EditGenreStyles, bounds, ToButtonColor(color)));

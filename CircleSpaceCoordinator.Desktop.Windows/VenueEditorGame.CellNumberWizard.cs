@@ -15,7 +15,7 @@ public sealed partial class VenueEditorGame
     {
         var button = new IconButtonModel(BlockStyleButton(), selectedNumberChannel == 1 ? "旗からフレーム番号を自動連番" : "セル番号入力ウィザード");
         button.UpdatePointer(CanShowEditorHover ? new ScreenPoint(previousMouse.X, previousMouse.Y) : new(-1, -1));
-        StationeryButtonRenderer.Draw(button,
+        OperationButtonRenderer.Draw(button,
             (area, color) => DrawRectangle(area, ToButtonColor(color)),
             (area, width, color) => DrawOutline(area, width, ToButtonColor(color)),
             (area, color) =>

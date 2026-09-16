@@ -264,7 +264,7 @@ public sealed partial class VenueEditorGame
                 }
                 DrawOutline(bounds, 1, new Color(100, 119, 130));
                 if (mappingPickerColumn == 0 && mappingFocus < 0 && mappingRow == mappingScroll + row && mappingColumn == column)
-                    DrawOutline(bounds, 2, Color.Turquoise);
+                    DrawOutline(bounds, 2, OperationTargetColor);
             }
         }
         if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
@@ -283,7 +283,7 @@ public sealed partial class VenueEditorGame
         {
             var item = mappingEditorButtons[index];
             var button = item.Button;
-            StationeryButtonRenderer.Draw(button,
+            OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => { if (item.ColorId is null && item.PatternId is null) Text(button.AccessibleName, area, 17, ToButtonColor(color)); });
@@ -302,7 +302,7 @@ public sealed partial class VenueEditorGame
                 DrawGenrePattern(inside, GenrePatternFromId(pattern), Color.White, 255);
                 Text(button.AccessibleName, new(bounds.X + 4, bounds.Y + bounds.Height * 0.73, bounds.Width - 8, bounds.Height * 0.23), 15);
             }
-            if (mappingFocus == index) DrawOutline(bounds, 2, Color.Turquoise);
+            if (mappingFocus == index && button.IsEnabled) DrawOutline(bounds, 2, OperationTargetColor);
         }
     }
 
