@@ -2505,7 +2505,7 @@ public sealed partial class VenueEditorGame : Game
         var modeSpecificActions = editorMode switch
         {
             EditorMode.ParticipantData => [ToolbarAction.ImportParticipants, ToolbarAction.Undo, ToolbarAction.Redo],
-            EditorMode.CirclePlacementDecision => [ToolbarAction.SelectExportPlan, ToolbarAction.SelectExportTarget, ToolbarAction.SelectExportColumns, ToolbarAction.ExportSeatAssignments, ToolbarAction.Undo, ToolbarAction.Redo],
+            EditorMode.CirclePlacementDecision => [ToolbarAction.SelectExportTarget, ToolbarAction.SelectExportColumns, ToolbarAction.ExportSeatAssignments, ToolbarAction.Undo, ToolbarAction.Redo],
             EditorMode.DeskPlacement => deskActions,
             EditorMode.IslandDefinition => islandActions,
             EditorMode.GenrePlacement => genreActions,
@@ -2534,6 +2534,9 @@ public sealed partial class VenueEditorGame : Game
                 new IconButtonModel(new ScreenRectangle(actionX, 59d, buttonWidth, 44d), GetAccessibleName(action))));
             actionX += buttonWidth + 5d;
         }
+        if (editorMode == EditorMode.CirclePlacementDecision)
+            toolbarButtons.Add(new ToolbarButton(ToolbarAction.SelectExportPlan,
+                new IconButtonModel(new ScreenRectangle(192, 184, 84, 32), GetAccessibleName(ToolbarAction.SelectExportPlan))));
     }
 
     // Canvas tools share activeCanvasTool; the analysis toggle has independent state.
@@ -2966,7 +2969,7 @@ public sealed partial class VenueEditorGame : Game
                             ToolbarAction.ImportParticipants => "Excel / CSV 読込",
                             ToolbarAction.SelectExportTarget => "出力先",
                             ToolbarAction.SelectExportColumns => "出力列",
-                            ToolbarAction.SelectExportPlan => "確定する配置案を選択",
+                            ToolbarAction.SelectExportPlan => "変更",
                             _ => "書き出す",
                         }, ToRectangle(bounds, 5), foreground, 16, true);
                     else if (button.Action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu)

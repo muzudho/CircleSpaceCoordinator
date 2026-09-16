@@ -130,7 +130,21 @@ public sealed partial class VenueEditorGame
             ToRectangle(new ScreenRectangle(area.X, bounds.Y + bounds.Height - 82, area.Width, 22)), Color.LightGray, 12);
     }
 
-    private void DrawExportPlanPreview(CircleSpaceProject project, Plan plan, ScreenRectangle area)
+    private void DrawCurrentExportPlan()
+    {
+        if (workspace is null) return;
+        var project = workspace.Project;
+        var plan = CircleSeatExportBuilder.GetExportPlan(project);
+        DrawRectangle(new ScreenRectangle(12, 118, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 104), new Color(24, 34, 44));
+        var preview = new ScreenRectangle(20, 122, 156, 92);
+        if (plan is not null) DrawExportPlanPreview(project, plan, preview, compact: true);
+        else textRenderer?.Draw("未選択", ToRectangle(preview, 8), Color.LightGray, 18);
+        var textWidth = Math.Max(1, GraphicsDevice.Viewport.Width - 212);
+        textRenderer?.Draw("書き出すサークル配置案", new Rectangle(192, 122, textWidth, 24), Color.LightGray, 16);
+        textRenderer?.Draw(plan?.Name ?? "未決定（［変更］から選択）", new Rectangle(192, 148, textWidth, 30), Color.White, 22, true);
+    }
+
+    private void DrawExportPlanPreview(CircleSpaceProject project, Plan plan, ScreenRectangle area, bool compact = false)
     {
         var types = project.DeskTypes.ToDictionary(item => item.Id);
         var cells = plan.DeskPlacements.SelectMany(desk => desk.GetOccupiedCells(types[desk.DeskTypeId])).ToArray();
@@ -139,9 +153,10 @@ public sealed partial class VenueEditorGame
         var minY = Math.Min(0, allCells.Select(cell => cell.Y).DefaultIfEmpty(0).Min());
         var maxX = Math.Max(project.Venue.Width, allCells.Select(cell => cell.X + 1).DefaultIfEmpty(1).Max());
         var maxY = Math.Max(project.Venue.Height, allCells.Select(cell => cell.Y + 1).DefaultIfEmpty(1).Max());
-        var scale = Math.Max(0.01, Math.Min((area.Width - 24) / Math.Max(1, maxX - minX), (area.Height - 54) / Math.Max(1, maxY - minY)));
+        var bottomPadding = compact ? 24 : 54;
+        var scale = Math.Max(0.01, Math.Min((area.Width - 24) / Math.Max(1, maxX - minX), (area.Height - bottomPadding) / Math.Max(1, maxY - minY)));
         var x = area.X + (area.Width - (maxX - minX) * scale) / 2;
-        var y = area.Y + 12 + (area.Height - 54 - (maxY - minY) * scale) / 2;
+        var y = area.Y + 12 + (area.Height - bottomPadding - (maxY - minY) * scale) / 2;
         ScreenRectangle Cell(GridPosition cell) => new(x + (cell.X - minX) * scale, y + (cell.Y - minY) * scale, scale, scale);
         DrawOutline(new ScreenRectangle(x - minX * scale, y - minY * scale, project.Venue.Width * scale, project.Venue.Height * scale), 1, Color.LightGray);
         foreach (var cell in project.Venue.BlockedCells) DrawRectangle(Cell(cell), new Color(90, 96, 105));
@@ -164,7 +179,7 @@ public sealed partial class VenueEditorGame
             if (scale >= 24 && assignment.OccupiedCells.Count > 0 && participant is not null)
                 textRenderer?.Draw(participant.DisplayName, ToRectangle(Cell(assignment.OccupiedCells.OrderBy(cell => cell.Y).ThenBy(cell => cell.X).First())), Color.White, 10);
         }
-        textRenderer?.Draw($"配置済み {plan.Assignments.Count} ／ 仮置き {plan.TemporaryPlacements.Count} ／ 未配置 {project.Participants.Count - plan.Assignments.Count - plan.TemporaryPlacements.Count}",
+        if (!compact) textRenderer?.Draw($"配置済み {plan.Assignments.Count} ／ 仮置き {plan.TemporaryPlacements.Count} ／ 未配置 {project.Participants.Count - plan.Assignments.Count - plan.TemporaryPlacements.Count}",
             ToRectangle(new ScreenRectangle(area.X + 8, area.Y + area.Height - 30, area.Width - 16, 24)), Color.LightGray, 13);
     }
 }

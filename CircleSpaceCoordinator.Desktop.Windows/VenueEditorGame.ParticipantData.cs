@@ -38,7 +38,7 @@ public sealed partial class VenueEditorGame
         var width = Math.Max(1, GraphicsDevice.Viewport.Width - 24 - 60 - 18);
         var cellWidth = Math.Min(180d, width);
         var columns = Math.Max(1, (int)(width / cellWidth));
-        var top = editorMode == EditorMode.CirclePlacementDecision ? 246 : 182;
+        var top = editorMode == EditorMode.CirclePlacementDecision ? 358 : 182;
         var rows = Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - top - 30 - 18 - 12) / 28);
         return (new ScreenRectangle(72, top, columns * cellWidth, 30 + rows * 28), rows, columns, cellWidth);
     }
@@ -170,16 +170,19 @@ public sealed partial class VenueEditorGame
             tableTextPage = page;
         }
         var ink = new Color(222, 234, 240);
+        var headerOffset = editorMode == EditorMode.CirclePlacementDecision ? 112 : 0;
+        if (editorMode == EditorMode.CirclePlacementDecision) DrawCurrentExportPlan();
         tableTextRenderer!.Draw($"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　{table.SourceDescription}　{table.RowCount:N0} 行 × {table.ColumnCount:N0} 列",
-            new Rectangle(12, 118, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), ink, 17, true);
+            new Rectangle(12, 118 + headerOffset, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), ink, 17, true);
         var exportPlan = CircleSeatExportBuilder.GetExportPlan(workspace.Project);
         var exportTarget = exportPlan is null ? "配置案　未決定" : $"配置決定案: {exportPlan.Name}";
-        tableTextRenderer.Draw($"{exportTarget}　｜　表示: {Math.Min(table.RowCount, tableScroll.Row + 1)}～{Math.Min(table.RowCount, tableScroll.Row + layout.Rows)} 行 / {tableScroll.Column + 1}～{Math.Min(table.ColumnCount, tableScroll.Column + layout.Columns)} 列",
-            new Rectangle(12, 150, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 26), ink, 15);
+        var planPrefix = editorMode == EditorMode.CirclePlacementDecision ? "" : exportTarget + "　｜　";
+        tableTextRenderer.Draw($"{planPrefix}表示: {Math.Min(table.RowCount, tableScroll.Row + 1)}～{Math.Min(table.RowCount, tableScroll.Row + layout.Rows)} 行 / {tableScroll.Column + 1}～{Math.Min(table.ColumnCount, tableScroll.Column + layout.Columns)} 列",
+            new Rectangle(12, 150 + headerOffset, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 26), ink, 15);
         if (editorMode == EditorMode.CirclePlacementDecision)
         {
-            tableTextRenderer.Draw(ExportColumnsSummary, new Rectangle(12, 180, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), new Color(255, 218, 130), 15, true);
-            tableTextRenderer.Draw(exportPreviewStatus, new Rectangle(12, 212, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), ink, 15);
+            tableTextRenderer.Draw(ExportColumnsSummary, new Rectangle(12, 180 + headerOffset, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), new Color(255, 218, 130), 15, true);
+            tableTextRenderer.Draw(exportPreviewStatus, new Rectangle(12, 212 + headerOffset, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), ink, 15);
         }
         for (var c = 0; c < Math.Min(layout.Columns, table.ColumnCount - tableScroll.Column); c++)
         {
