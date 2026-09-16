@@ -2226,7 +2226,6 @@ public sealed partial class VenueEditorGame : Game
         tokens.AddRange(workspace.SelectedPlan.TemporaryPlacements.Select(item => new ParticipantToken(
             item.ParticipantId, item.ScoringPosition, item.OccupiedCells.ToArray(),
             combinedIds.GetValueOrDefault(item.ParticipantId) ?? item.CombinedSpaceId, false, participantNumbers[item.ParticipantId])));
-        AddUnassignedTokens(tokens, snapshot, participantNumbers);
         return tokens;
     }
 
@@ -2269,53 +2268,6 @@ public sealed partial class VenueEditorGame : Game
             ToRectangle(bounds, 2), Color.White, 14, true);
     }
 
-    private void AddUnassignedTokens(
-        List<ParticipantToken> tokens,
-        PlanSnapshot snapshot,
-        IReadOnlyDictionary<string, int> participantNumbers)
-    {
-        if (workspace is null)
-            return;
-        var occupied = snapshot.Desks.SelectMany(desk => desk.OccupiedCells)
-            .Concat(workspace.Project.Venue.BlockedCells)
-            .Concat(tokens.SelectMany(token => token.DisplayCells))
-            .ToHashSet();
-        var free = Enumerable.Range(0, workspace.Project.Venue.Height)
-            .SelectMany(y => Enumerable.Range(0, workspace.Project.Venue.Width).Select(x => new GridPosition(x, y)))
-            .Where(cell => !occupied.Contains(cell))
-            .ToHashSet();
-        var combinedIds = BuildCombinedParticipantIds();
-        var overflowIndex = 0;
-
-        foreach (var group in snapshot.UnassignedParticipants
-                     .Where(participant => workspace.SelectedPlan.TemporaryPlacements.All(item => item.ParticipantId != participant.ParticipantId))
-                     .GroupBy(participant => combinedIds.GetValueOrDefault(participant.ParticipantId) ?? $"single:{participant.ParticipantId}"))
-        {
-            var members = group.ToArray();
-            if (members.Length == 2 && members.All(member => member.RequiredCellCount == 1))
-            {
-                var pairCells = TakeAdjacentCells(free, ref overflowIndex);
-                for (var index = 0; index < members.Length; index++)
-                    AddToken(members[index], [pairCells[index]]);
-                continue;
-            }
-
-            foreach (var participant in members)
-                AddToken(participant, TakeCells(free, participant.RequiredCellCount, ref overflowIndex));
-        }
-
-        void AddToken(UnassignedParticipantView participant, IReadOnlyList<GridPosition> displayCells)
-        {
-            tokens.Add(new ParticipantToken(
-                participant.ParticipantId,
-                displayCells[0],
-                displayCells,
-                combinedIds.GetValueOrDefault(participant.ParticipantId),
-                false,
-                participantNumbers[participant.ParticipantId]));
-        }
-    }
-
     private Dictionary<string, string?> BuildCombinedParticipantIds()
     {
         if (workspace is null)
@@ -2337,59 +2289,6 @@ public sealed partial class VenueEditorGame : Game
             result[partner.Id] = combinedId;
         }
         return result;
-    }
-
-    private GridPosition[] TakeCells(HashSet<GridPosition> free, int count, ref int overflowIndex)
-    {
-        foreach (var first in free.OrderBy(cell => cell.Y).ThenBy(cell => cell.X))
-        {
-            var cells = Enumerable.Range(0, count).Select(offset => new GridPosition(first.X + offset, first.Y)).ToArray();
-            if (!cells.All(free.Contains))
-                continue;
-            foreach (var cell in cells)
-                free.Remove(cell);
-            return cells;
-        }
-        while (true)
-        {
-            var overflow = TakeOverflowCell(ref overflowIndex);
-            overflowIndex += Math.Max(0, count - 1);
-            var cells = Enumerable.Range(0, count).Select(offset => new GridPosition(overflow.X + offset, overflow.Y)).ToArray();
-            if (workspace?.SelectedPlan.TemporaryPlacements.Any(item => item.OccupiedCells.Overlaps(cells)) != true)
-                return cells;
-        }
-    }
-
-    private GridPosition[] TakeAdjacentCells(HashSet<GridPosition> free, ref int overflowIndex)
-    {
-        foreach (var left in free.OrderBy(cell => cell.Y).ThenBy(cell => cell.X))
-        {
-            var right = new GridPosition(left.X + 1, left.Y);
-            if (!free.Contains(right))
-                continue;
-            free.Remove(left);
-            free.Remove(right);
-            return [left, right];
-        }
-        return TakeCells([], 2, ref overflowIndex);
-    }
-
-    private GridPosition TakeCell(HashSet<GridPosition> free, ref int overflowIndex)
-    {
-        var cell = free.OrderBy(item => item.Y).ThenBy(item => item.X).FirstOrDefault();
-        if (free.Remove(cell))
-            return cell;
-        return TakeOverflowCell(ref overflowIndex);
-    }
-
-    private GridPosition TakeOverflowCell(ref int overflowIndex)
-    {
-        var width = Math.Max(2, workspace?.Project.Venue.Width ?? 2);
-        var cell = new GridPosition(overflowIndex % width, (workspace?.Project.Venue.Height ?? 0) + 1 + overflowIndex / width);
-        overflowIndex++;
-        if (workspace?.SelectedPlan.TemporaryPlacements.Any(item => item.OccupiedCells.Contains(cell)) == true)
-            return TakeOverflowCell(ref overflowIndex);
-        return cell;
     }
 
     private void DrawCombinedConnector(ParticipantToken first, ParticipantToken second, bool requirementsSatisfied)
@@ -2559,7 +2458,6 @@ public sealed partial class VenueEditorGame : Game
         {
             ToolbarAction.MoveDesk,
             ToolbarAction.DeskMenu,
-            ToolbarAction.RemoveDesk,
             ToolbarAction.EditSeatName,
             ToolbarAction.SwapAddresses,
             ToolbarAction.PillarMenu,
@@ -2918,28 +2816,14 @@ public sealed partial class VenueEditorGame : Game
                 ? (false, "target=none")
                 : (false, $"issues={FormatIssues(result.Issues)}");
 
-        EditorCommandResult RemoveFrameAt(GridPosition position, bool unassignParticipants = false)
+        EditorCommandResult RemoveFrameAt(GridPosition position)
         {
-            var removal = commandController.RemoveDeskAt(position, unassignParticipants);
+            var removal = commandController.RemoveDeskAt(position);
             if (removal.Applied)
             {
                 selectedCellRange = null;
                 selectedFrameIds.Clear();
                 rangeSwapStatus = "フレーム本体を削除しました。Ctrl＋Zで元に戻せます。";
-            }
-            else if (!unassignParticipants && removal.Issues.Any(issue => issue.Code == "assignment.cell.withoutDesk"))
-            {
-                var owner = workspace;
-                var project = workspace!.Project;
-                var planId = workspace.SelectedPlanId;
-                OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "フレーム本体を削除",
-                    "このフレームにはサークルが配置されています。\nフレームを共有するすべての配置案で、該当サークルを未配置に戻して削除しますか？\n\nフレームの番地・接続も削除します。サークルの登録情報は残ります。\nCtrl＋Zで元に戻せます。"), action =>
-                {
-                    if (action != ModalDialogAction.Accept) return;
-                    if (workspace != owner || workspace.SelectedPlanId != planId || !ReferenceEquals(workspace.Project, project))
-                    { ShowInAppMessage("フレーム削除", "編集対象が変わりました。削除するフレームを選び直してください。"); return; }
-                    RemoveFrameAt(position, unassignParticipants: true);
-                }, [("キャンセル", ModalDialogAction.Cancel), ("未配置に戻して削除", ModalDialogAction.Accept)]);
             }
             else if (removal.Issues.Count > 0)
                 ShowInAppMessage("フレームを削除できません", string.Join("\n", removal.Issues.Select(issue => issue.Message)));

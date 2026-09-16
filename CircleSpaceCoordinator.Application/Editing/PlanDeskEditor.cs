@@ -37,8 +37,7 @@ public static class PlanDeskEditor
     public static CircleSpaceProject RemoveDesk(
         CircleSpaceProject project,
         string planId,
-        string deskPlacementId,
-        bool unassignParticipants = false)
+        string deskPlacementId)
     {
         ArgumentNullException.ThrowIfNull(project);
         ArgumentException.ThrowIfNullOrWhiteSpace(planId);
@@ -58,18 +57,15 @@ public static class PlanDeskEditor
             .Select(layout => layout.Id).Append(planId).ToHashSet(StringComparer.Ordinal);
         Plan RemoveFrom(Plan current)
         {
-            var combined = current.Assignments.Where(item => item.OccupiedCells.Overlaps(removedCells))
-                .Select(item => item.CombinedSpaceId).OfType<string>().ToHashSet(StringComparer.Ordinal);
+            var displaced = current.Assignments.Where(item => item.OccupiedCells.Overlaps(removedCells)).ToArray();
             return current with
             {
                 DeskPlacements = current.DeskPlacements.Where(item => item.Id != deskPlacementId).ToArray(),
                 SeatLabels = current.SeatLabels.Where(item => item.DeskPlacementId != deskPlacementId).ToArray(),
                 IslandConnectors = current.IslandConnectors.Where(item => item.FirstDeskId != deskPlacementId && item.SecondDeskId != deskPlacementId).ToArray(),
                 DisabledIslandConnections = current.DisabledIslandConnections.Where(item => !removedCells.Contains(item.FirstCell) && !removedCells.Contains(item.SecondCell)).ToArray(),
-                Assignments = unassignParticipants ? current.Assignments.Where(item => !item.OccupiedCells.Overlaps(removedCells) &&
-                    (item.CombinedSpaceId is null || !combined.Contains(item.CombinedSpaceId))).ToArray() : current.Assignments,
-                TemporaryPlacements = unassignParticipants ? current.TemporaryPlacements.Where(item =>
-                    item.CombinedSpaceId is null || !combined.Contains(item.CombinedSpaceId)).ToArray() : current.TemporaryPlacements,
+                Assignments = current.Assignments.Except(displaced).ToArray(),
+                TemporaryPlacements = [.. current.TemporaryPlacements, .. displaced],
             };
         }
         var result = project with { Plans = project.Plans.Select(item => affectedPlans.Contains(item.Id) ? RemoveFrom(item) : item).ToArray() };

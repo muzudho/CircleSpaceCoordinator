@@ -254,8 +254,10 @@ public static class ProjectValidator
                 add("temporary.position", temporaryPath, "Temporary position must be an occupied cell.");
             foreach (var cell in temporary.OccupiedCells)
             {
-                if (deskCells.Contains(cell) || venue.BlockedCells.Contains(cell))
-                    add("temporary.cell.obstructed", temporaryPath, "Temporary placement overlaps a desk or pillar.");
+                // Removing a frame can leave part of a multi-cell circle on a surviving frame.
+                // Keep its coordinates until it is explicitly assigned again.
+                if (venue.BlockedCells.Contains(cell))
+                    add("temporary.cell.obstructed", temporaryPath, "Temporary placement overlaps a pillar.");
                 if (!assignedCells.Add(cell))
                     add("temporary.cell.overlap", temporaryPath, "Temporary placements overlap.");
             }

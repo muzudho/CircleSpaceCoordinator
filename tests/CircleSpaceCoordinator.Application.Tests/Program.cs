@@ -39,7 +39,9 @@ internal static class Program
             ("Overlapping cell ranges cannot be swapped", OverlappingCellRangesCannotBeSwapped),
             ("An overlapping assignment is rejected", OverlappingAssignmentIsRejected),
             ("An unassigned desk can be added and removed", DeskCanBeAddedAndRemoved),
-            ("A desk with an assignment cannot be removed", AssignedDeskCannotBeRemoved),
+            ("Removing an assigned desk preserves circle positions", AssignedDeskRemovalPreservesPositions),
+            ("Frame deletion preserves combined circles and existing temporary positions", FrameDeletionPreservesCombinedCircles),
+            ("Partial frame deletion preserves a multi-cell circle during subsequent edits", PartialFrameDeletionPreservesPositions),
             ("An invalid new desk is rejected", InvalidNewDeskIsRejected),
             ("A plan can be renamed and undone", PlanCanBeRenamedAndUndone),
             ("A plan can be removed", PlanCanBeRemoved),
@@ -478,18 +480,55 @@ internal static class Program
         AssertEqual("desk-1", removed.Plans.Single().DeskPlacements.Single().Id);
     }
 
-    private static void AssignedDeskCannotBeRemoved()
+    private static void AssignedDeskRemovalPreservesPositions()
     {
-        try
+        var project = CreateProject();
+        var result = PlanDeskEditor.RemoveDesk(project, "plan-1", "desk-1");
+        var plan = result.Plans.Single(item => item.Id == "plan-1");
+        AssertEqual(false, plan.DeskPlacements.Any(item => item.Id == "desk-1"));
+        foreach (var original in project.Plans.Single(item => item.Id == "plan-1").Assignments)
         {
-            PlanDeskEditor.RemoveDesk(CreateProject(), "plan-1", "desk-1");
-            throw new InvalidOperationException("Expected removal of an assigned desk to fail.");
+            var preserved = plan.Assignments.Concat(plan.TemporaryPlacements).Single(item => item.ParticipantId == original.ParticipantId);
+            AssertEqual(original.ScoringPosition, preserved.ScoringPosition);
+            AssertEqual(true, original.OccupiedCells.SetEquals(preserved.OccupiedCells));
         }
-        catch (ProjectValidationException exception)
+        AssertEqual(true, plan.TemporaryPlacements.Count > 0);
+    }
+
+    private static void FrameDeletionPreservesCombinedCircles()
+    {
+        var source = CreateProject();
+        var participants = Enumerable.Range(0, 3).Select(index =>
+            new Participant($"circle-{index}", $"Circle {index}", 1, new Dictionary<string, double>())).ToArray();
+        var pair = participants.Take(2).Select((participant, index) =>
+            new ParticipantAssignment(participant.Id, new HashSet<GridPosition> { new(index, 0) }, new(index, 0))
+            { CombinedSpaceId = "pair" }).ToArray();
+        var parked = new ParticipantAssignment(participants[2].Id, new HashSet<GridPosition> { new(-2, 3) }, new(-2, 3));
+        var sourcePlan = source.Plans[0] with { Assignments = pair, TemporaryPlacements = [parked] };
+        var project = source with { Participants = participants, Plans = [sourcePlan] };
+        var plan = PlanDeskEditor.RemoveDesk(project, sourcePlan.Id, "desk-1").Plans[0];
+        AssertEqual(0, plan.Assignments.Count);
+        AssertEqual(3, plan.TemporaryPlacements.Count);
+        foreach (var original in pair.Append(parked))
+            AssertEqual(original, plan.TemporaryPlacements.Single(item => item.ParticipantId == original.ParticipantId));
+    }
+
+    private static void PartialFrameDeletionPreservesPositions()
+    {
+        var source = CreateProject();
+        var singleCell = new DeskType("single", "Single", [new GridPosition(0, 0)]);
+        var plan = source.Plans[0] with
         {
-            if (exception.Issues.All(issue => issue.Code != "assignment.cell.withoutDesk"))
-                throw;
-        }
+            DeskPlacements = [new("left", singleCell.Id, new(0, 0), QuarterTurn.North),
+                new("right", singleCell.Id, new(1, 0), QuarterTurn.North)],
+        };
+        var extra = new Participant("extra", "Extra", 1, new Dictionary<string, double>());
+        var project = source with { DeskTypes = [singleCell], Participants = [.. source.Participants, extra], Plans = [plan] };
+        var removed = PlanDeskEditor.RemoveDesk(project, plan.Id, "left");
+        AssertEqual(plan.Assignments[0], removed.Plans[0].TemporaryPlacements.Single());
+        var edited = TemporaryPlacementEditor.Park(removed, plan.Id, extra.Id, new HashSet<GridPosition> { new(-1, 2) }, new(-1, 2));
+        AssertEqual(plan.Assignments[0], edited.Plans[0].TemporaryPlacements.Single(item => item.ParticipantId != extra.Id));
+        AssertEqual(2, edited.Plans[0].TemporaryPlacements.Count);
     }
 
     private static void InvalidNewDeskIsRejected()

@@ -41,7 +41,7 @@ internal static class Program
             ("Island paths use seat cells while facing rectangles retain physical cells", IslandPathsUseSeats),
             ("Frame-defined connections survive editing, rotation, catalog and event persistence", FrameDefinedConnections),
             ("Address swaps preserve other channels and physical frames through remote history and JSON", AddressSwaps),
-            ("Deleting an occupied frame can unassign circles across shared layouts and undo all changes", OccupiedFrameDeletion),
+            ("Deleting an occupied frame preserves circle coordinates across shared layouts and undo", OccupiedFrameDeletion),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -1075,14 +1075,18 @@ internal static class Program
             var commands = new EditorCommandController(remote);
             AssertEqual(true, commands.DuplicateSelectedPlan().Applied);
             var before = ProjectJsonSerializer.Save(remote.Project);
-            AssertEqual(false, commands.RemoveDeskAt(new(0, 0)).Applied);
-            AssertEqual(before, ProjectJsonSerializer.Save(remote.Project));
-            AssertEqual(true, commands.RemoveDeskAt(new(0, 0), unassignParticipants: true).Applied);
+            AssertEqual(true, commands.RemoveDeskAt(new(0, 0)).Applied);
             AssertEqual(2, remote.Project.Plans.Count);
             foreach (var plan in remote.Project.Plans)
             {
                 AssertEqual("desk-2", plan.DeskPlacements.Single().Id);
                 AssertEqual(0, plan.Assignments.Count);
+                var preserved = plan.TemporaryPlacements.Single();
+                var original = source.Plans[0].Assignments.Single();
+                AssertEqual(original.ParticipantId, preserved.ParticipantId);
+                AssertEqual(original.ScoringPosition, preserved.ScoringPosition);
+                AssertEqual(true, original.OccupiedCells.SetEquals(preserved.OccupiedCells));
+                AssertEqual(original.CombinedSpaceId, preserved.CombinedSpaceId);
                 AssertEqual("desk-2", plan.SeatLabels.Single().DeskPlacementId);
                 AssertEqual(0, plan.IslandConnectors.Count);
                 AssertEqual(0, plan.DisabledIslandConnections.Count);

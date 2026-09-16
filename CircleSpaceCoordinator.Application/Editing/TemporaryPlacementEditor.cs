@@ -72,7 +72,9 @@ public static class TemporaryPlacementEditor
         var temporary = new List<ParticipantAssignment>();
         foreach (var item in all)
         {
-            if (!item.OccupiedCells.Any(deskCells.Contains)) temporary.Add(item);
+            if (plan.TemporaryPlacements.Any(existing => existing.ParticipantId == item.ParticipantId &&
+                existing.OccupiedCells.SetEquals(item.OccupiedCells))) temporary.Add(item);
+            else if (!item.OccupiedCells.Any(deskCells.Contains)) temporary.Add(item);
             else if (desks.Any(cells => cells.IsSupersetOf(item.OccupiedCells))) assigned.Add(item);
             else throw Invalid("temporary.destination.partialDesk", "机と通路にまたがらない位置に置いてください。");
         }
