@@ -38,6 +38,7 @@ internal static class Program
             ("Number channel gaps distinguish frames from seats and follow independent edits and history", MissingNumberChannels),
             ("Vacancy markers count physical seats and follow placement, parking and history", VacantPhysicalSeats),
             ("A missing circle layout reports the reason and creating one enables placement", MissingCircleLayoutCanBeCreated),
+            ("Unassigned circles fill aisles, overflow below the venue and compact without moving parked circles", UnassignedStaging),
             ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
             ("Shared appearance mappings accept block numbers and preserve isolated edits and unused styles", BlockAppearanceDrafts),
             ("Block mappings collect frame labels and survive remote history and JSON", BlockStylesRoundTrip),
@@ -1463,6 +1464,42 @@ internal static class Program
             AssertEqual("dots", ProjectFileService.Load(path).GenreStyles[0].Pattern);
         }
         finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    private static void UnassignedStaging()
+    {
+        var type = new DeskType("staging-desk", "机", [new(0, 0), new(1, 0)]);
+        var plan = new Plan("staging", "配置案", [new("desk", type.Id, new(0, 0), QuarterTurn.North)], []);
+        var project = CreateProject() with
+        {
+            Venue = new("venue", "会場", 3, 2, new HashSet<GridPosition> { new(2, 0) }),
+            DeskTypes = [type],
+            Participants = Enumerable.Range(0, 5).Select(i => new Participant($"p{i}", $"サークル{i}", i == 0 ? 2 : 1, new Dictionary<string, double>())).ToArray(),
+            Plans = [plan],
+        };
+        var staged = UnassignedParticipantStaging.Build(project, plan);
+        AssertEqual(5, staged.Count);
+        AssertEqual(new GridPosition(0, 1), staged[0].ScoringPosition);
+        AssertEqual(2, staged[0].OccupiedCells.Count);
+        AssertEqual(new GridPosition(2, 1), staged[1].ScoringPosition);
+        AssertEqual(new GridPosition(0, 3), staged[2].ScoringPosition);
+        AssertEqual(6, staged.SelectMany(item => item.OccupiedCells).Distinct().Count());
+        var assigned = plan with { Assignments = [new("p0", new HashSet<GridPosition> { new(0, 0), new(1, 0) }, new(0, 0))] };
+        var compacted = UnassignedParticipantStaging.Build(project, assigned);
+        AssertEqual(4, compacted.Count);
+        AssertEqual(new GridPosition(0, 1), compacted[0].ScoringPosition);
+        AssertEqual(new GridPosition(0, 3), compacted[3].ScoringPosition);
+        var parked = assigned with { TemporaryPlacements = [new("p1", new HashSet<GridPosition> { new(0, 3) }, new(0, 3))] };
+        var afterParking = UnassignedParticipantStaging.Build(project, parked);
+        AssertEqual(3, afterParking.Count);
+        AssertEqual(false, afterParking.Any(item => item.ParticipantId == "p1" || item.OccupiedCells.Contains(new(0, 3))));
+        AssertEqual(new GridPosition(0, 3), parked.TemporaryPlacements[0].ScoringPosition);
+        AssertEqual(staged[0].ScoringPosition, UnassignedParticipantStaging.Build(project, plan)[0].ScoringPosition);
+        // A circle wider than the venue still has a contiguous queue position below it.
+        var narrow = project with { Venue = new("narrow", "狭い会場", 1, 1, new HashSet<GridPosition> { new(0, 0) }) };
+        var overflow = UnassignedParticipantStaging.Build(narrow, plan with { DeskPlacements = [] });
+        AssertEqual(new GridPosition(0, 2), overflow[0].ScoringPosition);
+        AssertEqual(2, overflow[0].OccupiedCells.Count);
     }
 
     private static void FrameDraftEdits()

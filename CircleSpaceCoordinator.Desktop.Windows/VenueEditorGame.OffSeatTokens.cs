@@ -11,6 +11,21 @@ public sealed partial class VenueEditorGame
     private string? seatTokenPlanId;
     private HashSet<GridPosition> tokenSeatCells = [];
     private static readonly Color OffSeatColor = new(255, 164, 72);
+    private CircleSpaceProject? stagingProject;
+    private Plan? stagingPlan;
+    private IReadOnlyList<ParticipantAssignment> stagedParticipants = [];
+
+    private IReadOnlyList<ParticipantAssignment> GetStagedParticipants()
+    {
+        if (workspace is null || !workspace.HasSelectedCircleLayout) return [];
+        if (!ReferenceEquals(stagingProject, workspace.Project) || !ReferenceEquals(stagingPlan, workspace.SelectedPlan))
+        {
+            stagingProject = workspace.Project;
+            stagingPlan = workspace.SelectedPlan;
+            stagedParticipants = CircleSpaceCoordinator.Desktop.Core.Interaction.UnassignedParticipantStaging.Build(stagingProject, stagingPlan);
+        }
+        return stagedParticipants;
+    }
 
     private bool IsOffSeatToken(ParticipantToken token) => !token.Assigned || !AreTokenCellsSeats(token.DisplayCells);
 

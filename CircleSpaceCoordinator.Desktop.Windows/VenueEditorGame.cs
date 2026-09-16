@@ -1026,7 +1026,7 @@ public sealed partial class VenueEditorGame : Game
         }
         if (plans.Count == 0)
         {
-            textRenderer?.Draw("サークル配置なし（＋で追加）", ToRectangle(GetPlanRowBounds(0), 6), new Color(184, 204, 214), 16);
+            textRenderer?.Draw("サークル配置案なし（＋で追加）", ToRectangle(GetPlanRowBounds(0), 6), new Color(184, 204, 214), 16);
             return;
         }
         var minimum = plans.Min(plan => plan.GeneralAttendeeScore);
@@ -2224,7 +2224,7 @@ public sealed partial class VenueEditorGame : Game
                 true,
                 participantNumbers[assignment.ParticipantId]))
             .ToList();
-        tokens.AddRange(workspace.SelectedPlan.TemporaryPlacements.Select(item => new ParticipantToken(
+        tokens.AddRange(workspace.SelectedPlan.TemporaryPlacements.Concat(GetStagedParticipants()).Select(item => new ParticipantToken(
             item.ParticipantId, item.ScoringPosition, item.OccupiedCells.ToArray(),
             combinedIds.GetValueOrDefault(item.ParticipantId) ?? item.CombinedSpaceId, false, participantNumbers[item.ParticipantId])));
         return tokens;
