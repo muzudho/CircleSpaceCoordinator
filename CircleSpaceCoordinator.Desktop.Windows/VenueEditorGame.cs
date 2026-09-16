@@ -724,7 +724,6 @@ public sealed partial class VenueEditorGame : Game
         pressedMappingButton = null;
         pressedFrameButton?.CancelPress();
         pressedFrameButton = null;
-        framePainting = false;
         pressedEventButton?.CancelPress();
         pressedEventButton = null;
         foreach (var (button, _) in eventButtons) button.ClearPointerState();

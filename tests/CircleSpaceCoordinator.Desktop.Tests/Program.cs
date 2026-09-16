@@ -1478,7 +1478,7 @@ internal static class Program
         draft.Resize(1, 1);
         AssertEqual(1, draft.BuildType().Cells.Count);
         draft.Resize(2, 1);
-        AssertEqual(2, draft.AreaAt(1, 0));
+        AssertEqual(1, draft.AreaAt(1, 0));
         var built = draft.BuildType();
         AssertEqual("編集した型", built.Name);
         AssertEqual(0, built.Cells[0].Area);
@@ -1492,7 +1492,7 @@ internal static class Program
         invalid = false;
         try { (catalog with { Types = catalog.Types.Select(type => type.Id == source.Id ? draft.BuildType() : type).ToArray() }).Validate(); }
         catch (InvalidDataException) { invalid = true; }
-        AssertEqual(true, invalid); // Existing request still refers to area 2.
+        AssertEqual(false, invalid); // Requests refer to the frame, not a cell group.
         draft.Paint(0, 0, 1);
         draft.Paint(1, 0, 2);
         (catalog with { Types = catalog.Types.Select(type => type.Id == source.Id ? draft.BuildType() : type).ToArray() }).Validate();
@@ -1500,12 +1500,28 @@ internal static class Program
         var request = new SpaceDefinitionDraft(requestSource);
         request.Name = "別の申込値";
         request.Targets.Clear();
-        AssertEqual(2, requestSource.Targets.Count);
+        AssertEqual(1, requestSource.Targets.Count);
         request.Targets.Add(new SpaceTarget(catalog.Types[1].Id, 1));
         var savedRequest = request.BuildRequest();
         request.Targets.Clear();
         AssertEqual(1, savedRequest.Targets.Count);
         (catalog with { Requests = [savedRequest, catalog.Requests[1]] }).Validate();
+        var toggle = new SpaceDefinitionDraft(source with { Width = 3, Cells = [new(0, 0, 9), new(1, 0, 0)] });
+        AssertEqual(1, toggle.AreaAt(0, 0));
+        toggle.ToggleCell(0, 0);
+        AssertEqual(0, toggle.AreaAt(0, 0));
+        toggle.ToggleCell(0, 0);
+        AssertEqual(1, toggle.AreaAt(0, 0));
+        toggle.ToggleCell(1, 0);
+        toggle.ToggleCell(2, 0);
+        AssertEqual(3, toggle.BuildType().Cells.Count(cell => cell.Area == 1));
+        toggle.ToggleConnection(new(0, 0), new(2, 0));
+        toggle.ToggleCell(2, 0);
+        AssertEqual(false, toggle.Connections.Any(link => link.FirstCell == new GridPosition(2, 0) || link.SecondCell == new GridPosition(2, 0)));
+        AssertEqual(3, toggle.BuildType().Cells.Count);
+        toggle.Resize(4, 2);
+        AssertEqual(8, toggle.BuildType().Cells.Count);
+        AssertEqual(0, toggle.BuildType().Cells.Single(cell => cell.X == 3 && cell.Y == 1).Area);
         foreach (var size in new[] { 0, 13 })
         {
             invalid = false;
@@ -1869,6 +1885,23 @@ internal static class Program
         try
         {
             var path = Path.Combine(directory, "space-definitions.json");
+            var legacyPath = Path.Combine(directory, "legacy.json");
+            var legacyType = SpaceDefinitionCatalog.CreateDefault().Types[0] with
+            {
+                Cells = [new(0, 0, 2), new(1, 0, 9)],
+                Connections = [new(new(0, 0), new(1, 0))],
+            };
+            var legacy = new SpaceDefinitionCatalog([legacyType], [new("legacy", "1", "旧区画", [new(legacyType.Id, 2), new(legacyType.Id, 9)])]);
+            var legacyJson = System.Text.Json.JsonSerializer.Serialize(legacy, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+            File.WriteAllText(legacyPath, legacyJson);
+            var migrated = new SpaceDefinitionStore(legacyPath);
+            AssertEqual(legacyJson, File.ReadAllText(legacyPath)); // Reading does not overwrite the user's file.
+            AssertEqual(true, migrated.Current.Types[0].Cells.All(cell => cell.Area == 1));
+            AssertEqual(1, migrated.Current.Requests[0].Targets.Count);
+            AssertEqual(new SpaceTarget(legacyType.Id, 1), migrated.Current.Requests[0].Targets[0]);
+            AssertEqual(legacyType.Connections[0], migrated.Current.Types[0].Connections![0]);
+            migrated.Save(migrated.Current);
+            AssertEqual(1, new SpaceDefinitionStore(legacyPath).Current.Requests[0].Targets.Count);
             var first = new SpaceDefinitionStore(path);
             AssertEqual(6, first.Current.Types.Count);
             AssertEqual(2, first.Current.Requests.Count);

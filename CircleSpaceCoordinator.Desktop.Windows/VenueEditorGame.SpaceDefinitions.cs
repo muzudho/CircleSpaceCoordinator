@@ -173,25 +173,24 @@ public sealed partial class VenueEditorGame
             var request = catalog.Requests[spaceSelected];
             Text($"申込スペース：{request.Value}", 218, 22);
             Text(request.Description, 252);
-            Text("割当可能な区画", 299);
-            var targets = request.Targets.Select(t => $"{catalog.Types.Single(type => type.Id == t.TypeId).Name} ／ 区画{t.Area}");
+            Text("割当可能なフレーム", 299);
+            var targets = request.Targets.Select(t => catalog.Types.Single(type => type.Id == t.TypeId).Name);
             var y = 334;
             foreach (var target in targets.Take(Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - y) / 32))) { Text(target, y, 16); y += 32; }
             return;
         }
         var type = catalog.Types[spaceSelected];
         Text($"{type.Name}　({type.Kind}・{type.Width}×{type.Height})", 218, 21);
-        Text("同じ番号＝1区画 ／ 灰色＝占有するが席ではない", 255, 16);
+        Text("オレンジの丸＝配置可能セル ／ 丸なし＝配置未確定セル", 255, 16);
         Text($"上：{type.Edges[0]}　右：{type.Edges[1]}　下：{type.Edges[2]}　左：{type.Edges[3]}", 288, 16);
         var cellSize = Math.Max(1, Math.Min(64, Math.Min((GraphicsDevice.Viewport.Width - 410) / type.Width,
             (GraphicsDevice.Viewport.Height - StatusBarHeight - 350) / type.Height)));
         foreach (var cell in type.Cells)
         {
             var bounds = new ScreenRectangle(385 + cell.X * cellSize, 338 + cell.Y * cellSize, cellSize - 2, cellSize - 2);
-            var fill = FrameAreaColor(cell.Area);
-            DrawRectangle(bounds, new Color(fill.R, fill.G, fill.B));
+            DrawRectangle(bounds, FrameCellColor);
             DrawOutline(bounds, 1, Color.LightGray);
-            textRenderer?.Draw(cell.Area == 0 ? "—" : cell.Area.ToString(), ToRectangle(bounds, 3), Color.White, 20, true);
+            if (cell.Area > 0) DrawFrameCellMarker(bounds);
         }
     }
 }

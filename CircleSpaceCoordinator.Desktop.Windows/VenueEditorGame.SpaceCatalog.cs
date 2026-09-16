@@ -246,8 +246,8 @@ public sealed partial class VenueEditorGame
         }
         if (spaceRequestsTab && SpaceDefinitions.Current.Requests.ElementAtOrDefault(spaceSelected) is { } request)
         {
-            var summary = request.Value + "\n" + request.Description + "\n割当可能な区画\n" + string.Join("\n", request.Targets.Select(target =>
-                $"{SpaceDefinitions.Current.Types.FirstOrDefault(t => t.Id == target.TypeId)?.Name} ／ 区画{target.Area}"));
+            var summary = request.Value + "\n" + request.Description + "\n割当可能なフレーム\n" + string.Join("\n", request.Targets.Select(target =>
+                SpaceDefinitions.Current.Types.FirstOrDefault(t => t.Id == target.TypeId)?.Name));
             textRenderer?.Draw(summary, ToRectangle(new ScreenRectangle(panel.X + panel.Width * 0.68, panel.Y + 110,
                 panel.Width * 0.29, panel.Height - 270)), Color.White, 16);
         }
@@ -259,10 +259,11 @@ public sealed partial class VenueEditorGame
             : "追加・編集は［保存］で共通定義に反映。［配置に決定］/ Enterで次のフレームを選択。Q / Eで回転。");
     }
 
-    private void DrawSpaceTypePreview(SpaceTypeDefinition type, QuarterTurn orientation, ScreenRectangle area, int? highlightedArea = null)
+    private void DrawSpaceTypePreview(SpaceTypeDefinition type, QuarterTurn orientation, ScreenRectangle area)
     {
-        var cells = type.Cells.Select(c => (Cell: c, Position: new GridPosition(c.X, c.Y).Rotate(orientation))).ToArray();
-        if (cells.Length == 0) return;
+        var states = type.Cells.ToDictionary(cell => new GridPosition(cell.X, cell.Y), cell => cell.Area > 0);
+        var cells = Enumerable.Range(0, type.Height).SelectMany(y => Enumerable.Range(0, type.Width)
+            .Select(x => (Placeable: states.GetValueOrDefault(new GridPosition(x, y)), Position: new GridPosition(x, y).Rotate(orientation)))).ToArray();
         var minX = cells.Min(c => c.Position.X);
         var minY = cells.Min(c => c.Position.Y);
         var columns = cells.Max(c => c.Position.X) - minX + 1;
@@ -272,12 +273,10 @@ public sealed partial class VenueEditorGame
         var y = area.Y + (area.Height - rows * size) / 2;
         foreach (var item in cells)
         {
-            var highlighted = highlightedArea is null || highlightedArea == item.Cell.Area;
-            var color = highlighted ? FrameAreaColor(item.Cell.Area) : new Color(52, 59, 68);
             var rect = new ScreenRectangle(x + (item.Position.X - minX) * size, y + (item.Position.Y - minY) * size, size - 1, size - 1);
-            DrawRectangle(rect, new Color(color.R, color.G, color.B));
-            DrawOutline(rect, highlightedArea is not null && highlighted ? 2 : 1, highlighted ? Color.White : Color.Gray);
-            textRenderer?.Draw(item.Cell.Area == 0 ? "—" : item.Cell.Area.ToString(), ToRectangle(rect, 2), highlighted ? Color.White : Color.Gray, Math.Max(1, Math.Min(18, (int)size / 2)), true);
+            DrawRectangle(rect, FrameCellColor);
+            DrawOutline(rect, 1, Color.Gray);
+            if (item.Placeable) DrawFrameCellMarker(rect);
         }
         for (var edge = 0; edge < 4; edge++)
         {

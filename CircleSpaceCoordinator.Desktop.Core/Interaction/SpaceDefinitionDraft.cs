@@ -35,7 +35,7 @@ public sealed class SpaceDefinitionDraft
         Width = source.Width;
         Height = source.Height;
         Edges = source.Edges.ToArray();
-        foreach (var cell in source.Cells) cells[(cell.X, cell.Y)] = cell.Area;
+        foreach (var cell in source.Cells) cells[(cell.X, cell.Y)] = cell.Area > 0 ? 1 : 0;
         hasDefinedConnections = source.Connections is not null;
         connections.UnionWith(source.Connections ?? FrameCellConnection.Adjacent(source.Cells.Where(cell => cell.Area > 0)
             .Select(cell => new GridPosition(cell.X, cell.Y)).ToHashSet()));
@@ -46,7 +46,7 @@ public sealed class SpaceDefinitionDraft
         request = source;
         Name = source.Value;
         Description = source.Description;
-        Targets.UnionWith(source.Targets);
+        Targets.UnionWith(source.Targets.Select(target => new SpaceTarget(target.TypeId, 1)));
     }
 
     public void Resize(int width, int height)
@@ -57,14 +57,15 @@ public sealed class SpaceDefinitionDraft
         Height = height;
     }
 
-    public int? AreaAt(int x, int y) => cells.TryGetValue((x, y), out var area) ? area : null;
+    public int AreaAt(int x, int y) => cells.GetValueOrDefault((x, y));
+
+    public void ToggleCell(int x, int y) => Paint(x, y, AreaAt(x, y) > 0 ? 0 : 1);
 
     public void Paint(int x, int y, int? area)
     {
         if (x < 0 || x >= Width || y < 0 || y >= Height) throw new ArgumentOutOfRangeException(nameof(x));
         if (area is < 0 or > 9) throw new ArgumentOutOfRangeException(nameof(area));
-        if (area is null) cells.Remove((x, y));
-        else cells[(x, y)] = area.Value;
+        cells[(x, y)] = area > 0 ? 1 : 0;
         if (area is null or 0) connections.RemoveWhere(link => link.FirstCell == new GridPosition(x, y) || link.SecondCell == new GridPosition(x, y));
     }
 
@@ -92,9 +93,8 @@ public sealed class SpaceDefinitionDraft
     public SpaceTypeDefinition BuildType() => (type ?? throw new InvalidOperationException("Not a type draft.")) with
     {
         Name = Name.Trim(), Kind = Kind, Width = Width, Height = Height,
-        Cells = cells.Where(pair => pair.Key.X < Width && pair.Key.Y < Height)
-            .OrderBy(pair => pair.Key.Y).ThenBy(pair => pair.Key.X)
-            .Select(pair => new SpaceCell(pair.Key.X, pair.Key.Y, pair.Value)).ToArray(),
+        Cells = Enumerable.Range(0, Height).SelectMany(y => Enumerable.Range(0, Width)
+            .Select(x => new SpaceCell(x, y, AreaAt(x, y) > 0 ? 1 : 0))).ToArray(),
         Edges = Edges.ToArray(),
         Connections = hasDefinedConnections ? Connections.ToArray() : null,
     };

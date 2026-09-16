@@ -8,6 +8,11 @@ public sealed record SpaceCell(int X, int Y, int Area);
 public sealed record SpaceTypeDefinition(string Id, string Name, string Kind, int Width, int Height,
     IReadOnlyList<SpaceCell> Cells, IReadOnlyList<string> Edges)
 {
+    // Keep the legacy JSON field; positive area numbers all mean placeable now.
+    public SpaceTypeDefinition NormalizeCellStates() => this with
+    {
+        Cells = Cells.Select(cell => cell with { Area = cell.Area > 0 ? 1 : 0 }).ToArray(),
+    };
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<FrameCellConnection>? Connections { get; init; }
 }
@@ -17,6 +22,15 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
 {
     public int SchemaVersion { get; init; } = 1;
 
+    public SpaceDefinitionCatalog NormalizeCellStates() => this with
+    {
+        Types = Types.Select(type => type.NormalizeCellStates()).ToArray(),
+        Requests = Requests.Select(request => request with
+        {
+            Targets = request.Targets.Select(target => new SpaceTarget(target.TypeId, 1)).Distinct().ToArray(),
+        }).ToArray(),
+    };
+
     public static SpaceDefinitionCatalog CreateDefault()
     {
         SpaceTypeDefinition Type(string id, string name, string kind, int width, int height, Func<int, int, int> area, string[] edges) =>
@@ -24,15 +38,15 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
                 Enumerable.Range(0, width).Select(x => new SpaceCell(x, y, area(x, y)))).ToArray(), edges);
         return new(
         [
-            Type("desk-2-seats", "長さ2・2サークル用長机", "机", 2, 1, (x, _) => x + 1, ["正面", "開放", "開放", "開放"]),
+            Type("desk-2-seats", "長さ2・2サークル用長机", "机", 2, 1, (_, _) => 1, ["正面", "開放", "開放", "開放"]),
             Type("desk-whole", "長さ2・1サークル用長机", "机", 2, 1, (_, _) => 1, ["正面", "開放", "開放", "開放"]),
-            Type("desk-3-seats", "長さ3・3サークル用長机", "机", 3, 1, (x, _) => x + 1, ["正面", "開放", "開放", "開放"]),
-            Type("desk-3-ends", "長さ3・2サークル用長机", "机", 3, 1, (x, _) => x == 1 ? 0 : x == 0 ? 1 : 2, ["正面", "開放", "開放", "開放"]),
+            Type("desk-3-seats", "長さ3・3サークル用長机", "机", 3, 1, (_, _) => 1, ["正面", "開放", "開放", "開放"]),
+            Type("desk-3-ends", "長さ3・2サークル用長机", "机", 3, 1, (x, _) => x == 1 ? 0 : 1, ["正面", "開放", "開放", "開放"]),
             Type("free-space", "自由配置フレーム2×2", "場所", 2, 2, (_, _) => 1, ["入口", "入口", "入口", "入口"]),
             Type("booth", "ブース3×3", "ブース", 3, 3, (_, _) => 1, ["壁", "入口", "入口", "壁"]),
         ],
         [
-            new("request-1", "1", "長さ2セルの長机のうち1セル", [new("desk-2-seats", 1), new("desk-2-seats", 2)]),
+            new("request-1", "1", "長さ2セルの長机のうち1セル", [new("desk-2-seats", 1)]),
             new("request-2", "2", "長さ2セルの長机全体", [new("desk-whole", 1)]),
         ]);
     }
@@ -55,7 +69,7 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
             if (type.Cells is null || type.Cells.Count == 0 ||
                 type.Cells.Any(c => c.X < 0 || c.X >= type.Width || c.Y < 0 || c.Y >= type.Height || c.Area is < 0 or > 9) ||
                 type.Cells.Select(c => (c.X, c.Y)).Distinct().Count() != type.Cells.Count)
-                throw new InvalidDataException("占有セルを1つ以上指定してください。区画番号は0～9で、0はセル区画なしです。");
+                throw new InvalidDataException("有効な位置と状態を持つフレームのセルを1つ以上指定してください。");
             if (requireRepresentativeCell && !type.Cells.Any(cell => cell.Area > 0))
                 throw new InvalidDataException("ブロックを入力するために、フレームを代表するセルが１つは必要です");
             if (!FrameCellConnection.AreValid(type.Connections, type.Cells.Where(cell => cell.Area > 0)
@@ -67,8 +81,8 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
             if (string.IsNullOrWhiteSpace(request.Id) || string.IsNullOrWhiteSpace(request.Value) || request.Targets is null || request.Targets.Count == 0)
                 throw new InvalidDataException("申込スペースの読込み値と割当先を指定してください。");
             foreach (var target in request.Targets)
-                if (target.Area <= 0 || !Types.Any(t => t.Id == target.TypeId && t.Cells.Any(c => c.Area == target.Area)))
-                    throw new InvalidDataException("申込スペースが参照している型・区画を削除できません。先に対応を変更してください。");
+                if (target.Area <= 0 || !Types.Any(t => t.Id == target.TypeId))
+                    throw new InvalidDataException("申込スペースが参照しているフレームを削除できません。先に対応を変更してください。");
         }
     }
 }
@@ -92,11 +106,13 @@ public sealed class SpaceDefinitionStore
         else Current = SpaceDefinitionCatalog.CreateDefault();
         // Earlier versions allowed no representative cell. Keep those definitions editable.
         Current.Validate(requireRepresentativeCell: false);
+        Current = Current.NormalizeCellStates();
     }
 
     public void Save(SpaceDefinitionCatalog catalog)
     {
         catalog.Validate();
+        catalog = catalog.NormalizeCellStates();
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
         var temporary = Path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         // A second running application must reload instead of silently overwriting edits.

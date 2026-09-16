@@ -15,10 +15,8 @@ public sealed partial class VenueEditorGame
     private readonly List<(IconButtonModel Button, Action Execute)> frameButtons = [];
     private (SpaceTarget Target, SpaceTypeDefinition Type)[] frameTargets = [];
     private IconButtonModel? pressedFrameButton;
-    private bool framePainting;
     private bool frameConnectionMode;
     private GridPosition? frameConnectionStart;
-    private int frameBrush = 1; // -1 erases; 0 occupies without a seat.
     private int frameX;
     private int frameY;
     private int frameFocus = -1; // Grid, or target catalog in request mode.
@@ -41,24 +39,27 @@ public sealed partial class VenueEditorGame
     }
     private double FrameCellSize => Math.Min(48, Math.Min(580d / frameDraft!.Width, 330d / frameDraft.Height));
 
-    private static Color FrameAreaColor(int area) => area == 0 ? new Color(100, 107, 114)
-        : new[] { Color.Teal, Color.SteelBlue, Color.DarkGoldenrod, Color.IndianRed, Color.MediumPurple,
-            Color.OliveDrab, Color.DarkCyan, Color.DarkOrange, Color.DeepPink }[(area - 1) % 9];
+    private static readonly Color FrameCellColor = new(100, 107, 114);
+
+    private void DrawFrameCellMarker(ScreenRectangle bounds)
+    {
+        var center = new ScreenPoint(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
+        var radius = Math.Min(12, Math.Min(bounds.Width, bounds.Height) * 0.26);
+        DrawCircle(center, radius + 1, new Color(20, 25, 32));
+        DrawCircle(center, radius, VacancyColor);
+    }
 
     private void OpenFrameDefinitionEditor(SpaceDefinitionDraft draft, SpaceDefinitionCatalog catalog, Action<SpaceDefinitionDraft> save)
     {
         CancelInProgressPointerInteraction();
         frameDraft = draft;
         frameSave = save;
-        frameBrush = 1;
         frameConnectionMode = false;
         frameConnectionStart = null;
         frameX = frameY = frameTargetSelection = frameTargetScroll = 0;
         frameFocus = -1;
         frameLayoutWidth = -1;
-        frameTargets = catalog.Types.SelectMany(type => type.Cells.Where(cell => cell.Area > 0)
-            .Select(cell => cell.Area).Distinct().Order().Select(area =>
-                (new SpaceTarget(type.Id, area), type))).ToArray();
+        frameTargets = catalog.Types.Select(type => (new SpaceTarget(type.Id, 1), type)).ToArray();
         modalInputDrain = true;
     }
 
@@ -88,7 +89,6 @@ public sealed partial class VenueEditorGame
         frameLayoutWidth = GraphicsDevice.Viewport.Width;
         frameLayoutHeight = GraphicsDevice.Viewport.Height;
         pressedFrameButton = null;
-        framePainting = false;
         frameButtons.Clear();
         void Add(string label, double x, double y, double width, Action execute, bool enabled = true, bool selected = false) =>
             frameButtons.Add((new IconButtonModel(FrameBounds(x, y, width, 36), label) { IsEnabled = enabled, IsSelected = selected }, execute));
@@ -110,12 +110,6 @@ public sealed partial class VenueEditorGame
             Add("幅 ＋", 110, 114, 80, () => ResizeFrame(1, 0), draft.Width < 12);
             Add("高さ −", 240, 114, 90, () => ResizeFrame(0, -1), draft.Height > 1);
             Add("高さ ＋", 340, 114, 90, () => ResizeFrame(0, 1), draft.Height < 12);
-            for (var brush = -1; brush <= 9; brush++)
-            {
-                var value = brush;
-                Add(brush < 0 ? "消す" : brush == 0 ? "席なし" : brush.ToString(), 20 + (brush + 1) * 53, 170, 48,
-                    () => { frameBrush = value; frameConnectionMode = false; frameConnectionStart = null; }, selected: !frameConnectionMode && frameBrush == brush);
-            }
             for (var edge = 0; edge < 4; edge++)
             {
                 var index = edge;
@@ -212,12 +206,12 @@ public sealed partial class VenueEditorGame
                 if (IsPressed(keyboard, Keys.Space) || IsPressed(keyboard, Keys.Enter))
                 {
                     if (frameConnectionMode) SelectFrameConnectionCell();
-                    else draft.Paint(frameX, frameY, frameBrush < 0 ? null : frameBrush);
+                    else draft.ToggleCell(frameX, frameY);
                 }
                 if (IsPressed(keyboard, Keys.Delete) || IsPressed(keyboard, Keys.Back))
                 {
                     if (frameConnectionMode) frameConnectionStart = null;
-                    else draft.Paint(frameX, frameY, null);
+                    else draft.Paint(frameX, frameY, 0);
                 }
             }
         }
@@ -265,14 +259,13 @@ public sealed partial class VenueEditorGame
                     SelectFrameConnectionCell();
                 }
             }
-            else if ((leftPress || rightPress) && Contains(grid, pointer)) { framePainting = true; frameFocus = -1; }
-            if (framePainting && Contains(grid, pointer) && (mouse.LeftButton == ButtonState.Pressed || mouse.RightButton == ButtonState.Pressed))
+            else if (leftPress && Contains(grid, pointer))
             {
+                frameFocus = -1;
                 frameX = Math.Min(draft.Width - 1, (int)((pointer.X - grid.X) / (FrameCellSize * FrameScale)));
                 frameY = Math.Min(draft.Height - 1, (int)((pointer.Y - grid.Y) / (FrameCellSize * FrameScale)));
-                draft.Paint(frameX, frameY, mouse.RightButton == ButtonState.Pressed || frameBrush < 0 ? null : frameBrush);
+                draft.ToggleCell(frameX, frameY);
             }
-            if (mouse.LeftButton == ButtonState.Released && mouse.RightButton == ButtonState.Released) framePainting = false;
         }
         if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed)
         {
@@ -295,21 +288,22 @@ public sealed partial class VenueEditorGame
         Text(draft.IsRequest ? "申込スペースエディター（アプリ共通）" : "フレーム定義エディター（アプリ共通）", 20, 18, 960, 26, true);
         if (draft.IsRequest)
         {
-            Text("割当可能な型・区画を選択してください。複数の型へ振替できます。", 20, 162, 960);
+            Text("割当可能なフレームを選択してください。複数のフレームへ振替できます。", 20, 162, 960);
             DrawFrameTargetCatalog();
         }
         else
         {
-            Text($"{draft.Width} × {draft.Height} セル　塗る区画を下から選択", 460, 116, 520);
+            Text($"{draft.Width} × {draft.Height} セル", 460, 116, 520);
+            Text("セルをクリック：配置可能／配置未確定を切替", 20, 170, 620);
             Text("種類・各辺のボタンは押すたびに切替", 650, 190, 330, 16);
             for (var y = 0; y < draft.Height; y++)
             for (var x = 0; x < draft.Width; x++)
             {
                 var area = draft.AreaAt(x, y);
                 var bounds = FrameBounds(20 + x * FrameCellSize, 222 + y * FrameCellSize, FrameCellSize - 2, FrameCellSize - 2);
-                DrawRectangle(bounds, area is null ? new Color(40, 45, 53) : FrameAreaColor(area.Value));
+                DrawRectangle(bounds, FrameCellColor);
                 DrawOutline(bounds, 1, Color.Gray);
-                if (area is not null) textRenderer?.Draw(area == 0 ? "—" : area.ToString()!, ToRectangle(bounds, 2), Color.White, Math.Max(10, (int)(20 * FrameScale)), true);
+                if (area > 0) DrawFrameCellMarker(bounds);
                 if (frameFocus < 0 && x == frameX && y == frameY) DrawOutline(bounds, 2, Color.White);
             }
             ScreenPoint Centre(GridPosition cell)
@@ -317,7 +311,7 @@ public sealed partial class VenueEditorGame
                 var bounds = FrameBounds(20 + (cell.X + 0.5) * FrameCellSize, 222 + (cell.Y + 0.5) * FrameCellSize, 0, 0);
                 return new(bounds.X, bounds.Y);
             }
-            foreach (var link in draft.Connections)
+            foreach (var link in frameConnectionMode ? draft.Connections : [])
             {
                 var first = Centre(link.FirstCell);
                 var second = Centre(link.SecondCell);
@@ -328,11 +322,11 @@ public sealed partial class VenueEditorGame
             }
             if (frameConnectionStart is { } start) DrawCircle(Centre(start), 6 * FrameScale, Color.Turquoise);
             Text(frameConnectionMode ? "配置可能セルを2つ選択：接続を追加／削除。同じセル・右クリック：選択解除。"
-                : "同番号＝1区画 ／ 灰色＝席なし ／ 暗い空欄＝占有なし。縮小時は範囲外のセル・接続を保存時に除去。", 20, 558, 960, 16);
+                : "オレンジの丸＝配置可能セル ／ 丸なし＝配置未確定セル。縮小時は範囲外のセル・接続を保存時に除去。", 20, 558, 960, 16);
         }
-        Text("Tab：部品移動　矢印：セル移動　Space：塗る／接続端点を選択", 20, 600, 610, 15);
+        Text("Tab：部品移動　矢印：セル移動　Space：切替／接続端点を選択", 20, 600, 610, 15);
         Text(frameConnectionMode ? "右クリック・Delete：端点解除　Ctrl+S：保存　Esc：解除／終了"
-            : "右クリック・Delete：消す　Ctrl+S：保存　Esc：キャンセル　Ctrl+P：撮影", 20, 626, 610, 14);
+            : "Delete：配置未確定にする　Ctrl+S：保存　Esc：キャンセル", 20, 626, 610, 14);
         for (var i = 0; i < frameButtons.Count; i++)
         {
             var button = frameButtons[i].Button;
