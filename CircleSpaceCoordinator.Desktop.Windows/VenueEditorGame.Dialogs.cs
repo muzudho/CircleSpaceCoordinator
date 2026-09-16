@@ -30,6 +30,7 @@ public sealed partial class VenueEditorGame
         (string Label, ModalDialogAction Action)[]? choices = null)
     {
         textInputService?.Stop();
+        ResetUnderlineKeyRepeat();
         underlineEditor = null;
         selectionLabels = null;
         exportColumnDraft = null;

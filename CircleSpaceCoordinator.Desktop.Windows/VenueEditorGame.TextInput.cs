@@ -7,11 +7,19 @@ using StationeryUI.Canvas;
 using StationeryUI.Controls;
 using StationeryUI.Text;
 using System.Globalization;
+using CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 public sealed partial class VenueEditorGame
 {
     private const int TextInputFocus = -1;
     private const int NoModalFocus = -2;
+    private readonly EditingKeyRepeat underlineBackRepeat = new();
+    private readonly EditingKeyRepeat underlineDeleteRepeat = new();
+    private void ResetUnderlineKeyRepeat()
+    {
+        underlineBackRepeat.Reset();
+        underlineDeleteRepeat.Reset();
+    }
     private ITextInputService? textInputService;
     private UnderlineTextEditor? underlineEditor;
     private string compositionText = "";
@@ -84,12 +92,17 @@ public sealed partial class VenueEditorGame
         }
         if (hadComposition || updates.Count > 0 || compositionText.Length > 0) suppressTextConfirmation = true;
         else if (keyboard.IsKeyUp(Keys.Enter) && keyboard.IsKeyUp(Keys.Escape)) suppressTextConfirmation = false;
+        var repeatEnabled = modalFocus == TextInputFocus && !hadComposition && compositionText.Length == 0 &&
+            !updates.Any(update => update.IsComposition) && !IsPressed(keyboard, Keys.Tab);
+        var deleteBack = underlineBackRepeat.Update(keyboard.IsKeyDown(Keys.Back), IsPressed(keyboard, Keys.Back), statusHintTime, repeatEnabled);
+        var deleteForward = underlineDeleteRepeat.Update(keyboard.IsKeyDown(Keys.Delete), IsPressed(keyboard, Keys.Delete), statusHintTime, repeatEnabled);
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released &&
             !Contains(UnderlineBounds(), pointer) && !modalButtons.Any(item => item.Button.Contains(pointer)))
         {
             // Leave the modal open, but stop editing. Uncommitted IME text is cancelled.
             modalFocus = NoModalFocus;
+            ResetUnderlineKeyRepeat();
             selectingUnderlineText = false;
             textInputService.Stop();
             compositionText = "";
@@ -125,8 +138,16 @@ public sealed partial class VenueEditorGame
             if (IsPressed(keyboard, Keys.Right)) editor.Move(1, shift);
             if (IsPressed(keyboard, Keys.Home)) editor.MoveTo(0, shift);
             if (IsPressed(keyboard, Keys.End)) editor.MoveTo(editor.Text.Length, shift);
-            if (IsPressed(keyboard, Keys.Back)) editor.Delete(true);
-            if (IsPressed(keyboard, Keys.Delete)) editor.Delete(false);
+            if (deleteBack)
+            {
+                editor.Delete(true);
+                Log("text_edit_key", true, $"key=Back;repeat={!IsPressed(keyboard, Keys.Back)}");
+            }
+            if (deleteForward)
+            {
+                editor.Delete(false);
+                Log("text_edit_key", true, $"key=Delete;repeat={!IsPressed(keyboard, Keys.Delete)}");
+            }
             if (control)
             {
                 if (IsPressed(keyboard, Keys.A)) editor.SelectAll();

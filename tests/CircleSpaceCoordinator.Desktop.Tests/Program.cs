@@ -24,6 +24,7 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Editing key repeat delays, repeats and resets across release, IME and focus changes", EditingKeyRepeats),
             ("Flag sequences order frame and cell numbers with atomic remote undo and persistence", FlagSequenceNumbering),
             ("Flag numbering rejects branching trees and unreachable selected cells", FlagNumberingRejectsTrees),
             ("Island entrance sides restrict exits while cycles and multiple roots retain shortest distances", IslandDistanceTrees),
@@ -1056,6 +1057,40 @@ internal static class Program
             catch (CircleSpaceCoordinator.Core.Validation.ProjectValidationException) { rejected = true; }
             AssertEqual(true, rejected);
         }
+    }
+
+    private static void EditingKeyRepeats()
+    {
+        var repeat = new EditingKeyRepeat();
+        var editor = new StationeryUI.Text.UnderlineTextEditor("abcdef", 100);
+        editor.MoveTo(editor.Text.Length, false);
+        void Tick(bool down, bool pressed, double seconds, bool enabled = true)
+        {
+            if (repeat.Update(down, pressed, seconds, enabled)) editor.Delete(true);
+        }
+        Tick(true, true, 0);
+        AssertEqual("abcde", editor.Text);
+        Tick(true, false, .44);
+        AssertEqual("abcde", editor.Text);
+        Tick(true, false, .46);
+        Tick(true, false, .52);
+        AssertEqual("abc", editor.Text);
+        Tick(false, false, .53);
+        Tick(true, true, .54);
+        AssertEqual("ab", editor.Text);
+        Tick(true, false, 1, enabled: false);
+        Tick(true, false, 2);
+        AssertEqual("ab", editor.Text);
+        Tick(false, false, 2.1);
+        Tick(true, true, 2.2);
+        AssertEqual("a", editor.Text);
+        repeat.Reset();
+        Tick(true, false, 20);
+        AssertEqual("a", editor.Text);
+        AssertEqual(true, repeat.Update(true, true, 21));
+        AssertEqual(true, repeat.Update(true, false, 100));
+        AssertEqual(false, repeat.Update(true, false, 100));
+        AssertEqual(false, repeat.Update(false, false, 101));
     }
 
     private static void FlagSequenceNumbering()

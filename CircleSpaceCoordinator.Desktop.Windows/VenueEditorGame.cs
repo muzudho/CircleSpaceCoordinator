@@ -204,6 +204,7 @@ public sealed partial class VenueEditorGame : Game
         var mouse = Mouse.GetState();
         if (!IsActive)
         {
+            ResetUnderlineKeyRepeat();
             CancelInProgressPointerInteraction();
             // Keep the current physical input state.  Otherwise a button held while
             // this window was inactive would look like a fresh click on activation.
