@@ -259,7 +259,7 @@ public sealed partial class VenueEditorGame
             : "追加・編集は［保存］で共通定義に反映。［配置に決定］/ Enterで次のフレームを選択。Q / Eで回転。");
     }
 
-    private void DrawSpaceTypePreview(SpaceTypeDefinition type, QuarterTurn orientation, ScreenRectangle area)
+    private void DrawSpaceTypePreview(SpaceTypeDefinition type, QuarterTurn orientation, ScreenRectangle area, int? highlightedArea = null)
     {
         var cells = type.Cells.Select(c => (Cell: c, Position: new GridPosition(c.X, c.Y).Rotate(orientation))).ToArray();
         if (cells.Length == 0) return;
@@ -272,11 +272,12 @@ public sealed partial class VenueEditorGame
         var y = area.Y + (area.Height - rows * size) / 2;
         foreach (var item in cells)
         {
-            var color = FrameAreaColor(item.Cell.Area);
+            var highlighted = highlightedArea is null || highlightedArea == item.Cell.Area;
+            var color = highlighted ? FrameAreaColor(item.Cell.Area) : new Color(52, 59, 68);
             var rect = new ScreenRectangle(x + (item.Position.X - minX) * size, y + (item.Position.Y - minY) * size, size - 1, size - 1);
             DrawRectangle(rect, new Color(color.R, color.G, color.B));
-            DrawOutline(rect, 1, Color.LightGray);
-            textRenderer?.Draw(item.Cell.Area == 0 ? "—" : item.Cell.Area.ToString(), ToRectangle(rect, 2), Color.White, Math.Min(18, (int)size / 2), true);
+            DrawOutline(rect, highlightedArea is not null && highlighted ? 2 : 1, highlighted ? Color.White : Color.Gray);
+            textRenderer?.Draw(item.Cell.Area == 0 ? "—" : item.Cell.Area.ToString(), ToRectangle(rect, 2), highlighted ? Color.White : Color.Gray, Math.Max(1, Math.Min(18, (int)size / 2)), true);
         }
         for (var edge = 0; edge < 4; edge++)
         {

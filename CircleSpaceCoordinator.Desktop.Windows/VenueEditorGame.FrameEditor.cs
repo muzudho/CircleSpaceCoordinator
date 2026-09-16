@@ -13,7 +13,7 @@ public sealed partial class VenueEditorGame
     private SpaceDefinitionDraft? frameDraft;
     private Action<SpaceDefinitionDraft>? frameSave;
     private readonly List<(IconButtonModel Button, Action Execute)> frameButtons = [];
-    private (SpaceTarget Target, string Label)[] frameTargets = [];
+    private (SpaceTarget Target, SpaceTypeDefinition Type)[] frameTargets = [];
     private IconButtonModel? pressedFrameButton;
     private bool framePainting;
     private bool frameConnectionMode;
@@ -21,12 +21,14 @@ public sealed partial class VenueEditorGame
     private int frameBrush = 1; // -1 erases; 0 occupies without a seat.
     private int frameX;
     private int frameY;
-    private int frameFocus = -1; // Grid, or target list in request mode.
+    private int frameFocus = -1; // Grid, or target catalog in request mode.
     private int frameTargetSelection;
     private int frameTargetScroll;
     private int frameLayoutWidth = -1;
     private int frameLayoutHeight = -1;
-    private const int FrameTargetRows = 8;
+    private const int FrameTargetPageSize = 6;
+    private const int FrameTargetColumns = 3;
+    private ScreenRectangle FrameTargetCard(int index) => FrameBounds(20 + index % FrameTargetColumns * 224, 206 + index / FrameTargetColumns * 164, 214, 156);
     private static readonly string[] FrameKinds = ["机", "場所", "ブース"];
     private static readonly string[] FrameEdgeValues = ["開放", "壁", "入口", "正面"];
     private static readonly string[] FrameEdgeNames = ["上辺", "右辺", "下辺", "左辺"];
@@ -56,7 +58,7 @@ public sealed partial class VenueEditorGame
         frameLayoutWidth = -1;
         frameTargets = catalog.Types.SelectMany(type => type.Cells.Where(cell => cell.Area > 0)
             .Select(cell => cell.Area).Distinct().Order().Select(area =>
-                (new SpaceTarget(type.Id, area), $"{type.Name} ／ 区画{area}（{type.Cells.Count(cell => cell.Area == area)}セル）"))).ToArray();
+                (new SpaceTarget(type.Id, area), type))).ToArray();
         modalInputDrain = true;
     }
 
@@ -98,8 +100,8 @@ public sealed partial class VenueEditorGame
             Add("説明：" + draft.Description + " ✎", 20, 114, 960, () =>
                 OpenUnderlineInput("申込スペースの説明", draft.Description, value => { draft.Description = value; frameLayoutWidth = -1; },
                     "説明を入力してください（200 文字まで）。", 200));
-            Add("前の項目", 640, 550, 160, () => ScrollFrameTargets(-FrameTargetRows), frameTargetScroll > 0);
-            Add("次の項目", 820, 550, 160, () => ScrollFrameTargets(FrameTargetRows), frameTargetScroll + FrameTargetRows < frameTargets.Length);
+            Add("前のページ", 640, 550, 160, () => ScrollFrameTargets(-FrameTargetPageSize), frameTargetScroll > 0);
+            Add("次のページ", 820, 550, 160, () => ScrollFrameTargets(FrameTargetPageSize), frameTargetScroll + FrameTargetPageSize < frameTargets.Length);
         }
         else
         {
@@ -155,7 +157,7 @@ public sealed partial class VenueEditorGame
     private void SelectFrameTarget(int index)
     {
         frameTargetSelection = Math.Clamp(index, 0, Math.Max(0, frameTargets.Length - 1));
-        frameTargetScroll = Math.Clamp(frameTargetScroll, Math.Max(0, frameTargetSelection - FrameTargetRows + 1), frameTargetSelection);
+        frameTargetScroll = frameTargetSelection / FrameTargetPageSize * FrameTargetPageSize;
         frameLayoutWidth = -1;
     }
 
@@ -168,9 +170,9 @@ public sealed partial class VenueEditorGame
 
     private void ScrollFrameTargets(int offset)
     {
-        frameTargetScroll = Math.Clamp(frameTargetScroll + offset, 0, Math.Max(0, frameTargets.Length - FrameTargetRows));
+        frameTargetScroll = Math.Clamp(frameTargetScroll + offset, 0, Math.Max(0, (frameTargets.Length - 1) / FrameTargetPageSize * FrameTargetPageSize));
         frameTargetSelection = Math.Clamp(frameTargetSelection, frameTargetScroll,
-            Math.Max(frameTargetScroll, Math.Min(frameTargets.Length - 1, frameTargetScroll + FrameTargetRows - 1)));
+            Math.Max(frameTargetScroll, Math.Min(frameTargets.Length - 1, frameTargetScroll + FrameTargetPageSize - 1)));
         frameLayoutWidth = -1;
     }
 
@@ -193,10 +195,12 @@ public sealed partial class VenueEditorGame
         {
             if (draft.IsRequest)
             {
-                if (IsPressed(keyboard, Keys.Up)) SelectFrameTarget(frameTargetSelection - 1);
-                if (IsPressed(keyboard, Keys.Down)) SelectFrameTarget(frameTargetSelection + 1);
-                if (IsPressed(keyboard, Keys.PageUp)) SelectFrameTarget(frameTargetSelection - FrameTargetRows);
-                if (IsPressed(keyboard, Keys.PageDown)) SelectFrameTarget(frameTargetSelection + FrameTargetRows);
+                if (IsPressed(keyboard, Keys.Left)) SelectFrameTarget(frameTargetSelection - 1);
+                if (IsPressed(keyboard, Keys.Right)) SelectFrameTarget(frameTargetSelection + 1);
+                if (IsPressed(keyboard, Keys.Up)) SelectFrameTarget(frameTargetSelection - FrameTargetColumns);
+                if (IsPressed(keyboard, Keys.Down)) SelectFrameTarget(frameTargetSelection + FrameTargetColumns);
+                if (IsPressed(keyboard, Keys.PageUp)) SelectFrameTarget(frameTargetSelection - FrameTargetPageSize);
+                if (IsPressed(keyboard, Keys.PageDown)) SelectFrameTarget(frameTargetSelection + FrameTargetPageSize);
                 if (IsPressed(keyboard, Keys.Space) || IsPressed(keyboard, Keys.Enter)) ToggleFrameTarget(frameTargetSelection);
             }
             else
@@ -225,7 +229,7 @@ public sealed partial class VenueEditorGame
         }
         if (draft.IsRequest && mouse.ScrollWheelValue != previousMouse.ScrollWheelValue)
         {
-            ScrollFrameTargets(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue) * 3);
+            ScrollFrameTargets(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue) * FrameTargetPageSize);
         }
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         foreach (var item in frameButtons) item.Button.UpdatePointer(pointer);
@@ -238,8 +242,8 @@ public sealed partial class VenueEditorGame
         }
         if (draft.IsRequest && leftPress && pressedFrameButton is null)
         {
-            for (var row = 0; row < FrameTargetRows && frameTargetScroll + row < frameTargets.Length; row++)
-                if (Contains(FrameBounds(20, 206 + row * 42, 960, 36), pointer))
+            for (var row = 0; row < FrameTargetPageSize && frameTargetScroll + row < frameTargets.Length; row++)
+                if (Contains(FrameTargetCard(row), pointer))
                 {
                     frameFocus = -1;
                     frameTargetSelection = frameTargetScroll + row;
@@ -292,17 +296,7 @@ public sealed partial class VenueEditorGame
         if (draft.IsRequest)
         {
             Text("割当可能な型・区画を選択してください。複数の型へ振替できます。", 20, 162, 960);
-            for (var row = 0; row < FrameTargetRows && frameTargetScroll + row < frameTargets.Length; row++)
-            {
-                var index = frameTargetScroll + row;
-                var item = frameTargets[index];
-                var bounds = FrameBounds(20, 206 + row * 42, 960, 36);
-                DrawRectangle(bounds, draft.Targets.Contains(item.Target) ? new Color(30, 115, 94) : new Color(35, 43, 54));
-                if (frameFocus < 0 && index == frameTargetSelection) DrawOutline(bounds, 2, Color.Turquoise);
-                Text((draft.Targets.Contains(item.Target) ? "☑ " : "☐ ") + item.Label, 28, 208 + row * 42, 944);
-            }
-            Text(frameTargets.Length == 0 ? "割当先がありません。先に配置物の型へ区画を定義してください。"
-                : $"{draft.Targets.Count} 区画を選択 ／ 候補 {frameTargets.Length} 件　ホイール・PageUp/Downでスクロール", 20, 550, 600, 15);
+            DrawFrameTargetCatalog();
         }
         else
         {
