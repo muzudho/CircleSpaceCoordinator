@@ -1903,6 +1903,20 @@ internal static class Program
             AssertEqual("架空イベント", project.Name);
             AssertEqual(1, project.Plans.Count);
             AssertEqual(1, settings.Current.EventProjects!.Count);
+            var catalog = new EventProjectCatalogService(settings);
+            var venueName = "２０２６年夏ぴよぴよ会館東棟２階";
+            catalog.EditVenueName(path, venueName);
+            var edited = ProjectFileService.Load(path);
+            AssertEqual(venueName, edited.Venue.Name);
+            AssertEqual(ProjectJsonSerializer.Save(project), ProjectJsonSerializer.Save(edited with { Venue = project.Venue }));
+            var saved = File.ReadAllText(path);
+            var rejected = false;
+            try { catalog.EditVenueName(path, "  "); }
+            catch (ArgumentException) { rejected = true; }
+            AssertEqual(true, rejected);
+            AssertEqual(saved, File.ReadAllText(path));
+            var portable = FrameLayoutPortableService.Export(edited, edited.DeskLayouts[0].Id, new([], []));
+            AssertEqual(venueName, FrameLayoutPortableService.Import(portable).Venue.Name);
         }
         finally
         {

@@ -67,7 +67,7 @@ public sealed partial class VenueEditorGame
         }
         Add("開く", () => { if (SelectedEvent is { } item) OpenEventProject(item.Project.Path); }, usable);
         Add("新規作成", CreateEventProject);
-        Add("フレーム配置を読込", ImportFrameLayout);
+        Add("編集", EditEventProject, usable);
         Add("既存ファイルを登録", RegisterEventProject);
         Add("複製", DuplicateEventProject, usable);
         Add("マル秘に設定", MarkEventConfidential, usable && selected?.Confidential == false);
@@ -323,6 +323,17 @@ public sealed partial class VenueEditorGame
             PromptEventPath("複製先", SuggestedEventPath(name), path =>
                 RefreshEventProjects(EventCatalog.Duplicate(selected.Project.Path, path, name).Path));
         }, "複製後のイベント名を入力してください（100 文字まで）。");
+    }
+
+    private void EditEventProject()
+    {
+        if (SelectedEvent is not { Exists: true, Error: null } selected) return;
+        var project = ProjectFileService.Load(selected.Project.Path);
+        OpenUnderlineInput("イベントを編集：会場名", project.Venue.Name, name =>
+        {
+            EventCatalog.EditVenueName(selected.Project.Path, name);
+            RefreshEventProjects(selected.Project.Path);
+        }, "会場名を保存します。フレーム配置データの書出しにもこの名前を使います。", 32767);
     }
 
     private void MoveEvent(int offset)

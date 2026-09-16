@@ -46,6 +46,13 @@ public sealed class EventProjectCatalogService(ApplicationSettingsService settin
 
     public void Remove(string path) => settings.RemoveProject(path);
 
+    public void EditVenueName(string path, string venueName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(venueName);
+        var project = ProjectFileService.Load(path);
+        ProjectFileService.Save(path, project with { Venue = project.Venue with { Name = venueName.Trim() } });
+    }
+
     public bool Move(string path, int offset) => settings.MoveProject(path, offset);
 
     public bool IsConfidential(string path)
