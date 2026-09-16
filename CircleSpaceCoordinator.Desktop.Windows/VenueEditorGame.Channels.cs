@@ -7,6 +7,7 @@ using CircleSpaceCoordinator.Desktop.Core;
 using CircleSpaceCoordinator.Engine.Model;
 using Microsoft.Xna.Framework;
 using StationeryUI.Canvas;
+using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
@@ -43,7 +44,7 @@ public sealed partial class VenueEditorGame
         return new ScreenRectangle(panel.X + 6, panel.Y + 66 + index * rowHeight, panel.Width - 32, rowHeight - 2);
     }
 
-    private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - 114) /
+    private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - (ShowsBlockStyleButton ? 138 : 114)) /
         (editorMode == EditorMode.CirclePlacement ? 38 : 48));
 
     private bool ShowsBlockStyleButton => editorMode == EditorMode.DeskPlacement &&
@@ -52,7 +53,17 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle BlockStyleButton()
     {
         var panel = GetChannelPanelBounds();
-        return new ScreenRectangle(panel.X + 8, panel.Y + panel.Height - 27, panel.Width - 16, 23);
+        return new ScreenRectangle(panel.X + 8, panel.Y + panel.Height - 48, 44, 44);
+    }
+
+    private void DrawBlockStyleButton()
+    {
+        var button = new IconButtonModel(BlockStyleButton(), "ブロック番号と色・網掛けパターンの対応を編集する");
+        button.UpdatePointer(CanShowEditorHover ? new ScreenPoint(previousMouse.X, previousMouse.Y) : new ScreenPoint(-1, -1));
+        StationeryButtonRenderer.Draw(button,
+            (bounds, color) => DrawRectangle(bounds, ToButtonColor(color)),
+            (bounds, thickness, color) => DrawOutline(bounds, thickness, ToButtonColor(color)),
+            (bounds, color) => DrawToolbarIcon(ToolbarAction.EditGenreStyles, bounds, ToButtonColor(color)));
     }
 
     private void DrawChannels()
@@ -93,8 +104,8 @@ public sealed partial class VenueEditorGame
         }
         DrawChannelScrollbar();
         textRenderer?.Draw($"サークル配置評価値: {evaluation.TotalScore:0.###}",
-            new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - (ShowsBlockStyleButton ? 50 : 44), 245, 21), new Color(244, 208, 111), 15);
-        if (ShowsBlockStyleButton) DrawLayoutButton(BlockStyleButton(), "色・網掛けの対応", false);
+            new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - (ShowsBlockStyleButton ? 72 : 44), 245, 21), new Color(244, 208, 111), 15);
+        if (ShowsBlockStyleButton) DrawBlockStyleButton();
         else textRenderer?.Draw("セルをクリックで入力 / リストはホイールで移動",
             new Rectangle((int)panel.X + 8, (int)(panel.Y + panel.Height) - 22, 248, 18), Color.LightGray, 11);
     }

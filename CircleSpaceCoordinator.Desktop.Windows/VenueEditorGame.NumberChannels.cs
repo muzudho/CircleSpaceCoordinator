@@ -41,6 +41,8 @@ public sealed partial class VenueEditorGame
     private string? GetNumberChannelHoverError(ScreenPoint pointer)
     {
         if (workspace is null || editorMode != EditorMode.DeskPlacement) return null;
+        if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer))
+            return "ブロック番号と色・網掛けパターンの対応を編集する";
         for (var row = 0; row < VisibleChannelRows; row++)
         {
             var index = channelScroll + row;
