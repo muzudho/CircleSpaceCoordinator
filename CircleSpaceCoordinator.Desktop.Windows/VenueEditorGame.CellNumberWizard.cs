@@ -9,7 +9,7 @@ public sealed partial class VenueEditorGame
 {
     private bool ShowsCellNumberWizardButton => editorMode == EditorMode.DeskPlacement &&
         selectedChannelId is null && selectedNumberChannel == 2;
-    private bool ShowsChannelFooterButton => ShowsAddressSwapButton;
+    private bool ShowsChannelFooterButton => ShowsBlockStyleButton || ShowsCellNumberWizardButton;
 
     private void DrawCellNumberWizardButton()
     {

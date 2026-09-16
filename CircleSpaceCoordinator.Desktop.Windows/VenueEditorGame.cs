@@ -496,10 +496,14 @@ public sealed partial class VenueEditorGame : Game
                 SelectDisplayedLayout(hoveredPlanId);
                 LogPointer("plan_select", pointer, true, $"displayedIndex={GetDisplayedPlans().ToList().FindIndex(plan => plan.PlanId == hoveredPlanId)}");
             }
-            else if (CanSelectCellRange && IsControlDown(keyboard) && IsPointerInEditorCanvas(pointer))
+            else if (IsControlDown(keyboard) && !keyboard.IsKeyDown(Keys.LeftShift) && !keyboard.IsKeyDown(Keys.RightShift) &&
+                     IsPointerInEditorCanvas(pointer) && CanSwapSelectedAddress(pointer))
             {
-                // Ctrl reserves this entire gesture for range selection, even
-                // over an existing selection or when another tool is active.
+                BeginAddressSwap(pointer);
+            }
+            else if (CanSelectCellRange && (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift)) && IsPointerInEditorCanvas(pointer))
+            {
+                // Shift reserves the gesture for selection, including over an existing range.
                 rangeSelectionAnchor = VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer));
                 rangeSelectionCurrent = rangeSelectionAnchor;
                 frameSelectionStart = IsFrameNumberChannelSelected ? pointer : null;
@@ -519,6 +523,12 @@ public sealed partial class VenueEditorGame : Game
             else if (IsAddressSwapMode && IsPointerInEditorCanvas(pointer))
             {
                 BeginAddressSwap(pointer);
+            }
+            else if (editorMode == EditorMode.DeskPlacement && activeCanvasTool == ToolbarAction.EditSeatName &&
+                     IsControlDown(keyboard) && IsPointerInEditorCanvas(pointer))
+            {
+                // Ctrl only swaps an existing address selection; it must not open input elsewhere.
+                rangeSwapStatus = "Shift＋ドラッグで範囲を選択してから、選択範囲をCtrl＋ドラッグしてください";
             }
             else if (IsWeightChannelSelected && activeCanvasTool == ToolbarAction.EditSeatName && IsPointerInEditorCanvas(pointer))
             {
@@ -1689,7 +1699,7 @@ public sealed partial class VenueEditorGame : Game
         var mouse = Mouse.GetState();
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         var keyboard = Keyboard.GetState();
-        if (!IsPointerInEditorCanvas(pointer) || IsControlDown(keyboard) || keyboard.IsKeyDown(Keys.Space) ||
+        if (!IsPointerInEditorCanvas(pointer) || IsControlDown(keyboard) || keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) || keyboard.IsKeyDown(Keys.Space) ||
             leftPanActive || rangeSelectionAnchor is not null || pressedToolbarButton is not null)
             return;
         if (activeCanvasTool is not (ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or
@@ -2553,6 +2563,7 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.MoveDesk,
             ToolbarAction.DeskMenu,
             ToolbarAction.EditSeatName,
+            ToolbarAction.SwapAddresses,
             ToolbarAction.PillarMenu,
             ToolbarAction.FillDesks,
             ToolbarAction.RotateLeft,
@@ -2631,7 +2642,7 @@ public sealed partial class VenueEditorGame : Game
     private static int GetToolbarActionGroup(ToolbarAction action) => action switch
     {
         ToolbarAction.PillarMenu or ToolbarAction.DeskMenu or ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or
-        ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or
+        ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.SwapAddresses or ToolbarAction.EditDeskNumber or
         ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
         ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
         ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => 0,
@@ -2661,6 +2672,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.OptimizeCirclePlacement => workspace?.HasSelectedCircleLayout == true,
                 ToolbarAction.EditGenreStyles => workspace is not null && workspace.Project.Participants.Any(item => !string.IsNullOrWhiteSpace(item.GenreId)),
                 ToolbarAction.ToggleEvaluationAnalysis => workspace is not null,
+                ToolbarAction.SwapAddresses => workspace is not null && ShowsAddressSwapButton,
                 ToolbarAction.AssignParticipant => workspace?.HasSelectedCircleLayout == true && participantController?.SelectedParticipantId is not null,
                 ToolbarAction.MoveDesk or ToolbarAction.AddDesk or ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.FillDesks or
                 ToolbarAction.RotateLeft or ToolbarAction.RotateRight or ToolbarAction.UnassignParticipant or
@@ -2671,7 +2683,8 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.SaveProject => workspace is not null && projectSavePath is not null,
                 _ => false,
             };
-            button.Model.IsSelected = button.Action == activeCanvasTool ||
+            button.Model.IsSelected = button.Action == activeCanvasTool && !(button.Action == ToolbarAction.EditSeatName && IsAddressSwapMode) ||
+                button.Action == ToolbarAction.SwapAddresses && IsAddressSwapMode ||
                 button.Action == ToolbarAction.SpaceDefinitionsMode && editorMode == EditorMode.SpaceDefinitions ||
                 button.Action == GetToolMenu(activeCanvasTool) ||
                 button.Action == ToolbarAction.ParticipantDataMode && editorMode == EditorMode.ParticipantData ||
@@ -2782,6 +2795,11 @@ public sealed partial class VenueEditorGame : Game
         {
             OpenGenreStyleEditor();
             return (true, "genre_styles");
+        }
+        if (action == ToolbarAction.SwapAddresses)
+        {
+            ToggleAddressSwapMode();
+            return (true, "address_swap_mode");
         }
         if (action == ToolbarAction.ToggleEvaluationAnalysis)
         {
@@ -3191,6 +3209,10 @@ public sealed partial class VenueEditorGame : Game
                 textRenderer?.Draw("番", new Rectangle((int)center.X - 9, (int)center.Y - 8, 18, 16), color, 14, true);
                 DrawLine(new ScreenPoint(center.X + 5d, center.Y + 7d), new ScreenPoint(center.X + 12d, center.Y + 14d), 3d, color);
                 break;
+            case ToolbarAction.SwapAddresses:
+                DrawArrow(new ScreenPoint(center.X, center.Y - 7), true, color, hooked: false);
+                DrawArrow(new ScreenPoint(center.X, center.Y + 7), false, color, hooked: false);
+                break;
             case ToolbarAction.PillarMenu:
             case ToolbarAction.AddPillar:
             case ToolbarAction.RemovePillar:
@@ -3354,7 +3376,8 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.MoveDesk => "フレームを移動する",
         ToolbarAction.AddDesk => "フレームを追加する",
         ToolbarAction.RemoveDesk => "フレームを削除する",
-        ToolbarAction.EditSeatName => "番号入力：選択チャンネルの番号を変更する（重みチャンネルでは重みを入力）",
+        ToolbarAction.EditSeatName => "番地入力：クリックで入力、Shift＋ドラッグで選択、選択範囲をCtrl＋ドラッグでスワップ",
+        ToolbarAction.SwapAddresses => "番地のスワップ：選択中の番地をドラッグで交換する（再度押すと入力へ戻る）",
         ToolbarAction.EditDeskNumber => "フレーム番号を変更する（全てのフレームに設定が必要）",
         ToolbarAction.AddPillar => "柱を置く",
         ToolbarAction.RemovePillar => "柱を消す",
@@ -3960,6 +3983,7 @@ internal enum ToolbarAction
     AddDesk,
     RemoveDesk,
     EditSeatName,
+    SwapAddresses,
     EditDeskNumber,
     AddPillar,
     RemovePillar,

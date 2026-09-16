@@ -3,9 +3,7 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Model;
 using CircleSpaceCoordinator.Desktop.Core;
-using Microsoft.Xna.Framework;
 using StationeryUI.Canvas;
-using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
@@ -16,29 +14,22 @@ public sealed partial class VenueEditorGame
     private string[] addressSwapFrames = [];
     private bool ShowsAddressSwapButton => editorMode == EditorMode.DeskPlacement && selectedChannelId is null;
     private bool IsAddressSwapMode => ShowsAddressSwapButton && addressSwapEnabled && activeCanvasTool == ToolbarAction.EditSeatName;
-    private ScreenRectangle AddressSwapButton()
-    {
-        var panel = GetChannelPanelBounds();
-        return new(panel.X + 60, panel.Y + panel.Height - 48, panel.Width - 68, 44);
-    }
-
     private void ToggleAddressSwapMode()
     {
         var enabled = !IsAddressSwapMode;
         CancelInProgressPointerInteraction();
         addressSwapEnabled = enabled;
         activeCanvasTool = ToolbarAction.EditSeatName;
-        rangeSwapStatus = enabled ? "番地スワップ：Ctrl＋ドラッグで選択 → 範囲をドラッグ。Escで解除。" : "番地入力モード";
+        rangeSwapStatus = enabled ? "番地スワップ：Shift＋ドラッグで選択 → 範囲をドラッグ。Escで解除。" : "番地入力モード";
     }
 
-    private void DrawAddressSwapButton()
+    private bool CanSwapSelectedAddress(ScreenPoint pointer)
     {
-        var button = new IconButtonModel(AddressSwapButton(), IsAddressSwapMode ? "番地のスワップ：ON" : "番地のスワップ") { IsSelected = IsAddressSwapMode };
-        button.UpdatePointer(CanShowEditorHover ? new ScreenPoint(previousMouse.X, previousMouse.Y) : new(-1, -1));
-        StationeryButtonRenderer.Draw(button,
-            (area, color) => DrawRectangle(area, ToButtonColor(color)),
-            (area, width, color) => DrawOutline(area, width, ToButtonColor(color)),
-            (area, color) => textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 3), ToButtonColor(color), 15, true));
+        if (workspace is null || !ShowsAddressSwapButton || activeCanvasTool != ToolbarAction.EditSeatName) return false;
+        var cell = VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer));
+        if (selectedNumberChannel == 1)
+            return workspace.GetSelectedPlanSnapshot().Desks.Any(frame => selectedFrameIds.Contains(frame.Id) && frame.OccupiedCells.Contains(cell));
+        return selectedCellRange is { } range && range.Contains(cell);
     }
 
     private void BeginAddressSwap(ScreenPoint pointer)
@@ -59,8 +50,12 @@ public sealed partial class VenueEditorGame
         }
         else
         {
-            if (!plan.DeskPlacements.Any(frame => frame.GetSeatCells(types[frame.DeskTypeId]).Contains(cell))) return;
-            draggedCellRange = selectedCellRange is { } selected && selected.Contains(cell) ? selected : CellRange.From(cell, cell);
+            if (selectedCellRange is { } selected && selected.Contains(cell)) draggedCellRange = selected;
+            else
+            {
+                if (!plan.DeskPlacements.Any(frame => frame.GetSeatCells(types[frame.DeskTypeId]).Contains(cell))) return;
+                draggedCellRange = CellRange.From(cell, cell);
+            }
             selectedCellRange = draggedCellRange;
             addressSwapFrames = [];
         }
