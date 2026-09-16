@@ -79,6 +79,9 @@ public static class ProjectValidator
                 Add("deskType.space.invalid", $"deskTypes[{deskType.Id}].space", "Space details must describe the footprint, allocation areas and four edges.");
             if (deskType.Footprint.Count == 0)
                 Add("deskType.empty", $"deskTypes[{deskType.Id}]", "A desk footprint must contain at least one cell.");
+            if (deskType.Space is { Cells: not null } connectionSpace && !FrameCellConnection.AreValid(connectionSpace.Connections,
+                connectionSpace.Cells.Where(cell => cell is not null && cell.Area > 0).Select(cell => new GridPosition(cell.X, cell.Y)).ToHashSet()))
+                Add("deskType.connections.invalid", $"deskTypes[{deskType.Id}].space.connections", "Connections must join distinct seat cells without duplicate links.");
             if (deskType.Footprint.Distinct().Count() != deskType.Footprint.Count)
                 Add("deskType.duplicateCell", $"deskTypes[{deskType.Id}].footprint", "A desk footprint contains duplicate cells.");
             if (!deskType.Footprint.Contains(new GridPosition(0, 0)))

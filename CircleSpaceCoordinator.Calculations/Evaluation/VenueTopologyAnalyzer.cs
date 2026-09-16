@@ -140,10 +140,26 @@ public static class VenueTopologyAnalyzer
         IReadOnlyDictionary<string, IReadOnlySet<GridPosition>> deskCells)
     {
         var edges = new HashSet<(GridPosition FirstCell, GridPosition SecondCell)>();
-        foreach (var cells in deskCells.Values)
-        foreach (var first in cells)
-        foreach (var second in cells.Where(second => Manhattan(first, second) == 1))
-            edges.Add(Normalize(first, second));
+        foreach (var placement in plan.DeskPlacements)
+        {
+            if (deskTypes[placement.DeskTypeId].Space?.Connections is { } configured)
+            {
+                foreach (var link in configured)
+                {
+                    var first = placement.Anchor + link.FirstCell.Rotate(placement.Orientation);
+                    var second = placement.Anchor + link.SecondCell.Rotate(placement.Orientation);
+                    if (first != second && deskCells[placement.Id].Contains(first) && deskCells[placement.Id].Contains(second))
+                        edges.Add(Normalize(first, second));
+                }
+            }
+            else
+            {
+                var cells = deskCells[placement.Id];
+                foreach (var first in cells)
+                foreach (var second in cells.Where(second => Manhattan(first, second) == 1))
+                    edges.Add(Normalize(first, second));
+            }
+        }
         edges.UnionWith(GetAutomaticIslandEdges(plan, deskTypes, deskCells));
         return edges.OrderBy(item => item.FirstCell.Y).ThenBy(item => item.FirstCell.X)
             .ThenBy(item => item.SecondCell.Y).ThenBy(item => item.SecondCell.X).ToArray();

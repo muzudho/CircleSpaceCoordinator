@@ -17,7 +17,8 @@ public static class SpaceTypeFactory
             definition.Cells.Select(c => new GridPosition(c.X, c.Y)).ToArray())
         {
             Space = new SpaceTypeDetails(definition.Id, definition.Kind, definition.Width, definition.Height,
-                definition.Cells.Select(c => new SpaceAreaCell(c.X, c.Y, c.Area)).ToArray(), definition.Edges.ToArray()),
+                definition.Cells.Select(c => new SpaceAreaCell(c.X, c.Y, c.Area)).ToArray(), definition.Edges.ToArray())
+            { Connections = definition.Connections?.ToArray() },
         };
     }
 }

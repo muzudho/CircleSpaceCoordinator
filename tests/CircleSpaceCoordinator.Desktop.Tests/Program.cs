@@ -39,6 +39,7 @@ internal static class Program
             ("Cell number wizard orders rotated cells, validates lists and applies one undoable edit", CellNumberWizardEdits),
             ("Cell numbering restarts per frame even when venue order interleaves frames", CellNumberFrameRepeat),
             ("Island paths use seat cells while facing rectangles retain physical cells", IslandPathsUseSeats),
+            ("Frame-defined connections survive editing, rotation, catalog and event persistence", FrameDefinedConnections),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -910,6 +911,77 @@ internal static class Program
         var facingGraph = VenueTopologyAnalyzer.Build(project, facing);
         AssertEqual(false, facingGraph.Neighbors.ContainsKey(new(0, 1)));
         AssertEqual(true, facingGraph.FacingCellPairs.Contains((new GridPosition(0, 1), new GridPosition(4, 1))));
+    }
+
+    private static void FrameDefinedConnections()
+    {
+        var source = SpaceDefinitionCatalog.CreateDefault().Types.Single(type => type.Id == "desk-3-ends");
+        var draft = new SpaceDefinitionDraft(source);
+        var first = new GridPosition(0, 0);
+        var last = new GridPosition(2, 0);
+        AssertEqual(0, draft.Connections.Count);
+        draft.ToggleConnection(first, last);
+        AssertEqual(1, draft.Connections.Count);
+        AssertEqual(true, source.Connections is null);
+        draft.ToggleConnection(last, first);
+        AssertEqual(0, draft.Connections.Count);
+        draft.ToggleConnection(first, last);
+        draft.Resize(2, 1);
+        AssertEqual(0, draft.BuildType().Connections!.Count);
+        draft.Resize(3, 1);
+        AssertEqual(1, draft.Connections.Count);
+        var definition = draft.BuildType();
+        draft.Paint(2, 0, 0);
+        AssertEqual(0, draft.Connections.Count);
+        AssertEqual(1, definition.Connections!.Count);
+        var invalid = false;
+        try { draft.ToggleConnection(first, last); } catch (ArgumentException) { invalid = true; }
+        AssertEqual(true, invalid);
+        var type = SpaceTypeFactory.Create(definition);
+        AssertEqual(false, type.Id == SpaceTypeFactory.Create(source).Id);
+        foreach (var orientation in Enum.GetValues<QuarterTurn>())
+        {
+            var frame = new DeskPlacement("frame", type.Id, new(5, 5), orientation);
+            var plan = new Plan("plan", "Plan", [frame], []);
+            var project = CreateProject() with { DeskTypes = [type], Plans = [plan],
+                Venue = new("venue", "Venue", 12, 12, new HashSet<GridPosition>()) };
+            var a = frame.Anchor + first.Rotate(orientation);
+            var b = frame.Anchor + last.Rotate(orientation);
+            AssertEqual(true, VenueTopologyAnalyzer.Build(project, plan).Neighbors[a].Contains(b));
+            var disabled = VenueTopologyEditor.ToggleAutomaticConnection(project, plan.Id, a, b);
+            AssertEqual(false, VenueTopologyAnalyzer.Build(disabled, disabled.Plans[0]).Neighbors[a].Contains(b));
+            var restored = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(project));
+            AssertEqual(definition.Connections[0], restored.DeskTypes[0].Space!.Connections![0]);
+            AssertEqual(true, VenueTopologyAnalyzer.Build(restored, restored.Plans[0]).Neighbors[a].Contains(b));
+        }
+        var adjacent = new SpaceDefinitionDraft(SpaceDefinitionCatalog.CreateDefault().Types[0]);
+        AssertEqual(1, adjacent.Connections.Count);
+        adjacent.ToggleConnection(new(0, 0), new(1, 0));
+        AssertEqual(0, adjacent.BuildType().Connections!.Count);
+        adjacent.ResetAdjacentConnections();
+        AssertEqual(true, adjacent.BuildType().Connections is null);
+        AssertEqual(1, adjacent.Connections.Count);
+        foreach (var links in new FrameCellConnection[][]
+        {
+            [new(first, first)], [new(first, new(1, 0))], [new(first, last), new(last, first)],
+        })
+        {
+            invalid = false;
+            try { new SpaceDefinitionCatalog([definition with { Connections = links }], []).Validate(); }
+            catch (InvalidDataException) { invalid = true; }
+            AssertEqual(true, invalid);
+        }
+        var directory = Path.Combine(Path.GetTempPath(), $"frame-links-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "definitions.json");
+            new SpaceDefinitionStore(path).Save(new([definition], []));
+            var loaded = new SpaceDefinitionStore(path).Current.Types[0];
+            AssertEqual(definition.Connections[0], loaded.Connections![0]);
+            AssertEqual(type.Id, SpaceTypeFactory.Create(loaded).Id);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 
     private static void BlockChannelDisplay()

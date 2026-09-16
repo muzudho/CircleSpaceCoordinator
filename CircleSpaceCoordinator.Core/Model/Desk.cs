@@ -12,7 +12,12 @@ public sealed record DeskType(
 
 public sealed record SpaceAreaCell(int X, int Y, int Area);
 public sealed record SpaceTypeDetails(string DefinitionId, string Kind, int Width, int Height,
-    IReadOnlyList<SpaceAreaCell> Cells, IReadOnlyList<string> Edges);
+    IReadOnlyList<SpaceAreaCell> Cells, IReadOnlyList<string> Edges)
+{
+    /// <summary>Null retains legacy adjacent-seat connections; an empty list explicitly disconnects all internal cells.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<FrameCellConnection>? Connections { get; init; }
+}
 
 public sealed record DeskPlacement(
     string Id,

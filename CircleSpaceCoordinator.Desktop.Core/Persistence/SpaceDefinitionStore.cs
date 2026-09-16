@@ -1,10 +1,16 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Persistence;
 
 using System.Text.Json;
+using CircleSpaceCoordinator.Core.Geometry;
+using CircleSpaceCoordinator.Core.Model;
 
 public sealed record SpaceCell(int X, int Y, int Area);
 public sealed record SpaceTypeDefinition(string Id, string Name, string Kind, int Width, int Height,
-    IReadOnlyList<SpaceCell> Cells, IReadOnlyList<string> Edges);
+    IReadOnlyList<SpaceCell> Cells, IReadOnlyList<string> Edges)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<FrameCellConnection>? Connections { get; init; }
+}
 public sealed record SpaceTarget(string TypeId, int Area);
 public sealed record SpaceRequestDefinition(string Id, string Value, string Description, IReadOnlyList<SpaceTarget> Targets);
 public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> Types, IReadOnlyList<SpaceRequestDefinition> Requests)
@@ -52,6 +58,9 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
                 throw new InvalidDataException("占有セルを1つ以上指定してください。区画番号は0～9で、0はセル区画なしです。");
             if (requireRepresentativeCell && !type.Cells.Any(cell => cell.Area > 0))
                 throw new InvalidDataException("ブロックを入力するために、フレームを代表するセルが１つは必要です");
+            if (!FrameCellConnection.AreValid(type.Connections, type.Cells.Where(cell => cell.Area > 0)
+                .Select(cell => new GridPosition(cell.X, cell.Y)).ToHashSet()))
+                throw new InvalidDataException("接続は異なる配置可能セル同士を指定してください。同じ接続の重複はできません。");
         }
         foreach (var request in Requests)
         {
