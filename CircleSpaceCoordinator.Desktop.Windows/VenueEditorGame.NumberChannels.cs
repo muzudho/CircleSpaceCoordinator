@@ -41,6 +41,8 @@ public sealed partial class VenueEditorGame
     private string? GetNumberChannelHoverError(ScreenPoint pointer)
     {
         if (workspace is null || editorMode != EditorMode.DeskPlacement) return null;
+        if (ShowsAddressSwapButton && Contains(AddressSwapButton(), pointer))
+            return "番地のスワップ：選択中チャンネルの番号だけをドラッグで入れ替える";
         if (ShowsCellNumberWizardButton && Contains(BlockStyleButton(), pointer))
             return "セル番号入力ウィザード：並び順と番号リストを指定して一括入力する";
         if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer))

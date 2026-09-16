@@ -263,6 +263,16 @@ public sealed partial class VenueEditorGame : Game
 
         if (IsPressed(keyboard, Keys.Escape))
         {
+            if (IsAddressSwapMode || addressSwapChannel >= 0)
+            {
+                var wasDragging = addressSwapChannel >= 0;
+                CancelInProgressPointerInteraction();
+                if (!wasDragging) addressSwapEnabled = false;
+                rangeSwapStatus = wasDragging ? "番地のスワップを取り消しました" : "番地入力モード";
+                previousMouse = mouse;
+                previousKeyboard = keyboard;
+                return;
+            }
             RequestReturnToEvents();
             previousMouse = mouse;
             previousKeyboard = keyboard;
@@ -506,6 +516,10 @@ public sealed partial class VenueEditorGame : Game
                 leftPanActive = true;
                 LogPointer("viewport_pan_start", pointer, true, "button=left;temporary=space");
             }
+            else if (IsAddressSwapMode && IsPointerInEditorCanvas(pointer))
+            {
+                BeginAddressSwap(pointer);
+            }
             else if (IsWeightChannelSelected && activeCanvasTool == ToolbarAction.EditSeatName && IsPointerInEditorCanvas(pointer))
             {
                 EditChannelWeight(VenueCanvasMapper.ToGridPosition(viewport.ScreenToCell(pointer)));
@@ -613,6 +627,10 @@ public sealed partial class VenueEditorGame : Game
                 rangeSelectionCurrent = null;
                 LogPointer("range_select_end", pointer, true,
                     $"left={selectedCellRange.Value.Left};top={selectedCellRange.Value.Top};width={selectedCellRange.Value.Width};height={selectedCellRange.Value.Height}");
+            }
+            else if (addressSwapChannel >= 0 && draggedCellRange is not null)
+            {
+                FinishAddressSwap(pointer);
             }
             else if (draggedCellRange is { } range && participantController is not null)
             {
@@ -734,6 +752,8 @@ public sealed partial class VenueEditorGame : Game
         rangeSelectionCurrent = null;
         frameSelectionStart = null;
         draggedCellRange = null;
+        addressSwapChannel = -1;
+        addressSwapProject = null;
     }
 
     protected override void Draw(GameTime gameTime)
@@ -804,6 +824,7 @@ public sealed partial class VenueEditorGame : Game
                     DrawParticipantDragGhost();
                 }
                 DrawRangeSelection();
+                DrawAddressSwapFramePreview();
                 DrawDeskEditTarget();
                 DrawPlanList();
                 DrawChannels();
@@ -2804,6 +2825,7 @@ public sealed partial class VenueEditorGame : Game
 
         (bool Success, string Detail) SelectCanvasTool(ToolbarAction tool)
         {
+            addressSwapEnabled = false;
             activeCanvasTool = tool;
             topologyFirstDeskId = null;
             topologyFirstCell = null;
@@ -2813,6 +2835,9 @@ public sealed partial class VenueEditorGame : Game
 
         (bool Success, string Detail) ChangeEditorMode(EditorMode mode)
         {
+            addressSwapEnabled = false;
+            addressSwapChannel = -1;
+            addressSwapProject = null;
             editorMode = mode;
             tableTextPage = null;
             activeCanvasTool = mode == EditorMode.DeskPlacement

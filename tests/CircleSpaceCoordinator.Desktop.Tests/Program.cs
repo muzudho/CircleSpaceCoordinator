@@ -40,6 +40,7 @@ internal static class Program
             ("Cell numbering restarts per frame even when venue order interleaves frames", CellNumberFrameRepeat),
             ("Island paths use seat cells while facing rectangles retain physical cells", IslandPathsUseSeats),
             ("Frame-defined connections survive editing, rotation, catalog and event persistence", FrameDefinedConnections),
+            ("Address swaps preserve other channels and physical frames through remote history and JSON", AddressSwaps),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -982,6 +983,73 @@ internal static class Program
             AssertEqual(type.Id, SpaceTypeFactory.Create(loaded).Id);
         }
         finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    private static void AddressSwaps()
+    {
+        var original = CreateAssignmentProject(1);
+        var originalPlan = original.Plans[0];
+        var plan = originalPlan with
+        {
+            DeskPlacements = [originalPlan.DeskPlacements[0] with { DeskNumber = "F1" },
+                originalPlan.DeskPlacements[1] with { DeskNumber = "F2", Anchor = new(3, 0), Orientation = QuarterTurn.South }],
+            SeatLabels = [new("desk-1", new(0, 0), "A", "1"), new("desk-1", new(1, 0), "A", "2"),
+                new("desk-2", new(0, 0), "B", "7"), new("desk-2", new(1, 0), "B", "8")],
+        };
+        var project = original with { Plans = [plan] };
+        var directory = Path.Combine(Path.GetTempPath(), $"address-swaps-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            foreach (var channel in new[] { 0, 1, 2 })
+            {
+                var path = Path.Combine(directory, $"{channel}.json");
+                ProjectFileService.Save(path, project);
+                using var remote = DesktopApplication.LoadWorkspace(path);
+                var commands = new EditorCommandController(remote);
+                var before = ProjectJsonSerializer.Save(remote.Project);
+                AssertEqual(true, commands.SwapAddresses(channel, new(0, 0), new(2, 0), 2, 1, ["desk-1"]).Applied);
+                var edited = remote.SelectedPlan;
+                var left = edited.SeatLabels.Single(label => label.DeskPlacementId == "desk-1" && label.RelativeCell == new GridPosition(0, 0));
+                AssertEqual(channel == 0 ? "B" : "A", left.BlockName);
+                AssertEqual(channel == 2 ? "8" : "1", left.SeatName);
+                AssertEqual(channel == 1 ? "F2" : "F1", edited.DeskPlacements[0].DeskNumber);
+                AssertEqual(true, plan.DeskPlacements.Select(frame => (frame.Id, frame.Anchor, frame.Orientation))
+                    .SequenceEqual(edited.DeskPlacements.Select(frame => (frame.Id, frame.Anchor, frame.Orientation))));
+                AssertEqual(true, edited.Assignments[0].OccupiedCells.SetEquals(plan.Assignments[0].OccupiedCells));
+                var after = ProjectJsonSerializer.Save(remote.Project);
+                remote.Undo();
+                AssertEqual(before, ProjectJsonSerializer.Save(remote.Project));
+                remote.Redo();
+                AssertEqual(after, ProjectJsonSerializer.Save(remote.Project));
+                ProjectFileService.Save(path, remote.Project);
+                AssertEqual(after, ProjectJsonSerializer.Save(ProjectFileService.Load(path)));
+                AssertEqual(false, commands.SwapAddresses(channel, new(0, 0), new(3, 0), 2, 1, ["desk-1"]).Applied);
+                AssertEqual(after, ProjectJsonSerializer.Save(remote.Project));
+            }
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+        var emptyPlan = plan with { SeatLabels = [new("desk-1", new(0, 0), "A", "")] };
+        var moved = AddressSwapEditor.Swap(project with { Plans = [emptyPlan] }, plan.Id, 0, new(0, 0), new(2, 0), 1, 1, []);
+        AssertEqual(1, moved.Plans[0].SeatLabels.Count);
+        AssertEqual("desk-2", moved.Plans[0].SeatLabels[0].DeskPlacementId);
+        AssertEqual(new GridPosition(1, 0), moved.Plans[0].SeatLabels[0].RelativeCell);
+        var four = plan with
+        {
+            DeskPlacements = Enumerable.Range(0, 4).Select(i => new DeskPlacement($"d{i}", plan.DeskPlacements[0].DeskTypeId,
+                new(i * 2, 0), QuarterTurn.North) { DeskNumber = $"N{i}" }).ToArray(),
+            SeatLabels = [], Assignments = [],
+        };
+        var large = project with { Plans = [four], Venue = project.Venue with { Width = 8 } };
+        var swapped = AddressSwapEditor.Swap(large, four.Id, 1, new(0, 0), new(4, 0), 4, 1, ["d1", "d0"]);
+        AssertEqual("N2,N3,N0,N1", string.Join(",", swapped.Plans[0].DeskPlacements.Select(frame => frame.DeskNumber)));
+        foreach (var channel in new[] { 0, 1, 2 })
+        {
+            var rejected = false;
+            try { AddressSwapEditor.Swap(project, plan.Id, channel, new(0, 0), new(1, 0), 2, 1, ["desk-1"]); }
+            catch (CircleSpaceCoordinator.Core.Validation.ProjectValidationException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
     }
 
     private static void BlockChannelDisplay()

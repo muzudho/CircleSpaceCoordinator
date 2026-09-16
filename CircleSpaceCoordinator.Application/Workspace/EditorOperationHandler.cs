@@ -56,6 +56,7 @@ public static class EditorOperationHandler
         PlanCatalogServiceCopyDeskLayout op => PlanCatalogService.CopyDeskLayout(project, op.sourcePlanId, op.destinationPlanId),
         SetGenreStyles op => project with { GenreStyles = op.styles },
         SetBlockStyles op => project with { BlockStyles = op.styles },
+        SwapNumberAddresses op => AddressSwapEditor.Swap(project, op.planId, op.channel, op.source, op.destination, op.width, op.height, op.sourceFrameIds),
         SetExportPlan op => op.planId is null || project.Plans.Any(plan => plan.Id == op.planId)
             ? project with { ExportPlanId = op.planId }
             : throw new InvalidOperationException("選択した配置案は存在しません。"),

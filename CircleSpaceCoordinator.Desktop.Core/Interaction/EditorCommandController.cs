@@ -189,6 +189,9 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
     public EditorCommandResult ReplaceSeatLabels(IReadOnlyList<DeskSeatLabel> labels) => Apply(
         new DeskSeatLabelEditorReplaceLabels( workspace.SelectedPlanId, labels));
 
+    public EditorCommandResult SwapAddresses(int channel, GridPosition source, GridPosition destination, int width, int height,
+        IReadOnlyList<string> sourceFrameIds) => Apply(new SwapNumberAddresses(workspace.SelectedPlanId, channel, source, destination, width, height, sourceFrameIds));
+
     public EditorCommandResult AddIslandConnector(
         string firstDeskId, string secondDeskId, GridPosition firstCell, GridPosition secondCell) => Apply(
         new VenueTopologyEditorAddConnector( workspace.SelectedPlanId, firstDeskId, secondDeskId, firstCell, secondCell));

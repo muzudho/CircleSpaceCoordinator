@@ -3,6 +3,12 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 public sealed partial class VenueEditorGame
 {
     private const double StatusHintDurationSeconds = 5;
+    private static readonly string[] AddressSwapHints =
+    [
+        "番地スワップ中：Ctrl＋ドラッグで範囲選択 → 選択範囲をドラッグ",
+        "選択中の番地だけ交換。フレーム番号は同数のフレームを会場の上→下・左→右順に対応",
+        "ドラッグ中のEsc：取消　ボタンを再度押す：入力モード　Ctrl＋Z：元に戻す",
+    ];
     private static readonly string[] BlockNumberHints =
     [
         "Ctrl＋ドラッグ：セル単位で範囲選択（フレームの一部も選択できます）",
@@ -32,8 +38,8 @@ public sealed partial class VenueEditorGame
 
     private string GetRotatingFrameNumberHint(IReadOnlyList<string> details)
     {
-        var hints = IsBlockNumberChannelSelected ? BlockNumberHints : IsFrameNumberChannelSelected ? FrameNumberHints : FramePlacementHints;
-        var context = IsBlockNumberChannelSelected ? "block-number" : IsFrameNumberChannelSelected ? "frame-number" : "frame-placement";
+        var hints = IsAddressSwapMode ? AddressSwapHints : IsBlockNumberChannelSelected ? BlockNumberHints : IsFrameNumberChannelSelected ? FrameNumberHints : FramePlacementHints;
+        var context = IsAddressSwapMode ? "address-swap" : IsBlockNumberChannelSelected ? "block-number" : IsFrameNumberChannelSelected ? "frame-number" : "frame-placement";
         if (statusHintContext != context)
         {
             statusHintContext = context;

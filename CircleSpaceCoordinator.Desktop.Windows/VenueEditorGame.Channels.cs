@@ -107,8 +107,9 @@ public sealed partial class VenueEditorGame
             new Rectangle((int)panel.X + 10, (int)(panel.Y + panel.Height) - (ShowsChannelFooterButton ? 72 : 44), 245, 21), new Color(244, 208, 111), 15);
         if (ShowsBlockStyleButton) DrawBlockStyleButton();
         else if (ShowsCellNumberWizardButton) DrawCellNumberWizardButton();
-        else textRenderer?.Draw("セルをクリックで入力 / リストはホイールで移動",
+        else if (!ShowsAddressSwapButton) textRenderer?.Draw("セルをクリックで入力 / リストはホイールで移動",
             new Rectangle((int)panel.X + 8, (int)(panel.Y + panel.Height) - 22, 248, 18), Color.LightGray, 11);
+        if (ShowsAddressSwapButton) DrawAddressSwapButton();
     }
 
     private bool ScrollChannels(ScreenPoint pointer, int delta)
@@ -140,7 +141,8 @@ public sealed partial class VenueEditorGame
         if (editorMode == EditorMode.CirclePlacement) return HandleCircleDisplayChannelClick(pointer);
         try
         {
-            if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer)) OpenBlockStyleEditor();
+            if (ShowsAddressSwapButton && Contains(AddressSwapButton(), pointer)) ToggleAddressSwapMode();
+            else if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer)) OpenBlockStyleEditor();
             else if (ShowsCellNumberWizardButton && Contains(BlockStyleButton(), pointer)) OpenCellNumberWizard();
             else if (Contains(ChannelButton(0), pointer)) EditChannelDefinition(create: true);
             else if (Contains(ChannelButton(1), pointer) && IsWeightChannelSelected) EditChannelDefinition(create: false);
@@ -166,6 +168,7 @@ public sealed partial class VenueEditorGame
                     var index = row + channelScroll;
                     if (index >= workspace.Project.Evaluation.Features.Count + 3 || !Contains(ChannelRow(row), pointer)) continue;
                     selectedChannelId = index < 3 ? null : workspace.Project.Evaluation.Features[index - 3].Id;
+                    addressSwapEnabled = false;
                     if (index < 3) selectedNumberChannel = index;
                     activeCanvasTool = ToolbarAction.EditSeatName;
                     selectedCellRange = null;
