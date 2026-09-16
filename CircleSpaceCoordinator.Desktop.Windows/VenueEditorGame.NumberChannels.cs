@@ -42,7 +42,7 @@ public sealed partial class VenueEditorGame
     {
         if (workspace is null || editorMode != EditorMode.DeskPlacement) return null;
         if (ShowsCellNumberWizardButton && Contains(BlockStyleButton(), pointer))
-            return "セル番号入力ウィザード：並び順と番号リストを指定して一括入力する";
+            return selectedNumberChannel == 1 ? "旗からフレーム番号を自動連番する（分岐のないシーケンス）" : "セル番号入力ウィザード：並び順と番号リストを指定して一括入力する";
         if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer))
             return "ブロック番号と色・網掛けパターンの対応を編集する";
         for (var row = 0; row < VisibleChannelRows; row++)

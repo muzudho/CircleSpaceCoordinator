@@ -8,12 +8,12 @@ using StationeryUI.Controls;
 public sealed partial class VenueEditorGame
 {
     private bool ShowsCellNumberWizardButton => editorMode == EditorMode.DeskPlacement &&
-        selectedChannelId is null && selectedNumberChannel == 2;
+        selectedChannelId is null && selectedNumberChannel is 1 or 2;
     private bool ShowsChannelFooterButton => ShowsBlockStyleButton || ShowsCellNumberWizardButton;
 
     private void DrawCellNumberWizardButton()
     {
-        var button = new IconButtonModel(BlockStyleButton(), "セル番号入力ウィザード");
+        var button = new IconButtonModel(BlockStyleButton(), selectedNumberChannel == 1 ? "旗からフレーム番号を自動連番" : "セル番号入力ウィザード");
         button.UpdatePointer(CanShowEditorHover ? new ScreenPoint(previousMouse.X, previousMouse.Y) : new(-1, -1));
         StationeryButtonRenderer.Draw(button,
             (area, color) => DrawRectangle(area, ToButtonColor(color)),
@@ -33,11 +33,12 @@ public sealed partial class VenueEditorGame
 
     private void OpenCellNumberWizard()
     {
+        if (selectedNumberChannel == 1) { OpenIslandFrameNumberWizard(); return; }
         if (workspace is not { } owner || commandController is not { } commands) return;
         var plan = owner.SelectedPlan;
         var sourceProject = owner.Project;
         var range = selectedCellRange;
-        var draft = new CellNumberWizard(sourceProject, plan, range is { } selected ? selected.Contains : null);
+        var draft = new CellNumberWizard(sourceProject, plan, range is { } selected ? selected.Contains : null, owner.View.Topology);
         if (draft.Count == 0) { ShowInAppMessage("セル番号入力ウィザード", "対象の配置可能セルがありません。"); return; }
         var numbers = draft.DefaultNumbers;
         var order = CellNumberOrder.VenueTopLeft;
@@ -52,14 +53,19 @@ public sealed partial class VenueEditorGame
                 ChooseOrder();
             });
         void ChooseOrder() => OpenSelection($"セル番号入力ウィザード 2/4：並び順（{draft.Count}セル）",
-            ["会場の左上を先頭とする（左→右、上→下）", "セルが上向きのときの左上を先頭とする（フレームごと）"],
-            (int)order, index => { order = (CellNumberOrder)index; EditNumbers(); }, ChooseMode);
+            ["会場の左上を先頭とする（左→右、上→下）", "セルが上向きのときの左上を先頭とする（フレームごと）", "旗からの順番（分岐のないシーケンス）"],
+            (int)order, index =>
+            {
+                order = (CellNumberOrder)index;
+                try { draft.Targets(order); EditNumbers(); }
+                catch (InvalidOperationException exception) { ShowNotice("自動連番できません", exception.Message, ChooseOrder); }
+            }, ChooseMode);
         void EditNumbers() => OpenUnderlineInput("セル番号入力ウィザード 3/4：番号リスト", numbers, value =>
         {
             draft.ParseNumbers(value, repeatPerFrame);
             numbers = value;
             Preview();
-        }, $"対象：{scope}、{draft.Count}セル。カンマ区切りで{(repeatPerFrame ? draft.NumbersPerFrame : draft.Count)}個指定します。\n例：1, 2, 3 ／ 01, 02, 03 ／ A, B, C\nフレーム順は会場の上→下・左→右。{(repeatPerFrame ? "各フレームの対象セルで先頭から使います。小さいフレームは先頭部分だけを使います。" : "番号は途中でリセットしません。")}",
+        }, $"対象：{scope}、{draft.Count}セル。カンマ区切りで{(repeatPerFrame ? draft.NumbersPerFrame : draft.Count)}個指定します。\n例：1, 2, 3 ／ 01, 02, 03 ／ A, B, C\n{(order == CellNumberOrder.IslandSequence ? "旗からの距離順。複数の旗は会場の上→左の順に処理します。" : "フレーム順は会場の上→下・左→右。")}\n{(repeatPerFrame ? "各フレームの対象セルで先頭から使います。小さいフレームは先頭部分だけを使います。" : "番号は途中でリセットしません。")}",
             Math.Max(4096, draft.Count * 82), cancelled: ChooseOrder);
         void Preview()
         {
@@ -67,7 +73,7 @@ public sealed partial class VenueEditorGame
             var targets = draft.Targets(order);
             var lines = targets.Take(6).Select((target, index) =>
                 $"セル ({target.Cell.X}, {target.Cell.Y}) → {values[index]}");
-            var message = $"対象：{scope}、{draft.Count}セル\n割り当て：{(repeatPerFrame ? "フレームごとに繰り返す" : "全体で通し番号")}\n並び順：{(order == CellNumberOrder.VenueTopLeft ? "会場の左上" : "フレーム内の左上（上向き基準）")}\n既存のセル番号を置き換えます。ブロック番号・フレーム番号は保持します。\n\n" +
+            var message = $"対象：{scope}、{draft.Count}セル\n割り当て：{(repeatPerFrame ? "フレームごとに繰り返す" : "全体で通し番号")}\n並び順：{(order == CellNumberOrder.IslandSequence ? "旗からの順番" : order == CellNumberOrder.VenueTopLeft ? "会場の左上" : "フレーム内の左上（上向き基準）")}\n既存のセル番号を置き換えます。ブロック番号・フレーム番号は保持します。\n\n" +
                 string.Join("\n", lines) + (draft.Count > 6 ? $"\nほか{draft.Count - 6}セル" : "") + "\n\n適用後は1回のUndoで戻せます。";
             OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "セル番号入力ウィザード 4/4：確認", message), action =>
             {

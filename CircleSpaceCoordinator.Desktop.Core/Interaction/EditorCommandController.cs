@@ -151,6 +151,9 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
     public EditorCommandResult SetDeskNumber(string deskPlacementId, string? deskNumber) => Apply(
         new PlanDeskEditorSetDeskNumber( workspace.SelectedPlanId, deskPlacementId, deskNumber));
 
+    public EditorCommandResult NumberFramesFromIslands(int firstNumber, IReadOnlySet<string>? frameIds = null) =>
+        Apply(new NumberFramesFromIslands(workspace.SelectedPlanId, firstNumber, frameIds));
+
     public EditorCommandResult SetDeskNumbers(IReadOnlyList<string> deskPlacementIds, string? deskNumber) =>
         deskPlacementIds.Count == 0 ? EditorCommandResult.NoTarget : Apply(
             new PlanDeskEditorSetDeskNumbers(workspace.SelectedPlanId, deskPlacementIds, deskNumber));

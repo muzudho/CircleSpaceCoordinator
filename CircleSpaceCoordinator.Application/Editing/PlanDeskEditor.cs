@@ -6,6 +6,21 @@ using CircleSpaceCoordinator.Core.Validation;
 
 public static class PlanDeskEditor
 {
+    public static CircleSpaceProject NumberFromIslands(CircleSpaceProject project, string planId, int firstNumber,
+        IReadOnlySet<string>? frameIds = null)
+    {
+        if (firstNumber < 0) throw new ArgumentOutOfRangeException(nameof(firstNumber));
+        var planIndex = FindUniqueIndex(project.Plans, planId, plan => plan.Id, "plan");
+        var plan = project.Plans[planIndex];
+        var frames = CircleSpaceCoordinator.Core.Evaluation.IslandNumbering.OrderedFrames(plan,
+            CircleSpaceCoordinator.Core.Evaluation.VenueTopologyAnalyzer.Build(project, plan), frameIds);
+        if ((long)firstNumber + frames.Count - 1 > int.MaxValue) throw new ArgumentOutOfRangeException(nameof(firstNumber));
+        var numbers = frames.Select((id, index) => (id, number: (firstNumber + index).ToString(System.Globalization.CultureInfo.InvariantCulture)))
+            .ToDictionary(item => item.id, item => item.number);
+        return ReplacePlan(project, planIndex, plan with { DeskPlacements = plan.DeskPlacements.Select(frame =>
+            numbers.TryGetValue(frame.Id, out var number) ? frame with { DeskNumber = number } : frame).ToArray() });
+    }
+
     public static CircleSpaceProject AddDesk(
         CircleSpaceProject project,
         string planId,

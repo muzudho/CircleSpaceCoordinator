@@ -24,6 +24,8 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Flag sequences order frame and cell numbers with atomic remote undo and persistence", FlagSequenceNumbering),
+            ("Flag numbering rejects branching trees and unreachable selected cells", FlagNumberingRejectsTrees),
             ("Island entrance sides restrict exits while cycles and multiple roots retain shortest distances", IslandDistanceTrees),
             ("Island starts survive remote edits, sharing, transforms, history and persistence", IslandStartEditing),
             ("Island distances use enabled seat connections and ignore facing regions", IslandDistanceConnections),
@@ -855,7 +857,7 @@ internal static class Program
         var draft = new CellNumberWizard(project, plan);
         AssertEqual(6, draft.Count);
         AssertEqual("1, 2", draft.DefaultFrameNumbers);
-        foreach (var order in Enum.GetValues<CellNumberOrder>())
+        foreach (var order in new[] { CellNumberOrder.VenueTopLeft, CellNumberOrder.FrameTopLeft })
         {
             var built = draft.Build(order, "01, 02", repeatPerFrame: true);
             foreach (var frame in frames)
@@ -1052,6 +1054,92 @@ internal static class Program
             var rejected = false;
             try { AddressSwapEditor.Swap(project, plan.Id, channel, new(0, 0), new(1, 0), 2, 1, ["desk-1"]); }
             catch (CircleSpaceCoordinator.Core.Validation.ProjectValidationException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
+    }
+
+    private static void FlagSequenceNumbering()
+    {
+        var source = CreateAssignmentProject(1);
+        var plan = source.Plans[0] with
+        {
+            IslandStarts = [new("desk-2", new(1, 0), QuarterTurn.West)],
+            SeatLabels = [new("desk-1", new(0, 0), "Block", "Old")],
+        };
+        var project = source with { Plans = [plan] };
+        var graph = VenueTopologyAnalyzer.Build(project, plan);
+        AssertEqual(true, IslandNumbering.OrderedFrames(plan, graph).SequenceEqual(["desk-2", "desk-1"]));
+        var draft = new CellNumberWizard(project, plan, topology: graph);
+        AssertEqual(new GridPosition(3, 0), draft.Targets(CellNumberOrder.IslandSequence)[0].Cell);
+        var labels = draft.Build(CellNumberOrder.IslandSequence, "01, 02, 03, 04");
+        AssertEqual("04", labels.Single(label => label.DeskPlacementId == "desk-1" && label.RelativeCell == new GridPosition(0, 0)).SeatName);
+        AssertEqual("Block", labels.Single(label => label.DeskPlacementId == "desk-1" && label.RelativeCell == new GridPosition(0, 0)).BlockName);
+        AssertEqual(true, draft.AssignedNumbers(CellNumberOrder.IslandSequence, "A, B", true).SequenceEqual(["A", "B", "A", "B"]));
+        var directory = Path.Combine(Path.GetTempPath(), $"flag-numbering-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "event.json");
+            ProjectFileService.Save(path, project);
+            using var remote = DesktopApplication.LoadWorkspace(path);
+            var commands = new EditorCommandController(remote);
+            AssertEqual(true, commands.DuplicateSelectedPlan().Applied);
+            var before = ProjectJsonSerializer.Save(remote.Project);
+            AssertEqual(true, commands.NumberFramesFromIslands(7).Applied);
+            foreach (var shared in remote.Project.Plans)
+            {
+                AssertEqual("8", shared.DeskPlacements.Single(frame => frame.Id == "desk-1").DeskNumber);
+                AssertEqual("7", shared.DeskPlacements.Single(frame => frame.Id == "desk-2").DeskNumber);
+                AssertEqual("Old", shared.SeatLabels.Single().SeatName);
+                AssertEqual("Block", shared.SeatLabels.Single().BlockName);
+            }
+            var after = ProjectJsonSerializer.Save(remote.Project);
+            remote.Undo();
+            AssertEqual(before, ProjectJsonSerializer.Save(remote.Project));
+            remote.Redo();
+            AssertEqual(after, ProjectJsonSerializer.Save(remote.Project));
+            AssertEqual(after, ProjectJsonSerializer.Save(ProjectJsonSerializer.Load(after)));
+            AssertEqual(true, commands.NumberFramesFromIslands(20, new HashSet<string> { "desk-1" }).Applied);
+            AssertEqual("20", remote.SelectedPlan.DeskPlacements.Single(frame => frame.Id == "desk-1").DeskNumber);
+            AssertEqual("7", remote.SelectedPlan.DeskPlacements.Single(frame => frame.Id == "desk-2").DeskNumber);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    private static void FlagNumberingRejectsTrees()
+    {
+        GridPosition a = new(0, 0), b = new(1, 0), c = new(2, 0), d = new(1, 1);
+        var type = new DeskType("branch", "Branch", [a, b, c, d])
+        {
+            Space = new("branch", "desk", 3, 2, [new(0, 0, 1), new(1, 0, 1), new(2, 0, 1), new(1, 1, 1)], [])
+            { Connections = [new(a, b), new(b, c), new(b, d)] },
+        };
+        var plan = new Plan("plan", "Plan", [new("frame", type.Id, new(0, 0), QuarterTurn.North)], [])
+        { IslandStarts = [new("frame", a, QuarterTurn.East)] };
+        var source = CreateProject();
+        var project = source with { DeskTypes = [type], Plans = [plan] };
+        var graph = VenueTopologyAnalyzer.Build(project, plan);
+        ExpectRejected(() => IslandNumbering.OrderedFrames(plan, graph));
+        ExpectRejected(() => new CellNumberWizard(project, plan, topology: graph).Targets(CellNumberOrder.IslandSequence));
+        ExpectRejected(() => PlanDeskEditor.NumberFromIslands(project, plan.Id, 1));
+        AssertEqual<string?>(null, project.Plans[0].DeskPlacements[0].DeskNumber);
+        var blocked = plan with { IslandStarts = [new("frame", a, QuarterTurn.West)] };
+        ExpectRejected(() => IslandNumbering.OrderedCells(blocked, graph, new HashSet<GridPosition> { c }));
+        ExpectRejected(() => IslandNumbering.OrderedCells(plan with { IslandStarts = [] }, graph));
+        // A loop cut at the flag is a sequence, not a branching tree.
+        var loopPlan = plan with { IslandStarts = [new("frame", a, QuarterTurn.East)] };
+        // Put the exit south of the flag so that it is not another entrance-side edge.
+        GridPosition exit = new(0, 1);
+        var loopGraph = new VenueTopologyGraph(new Dictionary<GridPosition, IReadOnlySet<GridPosition>>
+        {
+            [a] = new HashSet<GridPosition> { b, exit }, [b] = new HashSet<GridPosition> { a, c },
+            [c] = new HashSet<GridPosition> { b, exit }, [exit] = new HashSet<GridPosition> { c, a },
+        }, [], new Dictionary<GridPosition, string>());
+        AssertEqual(true, IslandNumbering.OrderedCells(loopPlan, loopGraph).SequenceEqual([a, b, c, exit]));
+        void ExpectRejected(Action action)
+        {
+            var rejected = false;
+            try { action(); } catch (InvalidOperationException) { rejected = true; }
             AssertEqual(true, rejected);
         }
     }

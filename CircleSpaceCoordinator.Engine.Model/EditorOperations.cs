@@ -56,7 +56,9 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(RemoveChannel), "RemoveChannel")]
 [JsonDerivedType(typeof(SetChannelWeights), "SetChannelWeights")]
 [JsonDerivedType(typeof(SetIslandStart), "SetIslandStart")]
+[JsonDerivedType(typeof(NumberFramesFromIslands), "NumberFramesFromIslands")]
 public abstract record EditorOperation;
+public sealed record NumberFramesFromIslands(string planId, int firstNumber, IReadOnlySet<string>? frameIds = null) : EditorOperation, IPlanOperation;
 public sealed record SetIslandStart(string planId, GridPosition cell, bool remove = false) : EditorOperation, IPlanOperation;
 public interface IPlanOperation { string planId { get; } }
 

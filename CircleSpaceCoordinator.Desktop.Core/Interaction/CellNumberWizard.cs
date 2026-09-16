@@ -1,9 +1,10 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 using CircleSpaceCoordinator.Core.Geometry;
+using CircleSpaceCoordinator.Core.Evaluation;
 using CircleSpaceCoordinator.Core.Model;
 
-public enum CellNumberOrder { VenueTopLeft, FrameTopLeft }
+public enum CellNumberOrder { VenueTopLeft, FrameTopLeft, IslandSequence }
 
 public sealed record CellNumberTarget(string FrameId, GridPosition RelativeCell, GridPosition Cell);
 
@@ -11,6 +12,7 @@ public sealed record CellNumberTarget(string FrameId, GridPosition RelativeCell,
 public sealed class CellNumberWizard
 {
     private readonly Plan plan;
+    private readonly VenueTopologyGraph? topology;
     private readonly CellNumberTarget[] venueOrder;
     private readonly CellNumberTarget[] frameOrder;
     public int Count => venueOrder.Length;
@@ -18,9 +20,10 @@ public sealed class CellNumberWizard
     public int NumbersPerFrame => frameOrder.GroupBy(target => target.FrameId).Select(group => group.Count()).DefaultIfEmpty(0).Max();
     public string DefaultFrameNumbers => string.Join(", ", Enumerable.Range(1, NumbersPerFrame));
 
-    public CellNumberWizard(CircleSpaceProject project, Plan plan, Func<GridPosition, bool>? includes = null)
+    public CellNumberWizard(CircleSpaceProject project, Plan plan, Func<GridPosition, bool>? includes = null, VenueTopologyGraph? topology = null)
     {
         this.plan = plan;
+        this.topology = topology;
         var types = project.DeskTypes.ToDictionary(type => type.Id);
         var frames = plan.DeskPlacements.Where(frame => types[frame.DeskTypeId].Footprint.Count > 0)
             .OrderBy(frame => frame.GetOccupiedCells(types[frame.DeskTypeId]).Min(cell => cell.Y))
@@ -36,8 +39,14 @@ public sealed class CellNumberWizard
             .ThenBy(target => target.FrameId, StringComparer.Ordinal).ToArray();
     }
 
-    public IReadOnlyList<CellNumberTarget> Targets(CellNumberOrder order) =>
-        Array.AsReadOnly(order == CellNumberOrder.VenueTopLeft ? venueOrder : frameOrder);
+    public IReadOnlyList<CellNumberTarget> Targets(CellNumberOrder order)
+    {
+        if (order != CellNumberOrder.IslandSequence)
+            return Array.AsReadOnly(order == CellNumberOrder.VenueTopLeft ? venueOrder : frameOrder);
+        if (topology is null) throw new InvalidOperationException("Island topology is required.");
+        var byCell = venueOrder.ToDictionary(target => target.Cell);
+        return IslandNumbering.OrderedCells(plan, topology, byCell.Keys.ToHashSet()).Select(cell => byCell[cell]).ToArray();
+    }
 
     public string[] ParseNumbers(string text, bool repeatPerFrame = false)
     {
