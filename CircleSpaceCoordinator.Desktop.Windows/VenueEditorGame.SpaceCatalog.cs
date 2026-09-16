@@ -182,6 +182,7 @@ public sealed partial class VenueEditorGame
     private void DrawNextSpace()
     {
         if (editorMode != EditorMode.DeskPlacement) return;
+        DrawSpaceCapacity();
         var bounds = NextSpaceBounds;
         DrawRectangle(bounds, new Color(24, 34, 44));
         DrawOutline(bounds, 2, new Color(110, 160, 170));

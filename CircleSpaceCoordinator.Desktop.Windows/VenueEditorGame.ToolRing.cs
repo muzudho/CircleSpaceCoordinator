@@ -199,7 +199,11 @@ public sealed partial class VenueEditorGame
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, ToolbarHeight), cover);
         var visiblePlans = Math.Min(GetDisplayedPlans().Count, GetVisiblePlanRowCount());
         DrawRectangle(GetPlanListBounds(visiblePlans), cover);
-        if (editorMode == EditorMode.DeskPlacement) DrawRectangle(NextSpaceBounds, cover);
+        if (editorMode == EditorMode.DeskPlacement)
+        {
+            DrawRectangle(NextSpaceBounds, cover);
+            DrawRectangle(SpaceCapacityBounds, cover);
+        }
         if (ShowsChannels) DrawRectangle(GetChannelPanelBounds(), cover);
     }
 

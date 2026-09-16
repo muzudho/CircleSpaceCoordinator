@@ -88,7 +88,6 @@ public sealed partial class VenueEditorGame : Game
     private bool hoveredLayoutBind;
     private bool hoveredDeskLayoutParent;
     private bool hoveredLayoutRename;
-    private string primaryStatusMessage = "";
     private string secondaryStatusMessage = "";
     private QuarterTurn nextDeskOrientation = QuarterTurn.North;
     private ScreenPoint? lastDeskGhostPointer;
@@ -291,7 +290,7 @@ public sealed partial class VenueEditorGame : Game
 
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         UpdateToolbar(pointer);
-        if (editorMode == EditorMode.DeskPlacement && (Contains(NextSpaceBounds, pointer) || pressedNextSpace))
+        if (editorMode == EditorMode.DeskPlacement && (Contains(NextSpaceBounds, pointer) || Contains(SpaceCapacityBounds, pointer) || pressedNextSpace))
         {
             if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
             {
@@ -1857,7 +1856,7 @@ public sealed partial class VenueEditorGame : Game
 
     private bool IsPointerInEditorCanvas(ScreenPoint pointer)
     {
-        if (editorMode == EditorMode.DeskPlacement && Contains(NextSpaceBounds, pointer)) return false;
+        if (editorMode == EditorMode.DeskPlacement && (Contains(NextSpaceBounds, pointer) || Contains(SpaceCapacityBounds, pointer))) return false;
         var height = GraphicsDevice.PresentationParameters.BackBufferHeight;
         if (pointer.Y < ToolbarHeight || pointer.Y >= height - StatusBarHeight)
             return false;
@@ -3348,7 +3347,7 @@ public sealed partial class VenueEditorGame : Game
         DrawRectangle(new ScreenRectangle(0d, top, width, StatusBarHeight), new Color(14, 20, 28, 248));
         DrawRectangle(new ScreenRectangle(0d, top, width, 2d), new Color(72, 143, 153));
         textRenderer?.Draw(
-            primaryStatusMessage,
+            HoveredButtonDescription(),
             new Rectangle(14, top + 5, Math.Max(1, width - 28), 23),
             Color.White,
             pixelHeight: 17,
@@ -3374,26 +3373,21 @@ public sealed partial class VenueEditorGame : Game
         Window.Title = GetWindowTitle();
         if (editorMode == EditorMode.SpaceDefinitions)
         {
-            primaryStatusMessage = "フレーム定義（アプリ共通）　変更は編集画面の［保存］で確定";
             secondaryStatusMessage = spaceDefinitionStatus;
             return;
         }
         if (workspace is null)
         {
-            primaryStatusMessage = "空の確認用グリッド";
             secondaryStatusMessage = "";
             return;
         }
 
         if (editorMode is EditorMode.ParticipantData or EditorMode.CirclePlacementDecision)
         {
-            primaryStatusMessage = $"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　{(editorMode == EditorMode.CirclePlacementDecision ? "スペース番号書き出し・出力先の表" : "サークルデータ（閲覧専用）")}";
             secondaryStatusMessage = toolbarButtons.FirstOrDefault(button => button.Model.IsPointerOver)?.Model.AccessibleName
                 ?? "ホイール: 縦スクロール　Shift＋ホイール: 横　矢印 / PageUp・Down / Home・End: 移動　セルクリック: 全文";
             return;
         }
-        var snapshot = workspace.GetSelectedPlanSnapshot();
-        var participant = participantController?.SelectedParticipantName ?? "未割当てなし";
         var hoveredToolbarButton = toolbarButtons.FirstOrDefault(button => button.Model.IsPointerOver);
         var hoveredButton = hoveredToolbarButton is not null &&
             activeCanvasTool == ToolbarAction.AddDesk &&
@@ -3405,26 +3399,13 @@ public sealed partial class VenueEditorGame : Game
         var hoveredPlan = hoveredPlanId is null
             ? null
             : GetDisplayedPlans().FirstOrDefault(plan => plan.PlanId == hoveredPlanId);
-        primaryStatusMessage = ShowsDeskLayouts
-            ? $"フレーム配置: {CurrentDeskLayoutName()}"
-            : $"配置案: {snapshot.PlanName}　一般参加者評価値: {snapshot.AudienceEvaluation.GeneralAttendeeScore:0.##}　サークル参加者評価値: {snapshot.AudienceEvaluation.CircleParticipantScore:0.##}";
-        if (editorMode != EditorMode.DeskPlacement && !snapshot.AudienceEvaluation.CombinedSpaceRequirementsSatisfied)
-            primaryStatusMessage += "　⚠ 合体サークルが同じフレームにありません";
-        primaryStatusMessage += editorMode switch
-        {
-            EditorMode.DeskPlacement => $"　モード: フレーム配置　次のフレーム: {FormatOrientation(nextDeskOrientation)}",
-            EditorMode.IslandDefinition => "　モード: 島定義",
-            EditorMode.GenrePlacement => "　モード: ジャンル配置",
-            EditorMode.CirclePlacement => $"　モード: サークル配置　選択中: {participant}",
-            _ => "　モード: ジャンルデータ",
-        };
         var details = new List<string>();
+        if (editorMode != EditorMode.DeskPlacement && !workspace.GetSelectedPlanSnapshot().AudienceEvaluation.CombinedSpaceRequirementsSatisfied)
+            details.Add("⚠ 合体サークルが同じフレームにありません");
         if (ShowsLayoutOrder && CanShowEditorHover)
             foreach (var direction in new[] { -1, 1 })
                 if (Contains(LayoutOrderButton(direction), new ScreenPoint(previousMouse.X, previousMouse.Y)))
                     details.Add(direction < 0 ? "選択中のフレーム配置を1つ上へ移動" : "選択中のフレーム配置を1つ下へ移動");
-        if (editorMode == EditorMode.DeskPlacement && SelectedDisplayedLayoutId is { } capacityLayoutId)
-            primaryStatusMessage = DescribeSpaceCapacity(capacityLayoutId) + "　｜　" + primaryStatusMessage;
         if (editorMode == EditorMode.DeskPlacement && hoveredPlan is not null)
         {
             var mismatch = GetSpaceCapacity().Layouts[hoveredPlan.PlanId] != GetSpaceCapacity().Requested;
