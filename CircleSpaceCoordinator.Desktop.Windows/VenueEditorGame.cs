@@ -3283,7 +3283,7 @@ public sealed partial class VenueEditorGame : Game
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
         ToolbarAction.ExportFrameLayout => "選択中のフレーム配置を、会場名・定義・島定義と一緒に書き出す",
-        ToolbarAction.ImportFrameLayout => "フレーム配置データを読み込み、新しいイベントとして開く",
+        ToolbarAction.ImportFrameLayout => "フレーム配置データを読み込み、現在のイベントに配置案を追加する",
         ToolbarAction.SpaceDefinitionsMode => "このフレーム配置の型と申込スペースを編集する",
         ToolbarAction.DeskMenu => "フレーム：追加・削除を選択",
         ToolbarAction.PillarMenu => "柱：追加・削除を選択",

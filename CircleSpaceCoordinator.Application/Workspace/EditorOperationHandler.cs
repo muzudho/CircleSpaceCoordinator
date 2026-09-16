@@ -11,6 +11,7 @@ public static class EditorOperationHandler
 {
     public static CircleSpaceProject Apply(CircleSpaceProject project, EditorOperation operation) => operation switch
     {
+        ImportFrameLayout op => FrameLayoutImportService.Add(project, op.incoming, op.id, op.name),
         SetFrameLayoutDefinitions op => SetDefinitions(project, op),
         SetFrameLayoutConfidential op => project.DeskLayouts.Any(layout => layout.Id == op.layoutId)
             ? project with { DeskLayouts = project.DeskLayouts.Select(layout => layout.Id == op.layoutId ? layout with { IsConfidential = true } : layout).ToArray() }

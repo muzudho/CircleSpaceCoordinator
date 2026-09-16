@@ -27,6 +27,7 @@ internal static class Program
             ("Portable frame layouts retain definitions, topology and confidentiality without circle data", PortableFrameRoundTrip),
             ("Portable imports reject malformed data and never replace existing event files", PortableFrameRejections),
             ("Local frame definitions and venue metadata survive remote history and persistence", PortableFrameEditing),
+            ("Portable layouts append to the current event with isolated types and atomic undo", PortableFrameAppend),
             ("Editing key repeat delays, repeats and resets across release, IME and focus changes", EditingKeyRepeats),
             ("Flag sequences order frame and cell numbers with atomic remote undo and persistence", FlagSequenceNumbering),
             ("Flag numbering rejects branching trees and unreachable selected cells", FlagNumberingRejectsTrees),
@@ -234,6 +235,56 @@ internal static class Program
         try { FrameLayoutPortableService.Export(project, project.DeskLayouts[0].Id, changed); }
         catch (InvalidDataException) { conflict = true; }
         AssertEqual(true, conflict);
+    }
+
+    private static void PortableFrameAppend()
+    {
+        var original = LayoutProjection.MigrateLegacyPlans(CreateProject());
+        var incoming = FrameLayoutPortableService.Import(FrameLayoutPortableService.Export(original, original.DeskLayouts[0].Id, new([], [])));
+        incoming = incoming with
+        {
+            DeskTypes = [incoming.DeskTypes[0] with { Name = "別の定義", Footprint = [new(0, 0), new(1, 0), new(2, 0)] }],
+            IsConfidential = true,
+        };
+        using var remote = CircleSpaceCoordinator.EditorClient.EditorConnection.Current.Open(ProjectJsonSerializer.Save(original));
+        var before = ProjectJsonSerializer.Save(remote.Project);
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.ImportFrameLayout(incoming, "imported", "読み込んだ配置案"), selectedPlanEdit: false);
+        remote.SelectDeskLayout("imported");
+        var result = remote.Project;
+        AssertEqual(original.Id, result.Id);
+        AssertEqual(original.Name, result.Name);
+        AssertEqual(2, result.DeskLayouts.Count);
+        AssertEqual(original.CircleLayouts.Count, result.CircleLayouts.Count);
+        AssertEqual(original.Participants.Count, result.Participants.Count);
+        AssertEqual(true, result.IsConfidential);
+        AssertEqual("読み込んだ配置案", result.DeskLayouts[1].Name);
+        AssertEqual(true, result.DeskLayouts[1].IsConfidential);
+        AssertEqual(true, result.DeskLayouts[1].DeskPlacements[0].DeskTypeId != original.DeskTypes[0].Id);
+        AssertEqual(2, result.DeskTypes.Single(type => type.Id == original.DeskTypes[0].Id).Footprint.Count);
+        AssertEqual(3, result.DeskTypes.Single(type => type.Id == result.DeskLayouts[1].DeskPlacements[0].DeskTypeId).Footprint.Count);
+        AssertEqual(before, ProjectJsonSerializer.Save(result with
+        {
+            DeskTypes = original.DeskTypes, DeskLayouts = original.DeskLayouts, IsConfidential = original.IsConfidential,
+        }));
+        remote.Undo();
+        AssertEqual(before, ProjectJsonSerializer.Save(remote.Project));
+        remote.Redo();
+        AssertEqual(2, ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(remote.Project)).DeskLayouts.Count);
+        var after = ProjectJsonSerializer.Save(remote.Project);
+        void Reject(CircleSpaceProject source, string name)
+        {
+            var rejected = false;
+            try { remote.Execute(new CircleSpaceCoordinator.Engine.Model.ImportFrameLayout(source, "another", name), selectedPlanEdit: false); }
+            catch { rejected = true; }
+            AssertEqual(true, rejected);
+            AssertEqual(after, ProjectJsonSerializer.Save(remote.Project));
+        }
+        Reject(incoming, original.DeskLayouts[0].Name);
+        Reject(incoming with { Venue = incoming.Venue with { Width = 10 } }, "寸法違い");
+        var empty = original with { DeskLayouts = [new DeskLayout("empty", "空", [])], Plans = [], CircleLayouts = [] };
+        var adopted = FrameLayoutImportService.Add(empty, incoming with { Venue = incoming.Venue with { Width = 10 } }, "adopted", "追加");
+        AssertEqual(10, adopted.Venue.Width);
+        AssertEqual(original.Participants.Count, adopted.Participants.Count);
     }
 
     private static void PortableFrameEditing()

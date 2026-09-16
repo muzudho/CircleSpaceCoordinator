@@ -5,6 +5,7 @@ using CircleSpaceCoordinator.Application.Participants;
 using System.Text.Json.Serialization;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "operation")]
+[JsonDerivedType(typeof(ImportFrameLayout), "ImportFrameLayout")]
 [JsonDerivedType(typeof(SetFrameLayoutDefinitions), "SetFrameLayoutDefinitions")]
 [JsonDerivedType(typeof(SetFrameLayoutConfidential), "SetFrameLayoutConfidential")]
 [JsonDerivedType(typeof(SetVenueName), "SetVenueName")]
@@ -61,6 +62,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(SetIslandStart), "SetIslandStart")]
 [JsonDerivedType(typeof(NumberFramesFromIslands), "NumberFramesFromIslands")]
 public abstract record EditorOperation;
+public sealed record ImportFrameLayout(CircleSpaceProject incoming, string id, string name) : EditorOperation;
 public sealed record SetFrameLayoutDefinitions(string layoutId, SpaceDefinitionCatalog definitions) : EditorOperation;
 public sealed record SetFrameLayoutConfidential(string layoutId) : EditorOperation;
 public sealed record SetVenueName(string name) : EditorOperation;

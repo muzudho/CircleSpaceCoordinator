@@ -58,7 +58,8 @@ public sealed partial class VenueEditorGame
         if (isConfidential)
             OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "マル秘データの書き出し",
                 "このフレーム配置データはマル秘です。\n受渡し先を確認してから書き出してください。続けますか？"),
-                action => { if (action == ModalDialogAction.Accept) Write(); });
+                action => { if (action == ModalDialogAction.Accept) Write(); },
+                [("書き出す", ModalDialogAction.Accept), ("キャンセル", ModalDialogAction.Cancel)]);
         else Write();
     }
 
@@ -70,48 +71,55 @@ public sealed partial class VenueEditorGame
                 Filter = "フレーム配置データ (*.frame-layout.json)|*.frame-layout.json|JSON (*.json)|*.json" };
             if (dialog.ShowDialog() != Forms.DialogResult.OK) return;
             var project = FrameLayoutPortableService.Import(File.ReadAllText(dialog.FileName));
-            void ChooseDestination()
+            var existingNames = workspace?.Project.DeskLayouts.Select(layout => layout.Name).ToHashSet(StringComparer.Ordinal)
+                ?? new HashSet<string>(StringComparer.Ordinal);
+            var originalName = project.DeskLayouts[0].Name;
+            var nameExists = existingNames.Contains(originalName);
+            void AddLayout()
             {
                 try
                 {
-                    var path = WindowsProjectFileDialog.Save("imported-event.json");
-                    if (path is null) return;
-                    if (File.Exists(path)) throw new IOException("既存のイベントは上書きできません。新しい保存先を指定してください。");
-                    void CreateAndOpen()
-                    {
-                        // Complete the import before closing the current workspace. A write failure leaves it open.
-                        FrameLayoutPortableService.SaveNewEvent(path, project);
-                        EventCatalog.Register(path);
-                        if (workspace is not null) CloseEventProject();
-                        RefreshEventProjects(path);
-                        OpenEventProject(path);
-                    }
-                    if (workspace is null) CreateAndOpen();
-                    else OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "読込先のイベントへ切り替える",
-                        "編集中のイベントを保存してから切り替えますか？\n保存せずに切り替えると、最後の保存以降の変更は失われます。"), action =>
-                    {
-                        var decision = action switch
-                        {
-                            ModalDialogAction.Accept => ProjectCloseDecision.Save,
-                            ModalDialogAction.Decrease => ProjectCloseDecision.Discard,
-                            _ => ProjectCloseDecision.Cancel,
-                        };
-                        RunEventAction(() => ProjectCloseWorkflow.TryClose(decision, () =>
-                        {
-                            if (SaveProject().Success) return true;
-                            ShowInAppMessage("保存できませんでした", screenshotStatus ?? "イベントは開いたままです。");
-                            return false;
-                        }, CreateAndOpen));
-                    }, [("保存して切替", ModalDialogAction.Accept), ("保存せず切替", ModalDialogAction.Decrease), ("キャンセル", ModalDialogAction.Cancel)]);
+                    if (workspace is null) return;
+                    var id = "desk-import-" + Guid.NewGuid().ToString("N");
+                    workspace.Execute(new CircleSpaceCoordinator.Engine.Model.ImportFrameLayout(project, id, project.DeskLayouts[0].Name), selectedPlanEdit: false);
+                    workspace.SelectDeskLayout(id);
+                    CancelInProgressPointerInteraction();
+                    planScroll = 0;
+                    CreateToolbar();
+                    ShowInAppMessage("フレーム配置案を読み込みました", "現在のイベントに追加しました。イベントを保存するとファイルに残ります。");
                 }
                 catch (Exception ex) { ShowInAppMessage("読み込めません", ex.Message); }
                 finally { modalInputDrain = true; }
             }
             var title = project.IsConfidential ? "マル秘データの読込み" : "フレーム配置データの読込み";
             var warning = project.IsConfidential ? "マル秘のデータです。取扱いに注意してください。\n" : "";
+            void ReadWithName()
+            {
+                var suggested = originalName.Length > 85 ? originalName[..85] : originalName;
+                if (existingNames.Contains(suggested))
+                {
+                    var stem = suggested;
+                    var suffix = 2;
+                    do { suggested = $"{stem}（読込{suffix++}）"; } while (existingNames.Contains(suggested));
+                }
+                OpenUnderlineInput("名前を付けて読込", suggested, name =>
+                {
+                    project = project with { DeskLayouts = [project.DeskLayouts[0] with { Name = name }] };
+                    AddLayout();
+                }, "読み込むフレーム配置案の名前を入力してください。\n既存の配置案は変更せず、現在のイベントにフレーム配置案として追加します。",
+                    validate: name => CircleSpaceCoordinator.Desktop.Core.Interaction.EditorDialogValidation.Name(name)
+                        ?? (existingNames.Contains(name.Trim()) ? "同名のフレーム配置案があります。別の名前を入力してください。" : null));
+            }
+            var duplicateWarning = nameExists ? "\n現在のイベントに同名のフレーム配置案があります。別の名前を付けて読み込んでください。" : "";
             OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, title,
-                $"{warning}会場名：{project.Venue.Name}\nフレーム配置：{project.DeskLayouts[0].Name}\n新しいイベントとして読み込みます。"),
-                action => { if (action == ModalDialogAction.Accept) ChooseDestination(); });
+                $"{warning}会場名：{project.Venue.Name}\nフレーム配置：{originalName}\n現在のイベントにフレーム配置案として追加します。{duplicateWarning}"),
+                action =>
+                {
+                    if (action == ModalDialogAction.Increase || action == ModalDialogAction.Accept && nameExists) ReadWithName();
+                    else if (action == ModalDialogAction.Accept) AddLayout();
+                }, nameExists
+                    ? [("名前を付けて読込", ModalDialogAction.Accept), ("キャンセル", ModalDialogAction.Cancel)]
+                    : [("読込", ModalDialogAction.Accept), ("名前を付けて読込", ModalDialogAction.Increase), ("キャンセル", ModalDialogAction.Cancel)]);
         }
         catch (Exception ex) { ShowInAppMessage("読み込めません", ex.Message); }
         finally { modalInputDrain = true; }
