@@ -217,9 +217,9 @@ public sealed partial class VenueEditorGame : Game
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
-        if (genreDraft is not null)
+        if (mappingDraft is not null)
         {
-            if (!UpdateModalDialog(keyboard, mouse)) UpdateGenreStyleEditor(keyboard, mouse);
+            if (!UpdateModalDialog(keyboard, mouse)) UpdateStyleMappingEditor(keyboard, mouse);
             previousMouse = mouse;
             previousKeyboard = keyboard;
             base.Update(gameTime);
@@ -691,8 +691,8 @@ public sealed partial class VenueEditorGame : Game
     {
         viewerDragging = false;
         selectionPressed = -1;
-        pressedGenreButton?.CancelPress();
-        pressedGenreButton = null;
+        pressedMappingButton?.CancelPress();
+        pressedMappingButton = null;
         pressedFrameButton?.CancelPress();
         pressedFrameButton = null;
         framePainting = false;
@@ -744,9 +744,9 @@ public sealed partial class VenueEditorGame : Game
 
         // Preserve antialiased text strokes when labels are scaled to fit their bounds.
         spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-        if (genreDraft is not null)
+        if (mappingDraft is not null)
         {
-            DrawGenreStyleEditor();
+            DrawStyleMappingEditor();
             DrawModalDialog();
         }
         else if (frameDraft is not null)

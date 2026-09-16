@@ -33,6 +33,7 @@ internal static class Program
             ("Vacancy markers count physical seats and follow placement, parking and history", VacantPhysicalSeats),
             ("A missing circle layout reports the reason and creating one enables placement", MissingCircleLayoutCanBeCreated),
             ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
+            ("Shared appearance mappings accept block numbers and preserve isolated edits and unused styles", BlockAppearanceDrafts),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -757,6 +758,36 @@ internal static class Program
         finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; }
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = "[" }));
         AssertEqual("event12-003", CircleLabelFormatter.Format(participant, 7, display with { CircleIdPattern = null }));
+    }
+
+    private static void BlockAppearanceDrafts()
+    {
+        StyleMappingEntry[] configured = [new("東A", "blue", "white", "checker"), new("未使用", "red", "yellow", "solid")];
+        var draft = new StyleMappingDraft(["東B", "東A", "東A", "", " "], configured);
+        AssertEqual(2, draft.Rows.Count);
+        AssertEqual("東A", draft.Rows[0].Key);
+        AssertEqual("thick-grid", draft.Rows[0].Pattern);
+        var liveRows = draft.Rows;
+        draft.SetColor(0, true, " #12abef ");
+        draft.SetPattern(0, "dots");
+        AssertEqual("#12ABEF", liveRows[0].PrimaryColor);
+        AssertEqual("blue", configured[0].PrimaryColor);
+        AssertEqual("checker", configured[0].Pattern);
+        var snapshot = draft.Build();
+        AssertEqual(configured[1], snapshot[2]);
+        draft.SetPattern(0, "solid");
+        AssertEqual("dots", snapshot[0].Pattern);
+        var rejected = false;
+        try { draft.SetPattern(0, "unknown"); } catch (ArgumentException) { rejected = true; }
+        AssertEqual(true, rejected);
+        AssertEqual("solid", draft.Rows[0].Pattern);
+        var empty = new StyleMappingDraft([], configured);
+        AssertEqual(0, empty.Rows.Count);
+        AssertEqual(true, configured.SequenceEqual(empty.Build()));
+        var invalid = new StyleMappingDraft(["東A"], [configured[0] with { PrimaryColor = "invalid" }]);
+        rejected = false;
+        try { invalid.Build(); } catch (InvalidDataException ex) { rejected = ex.Message.Contains("東A"); }
+        AssertEqual(true, rejected);
     }
 
     private static void GenreAppearanceDrafts()
