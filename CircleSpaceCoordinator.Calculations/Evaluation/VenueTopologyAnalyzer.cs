@@ -10,9 +10,9 @@ public static class VenueTopologyAnalyzer
         var deskTypes = project.DeskTypes.ToDictionary(item => item.Id, StringComparer.Ordinal);
         var deskCells = plan.DeskPlacements.ToDictionary(
             item => item.Id,
-            item => item.GetOccupiedCells(deskTypes[item.DeskTypeId]),
+            item => item.GetSeatCells(deskTypes[item.DeskTypeId]),
             StringComparer.Ordinal);
-        var deskIdByCell = deskCells.SelectMany(pair => pair.Value.Select(cell => (Cell: cell, DeskId: pair.Key)))
+        var deskIdByCell = plan.DeskPlacements.SelectMany(desk => desk.GetOccupiedCells(deskTypes[desk.DeskTypeId]).Select(cell => (Cell: cell, DeskId: desk.Id)))
             .ToDictionary(item => item.Cell, item => item.DeskId);
         var orientationByDeskId = plan.DeskPlacements.ToDictionary(item => item.Id, item => item.Orientation, StringComparer.Ordinal);
         var neighbors = deskCells.Values.SelectMany(item => item)
@@ -25,24 +25,9 @@ public static class VenueTopologyAnalyzer
             if (!disabledConnections.Contains(Normalize(first, second)))
                 AddEdge(first, second);
 
-        // A connector closes or bends desk runs at their free ends.  Parallel desks
-        // can have two equally close cell pairs, so distance alone may join the
-        // middle of a run and incorrectly erase a genre split.
-        var freeEndCellsByDeskId = deskCells.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<GridPosition>)pair.Value
-                .Where(cell => neighbors[cell].Count == pair.Value.Min(candidate => neighbors[candidate].Count))
-                .ToArray(),
-            StringComparer.Ordinal);
         foreach (var connector in plan.IslandConnectors)
-            if (freeEndCellsByDeskId.TryGetValue(connector.FirstDeskId, out var first) &&
-                freeEndCellsByDeskId.TryGetValue(connector.SecondDeskId, out var second))
-                AddEdge(
-                    connector.FirstCell is { } firstCell && deskCells[connector.FirstDeskId].Contains(firstCell)
-                        ? firstCell : first.First(),
-                    connector.SecondCell is { } secondCell && deskCells[connector.SecondDeskId].Contains(secondCell)
-                        ? secondCell : second.First());
-
+            if (ResolveConnectorCells(plan, deskTypes, connector) is { } endpoints)
+                AddEdge(endpoints.FirstCell, endpoints.SecondCell);
         var facingPairs = new HashSet<(GridPosition, GridPosition)>();
         foreach (var region in plan.FacingRegions)
         {
@@ -71,7 +56,8 @@ public static class VenueTopologyAnalyzer
             islandNumber++;
         }
         var crossIslandFacingPairs = facingPairs
-            .Where(pair => islandByCell[pair.Item1] != islandByCell[pair.Item2])
+            .Where(pair => !islandByCell.TryGetValue(pair.Item1, out var firstIsland) ||
+                !islandByCell.TryGetValue(pair.Item2, out var secondIsland) || firstIsland != secondIsland)
             .Select(pair => (pair.Item1, pair.Item2)).ToArray();
 
         return new VenueTopologyGraph(
@@ -120,6 +106,10 @@ public static class VenueTopologyAnalyzer
     private static int Manhattan(GridPosition first, GridPosition second) =>
         Math.Abs(first.X - second.X) + Math.Abs(first.Y - second.Y);
 
+    public static (GridPosition FirstCell, GridPosition SecondCell)? ResolveConnectorCells(
+        Plan plan, IReadOnlyDictionary<string, DeskType> deskTypes, IslandConnector connector) =>
+        IslandConnectorEndpoints.Resolve(plan, deskTypes, connector, GetAutomaticCellEdges(plan, deskTypes));
+
     /// <summary>Returns the physical links automatically inferred between adjacent desks.</summary>
     public static IReadOnlyList<(GridPosition FirstCell, GridPosition SecondCell)> GetAutomaticIslandEdges(
         Plan plan,
@@ -127,7 +117,7 @@ public static class VenueTopologyAnalyzer
     {
         var deskCells = plan.DeskPlacements.ToDictionary(
             item => item.Id,
-            item => item.GetOccupiedCells(deskTypes[item.DeskTypeId]),
+            item => item.GetSeatCells(deskTypes[item.DeskTypeId]),
             StringComparer.Ordinal);
         return GetAutomaticIslandEdges(plan, deskTypes, deskCells);
     }
@@ -139,7 +129,7 @@ public static class VenueTopologyAnalyzer
     {
         var deskCells = plan.DeskPlacements.ToDictionary(
             item => item.Id,
-            item => item.GetOccupiedCells(deskTypes[item.DeskTypeId]),
+            item => item.GetSeatCells(deskTypes[item.DeskTypeId]),
             StringComparer.Ordinal);
         return GetAutomaticCellEdges(plan, deskTypes, deskCells);
     }
@@ -167,7 +157,8 @@ public static class VenueTopologyAnalyzer
         var edges = new HashSet<(GridPosition FirstCell, GridPosition SecondCell)>();
         foreach (var run in DeskRunDetector.Detect(plan, deskTypes))
         for (var index = 1; index < run.DeskIds.Count; index++)
-            edges.Add(ClosestPair(deskCells[run.DeskIds[index - 1]], deskCells[run.DeskIds[index]]));
+            if (deskCells[run.DeskIds[index - 1]].Count > 0 && deskCells[run.DeskIds[index]].Count > 0)
+                edges.Add(ClosestPair(deskCells[run.DeskIds[index - 1]], deskCells[run.DeskIds[index]]));
 
         return edges.OrderBy(item => item.FirstCell.Y).ThenBy(item => item.FirstCell.X)
             .ThenBy(item => item.SecondCell.Y).ThenBy(item => item.SecondCell.X).ToArray();

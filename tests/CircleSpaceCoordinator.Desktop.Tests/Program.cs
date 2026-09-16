@@ -38,6 +38,7 @@ internal static class Program
             ("Block view repeats labels every four cells and respects rotated seat footprints", BlockChannelDisplay),
             ("Cell number wizard orders rotated cells, validates lists and applies one undoable edit", CellNumberWizardEdits),
             ("Cell numbering restarts per frame even when venue order interleaves frames", CellNumberFrameRepeat),
+            ("Island paths use seat cells while facing rectangles retain physical cells", IslandPathsUseSeats),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -872,6 +873,43 @@ internal static class Program
             AssertEqual(true, rejected);
         }
         AssertEqual(0, plan.SeatLabels.Count);
+    }
+
+    private static void IslandPathsUseSeats()
+    {
+        var type = new DeskType("seats", "Seats", [new(0, 0), new(1, 0), new(2, 0)])
+        {
+            Space = new("seats", "ブース", 3, 1, [new(0, 0, 1), new(1, 0, 0), new(2, 0, 1)], ["開放", "開放", "開放", "開放"]),
+        };
+        var empty = type with { Id = "empty", Space = type.Space with { Cells = [new(0, 0, 0), new(1, 0, 0), new(2, 0, 0)] } };
+        var plan = new Plan("plan", "Plan", [new("a", type.Id, new(0, 0), QuarterTurn.North),
+            new("b", type.Id, new(3, 0), QuarterTurn.North), new("empty", empty.Id, new(6, 0), QuarterTurn.North)], []);
+        var project = CreateProject() with { DeskTypes = [type, empty], Plans = [plan],
+            Venue = new("venue", "Venue", 10, 10, new HashSet<GridPosition>()) };
+        var types = project.DeskTypes.ToDictionary(item => item.Id);
+        var graph = VenueTopologyAnalyzer.Build(project, plan);
+        AssertEqual(4, graph.Neighbors.Count);
+        AssertEqual(false, graph.Neighbors.ContainsKey(new(1, 0)));
+        foreach (var edge in VenueTopologyAnalyzer.GetAutomaticCellEdges(plan, types))
+        {
+            AssertEqual(true, graph.Neighbors.ContainsKey(edge.FirstCell));
+            AssertEqual(true, graph.Neighbors.ContainsKey(edge.SecondCell));
+        }
+        AssertEqual(project, VenueTopologyEditor.AddConnector(project, plan.Id, "a", "b", new(1, 0), new(3, 0)));
+        AssertEqual(project, VenueTopologyEditor.AddConnector(project, plan.Id, "a", "empty"));
+        var linked = VenueTopologyEditor.AddConnector(project, plan.Id, "a", "b", new(0, 0), new(5, 0));
+        AssertEqual(true, VenueTopologyAnalyzer.Build(linked, linked.Plans[0]).Neighbors[new(0, 0)].Contains(new(5, 0)));
+        var legacy = plan with { IslandConnectors = [new("old", "a", "b", new(1, 0), new(4, 0)), new("no-seat", "a", "empty")] };
+        AssertEqual(4, VenueTopologyAnalyzer.Build(project, legacy).Neighbors.Count);
+        AssertEqual(true, VenueTopologyAnalyzer.ResolveConnectorCells(plan, types, legacy.IslandConnectors[0]) is null);
+        var facing = plan with
+        {
+            DeskPlacements = [new("a", type.Id, new(0, 0), QuarterTurn.East), new("b", type.Id, new(4, 2), QuarterTurn.West)],
+            FacingRegions = [new("facing", new(0, 0), new(4, 2))],
+        };
+        var facingGraph = VenueTopologyAnalyzer.Build(project, facing);
+        AssertEqual(false, facingGraph.Neighbors.ContainsKey(new(0, 1)));
+        AssertEqual(true, facingGraph.FacingCellPairs.Contains((new GridPosition(0, 1), new GridPosition(4, 1))));
     }
 
     private static void BlockChannelDisplay()

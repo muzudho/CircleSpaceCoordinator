@@ -1395,12 +1395,10 @@ public sealed partial class VenueEditorGame : Game
 
         foreach (var connector in workspace.SelectedPlan.IslandConnectors)
         {
-            if (!desks.TryGetValue(connector.FirstDeskId, out var first) || !desks.TryGetValue(connector.SecondDeskId, out var second))
+            if (IslandConnectorEndpoints.Resolve(workspace.SelectedPlan, deskTypes, connector, workspace.View.AutomaticEdges) is not { } endpoints)
                 continue;
-            var firstPoint = connector.FirstCell is { } firstCell && first.OccupiedCells.Contains(firstCell)
-                ? GetCellCenter(firstCell) : GetDeskCenter(first.OccupiedCells);
-            var secondPoint = connector.SecondCell is { } secondCell && second.OccupiedCells.Contains(secondCell)
-                ? GetCellCenter(secondCell) : GetDeskCenter(second.OccupiedCells);
+            var firstPoint = GetCellCenter(endpoints.FirstCell);
+            var secondPoint = GetCellCenter(endpoints.SecondCell);
             var highlighted = CanShowEditorHover && activeCanvasTool == ToolbarAction.RemoveTopology &&
                 DistanceSquaredToSegment(pointer, firstPoint, secondPoint) <= 81d;
             DrawLine(firstPoint, secondPoint, highlighted ? 9d : 5d, highlighted ? new Color(255, 92, 92) : new Color(255, 166, 64));
@@ -2881,7 +2879,8 @@ public sealed partial class VenueEditorGame : Game
 
         EditorCommandResult AddIslandConnectorAt(GridPosition position)
         {
-            var desk = workspace!.GetSelectedPlanSnapshot().Desks.LastOrDefault(item => item.OccupiedCells.Contains(position));
+            var types = workspace!.Project.DeskTypes.ToDictionary(type => type.Id);
+            var desk = workspace.SelectedPlan.DeskPlacements.LastOrDefault(item => item.GetSeatCells(types[item.DeskTypeId]).Contains(position));
             if (desk is null) return EditorCommandResult.NoTarget;
             if (topologyFirstDeskId is null)
             {
@@ -2952,12 +2951,11 @@ public sealed partial class VenueEditorGame : Game
 
         double ConnectorDistanceSquared(IslandConnector connector, IReadOnlyDictionary<string, DeskView> desks, ScreenPoint point)
         {
-            if (!desks.TryGetValue(connector.FirstDeskId, out var first) || !desks.TryGetValue(connector.SecondDeskId, out var second))
+            var types = workspace!.Project.DeskTypes.ToDictionary(type => type.Id);
+            if (IslandConnectorEndpoints.Resolve(workspace.SelectedPlan, types, connector, workspace.View.AutomaticEdges) is not { } endpoints)
                 return double.PositiveInfinity;
-            var firstPoint = connector.FirstCell is { } firstCell && first.OccupiedCells.Contains(firstCell)
-                ? GetCellCenter(firstCell) : GetDeskCenter(first.OccupiedCells);
-            var secondPoint = connector.SecondCell is { } secondCell && second.OccupiedCells.Contains(secondCell)
-                ? GetCellCenter(secondCell) : GetDeskCenter(second.OccupiedCells);
+            var firstPoint = GetCellCenter(endpoints.FirstCell);
+            var secondPoint = GetCellCenter(endpoints.SecondCell);
             return DistanceSquaredToSegment(point, firstPoint, secondPoint);
         }
     }
@@ -3318,7 +3316,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・セル番を出力先の Excel / CSV へ書き出す",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",
         ToolbarAction.EditGenreStyles => "ジャンルと色・網掛けパターンの対応を編集する",
-        ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（フレーム上のセルを2回選択）",
+        ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（配置可能セルを2回選択）",
         ToolbarAction.ToggleAutomaticIslandConnection => "自動島接続を有効・無効に切り替える（線をクリック）",
         ToolbarAction.AddFacingRegion => "向かい合わせ領域矩形を追加する（対角を2回選択）",
         ToolbarAction.RemoveTopology => "島接続補助直線または向かい合わせ領域を削除する",

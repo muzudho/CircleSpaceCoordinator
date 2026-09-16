@@ -23,8 +23,10 @@ public static class VenueTopologyEditor
         var deskTypes = project.DeskTypes.ToDictionary(item => item.Id, StringComparer.Ordinal);
         var firstDesk = plan.DeskPlacements.Single(item => item.Id == firstDeskId);
         var secondDesk = plan.DeskPlacements.Single(item => item.Id == secondDeskId);
-        if (firstCell is { } first && !firstDesk.GetOccupiedCells(deskTypes[firstDesk.DeskTypeId]).Contains(first) ||
-            secondCell is { } second && !secondDesk.GetOccupiedCells(deskTypes[secondDesk.DeskTypeId]).Contains(second))
+        if (firstDesk.GetSeatCells(deskTypes[firstDesk.DeskTypeId]).Count == 0 ||
+            secondDesk.GetSeatCells(deskTypes[secondDesk.DeskTypeId]).Count == 0) return project;
+        if (firstCell is { } first && !firstDesk.GetSeatCells(deskTypes[firstDesk.DeskTypeId]).Contains(first) ||
+            secondCell is { } second && !secondDesk.GetSeatCells(deskTypes[secondDesk.DeskTypeId]).Contains(second))
             return project;
         var connector = new IslandConnector(NewId("island-link", plan.IslandConnectors.Select(item => item.Id)), firstDeskId, secondDeskId, firstCell, secondCell);
         return Replace(project, planId, plan with { IslandConnectors = [.. plan.IslandConnectors, connector] });
