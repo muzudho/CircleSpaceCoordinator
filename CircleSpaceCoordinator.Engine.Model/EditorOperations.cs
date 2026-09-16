@@ -5,6 +5,9 @@ using CircleSpaceCoordinator.Application.Participants;
 using System.Text.Json.Serialization;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "operation")]
+[JsonDerivedType(typeof(SetFrameLayoutDefinitions), "SetFrameLayoutDefinitions")]
+[JsonDerivedType(typeof(SetFrameLayoutConfidential), "SetFrameLayoutConfidential")]
+[JsonDerivedType(typeof(SetVenueName), "SetVenueName")]
 [JsonDerivedType(typeof(SetExportPlan), "SetExportPlan")]
 [JsonDerivedType(typeof(DeskLayoutServiceFillAvailableCells), "DeskLayoutService.FillAvailableCells")]
 [JsonDerivedType(typeof(DeskSeatLabelEditorReplaceLabels), "DeskSeatLabelEditor.ReplaceLabels")]
@@ -58,6 +61,9 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(SetIslandStart), "SetIslandStart")]
 [JsonDerivedType(typeof(NumberFramesFromIslands), "NumberFramesFromIslands")]
 public abstract record EditorOperation;
+public sealed record SetFrameLayoutDefinitions(string layoutId, SpaceDefinitionCatalog definitions) : EditorOperation;
+public sealed record SetFrameLayoutConfidential(string layoutId) : EditorOperation;
+public sealed record SetVenueName(string name) : EditorOperation;
 public sealed record NumberFramesFromIslands(string planId, int firstNumber, IReadOnlySet<string>? frameIds = null) : EditorOperation, IPlanOperation;
 public sealed record SetIslandStart(string planId, GridPosition cell, bool remove = false) : EditorOperation, IPlanOperation;
 public interface IPlanOperation { string planId { get; } }

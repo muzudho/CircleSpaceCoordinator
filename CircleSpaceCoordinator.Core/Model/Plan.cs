@@ -27,6 +27,8 @@ public sealed record DeskLayout(
     string Name,
     IReadOnlyList<DeskPlacement> DeskPlacements)
 {
+    public SpaceDefinitionCatalog? Definitions { get; init; }
+    public bool IsConfidential { get; init; }
     public string? Description { get; init; }
     public IReadOnlyList<IslandConnector> IslandConnectors { get; init; } = [];
     public IReadOnlyList<DisabledIslandConnection> DisabledIslandConnections { get; init; } = [];

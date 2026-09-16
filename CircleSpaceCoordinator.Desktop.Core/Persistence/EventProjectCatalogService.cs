@@ -48,7 +48,11 @@ public sealed class EventProjectCatalogService(ApplicationSettingsService settin
 
     public bool Move(string path, int offset) => settings.MoveProject(path, offset);
 
-    public bool IsConfidential(string path) => ProjectFileService.Load(path).IsConfidential;
+    public bool IsConfidential(string path)
+    {
+        var project = ProjectFileService.Load(path);
+        return project.IsConfidential || project.DeskLayouts.Any(layout => layout.IsConfidential);
+    }
 
     /// <summary>One-way application operation. Clearing the flag requires direct JSON editing.</summary>
     public void MarkConfidential(string path)

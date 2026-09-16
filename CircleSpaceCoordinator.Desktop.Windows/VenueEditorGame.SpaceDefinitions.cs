@@ -1,6 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
+using CircleSpaceCoordinator.Core.Model;
 using StationeryUI.Canvas;
 using StationeryUI.Controls;
 using Microsoft.Xna.Framework;
@@ -14,20 +15,23 @@ public sealed partial class VenueEditorGame
     private int spaceScroll;
     private readonly List<(IconButtonModel Button, Action Execute)> spaceButtons = [];
     private IconButtonModel? pressedSpaceButton;
-    private string spaceDefinitionStatus = "型と申込スペースは全イベント・全配置案で共通です。";
+    private string spaceDefinitionStatus = "型と申込スペースは編集中のフレーム配置に保存します。";
 
     private SpaceDefinitionStore SpaceDefinitions => spaceDefinitions ??= new SpaceDefinitionStore(
         Path.Combine(AppContext.BaseDirectory, "space-definitions.json"));
 
+    private SpaceDefinitionCatalog CurrentSpaceDefinitions => workspace?.Project.DeskLayouts
+        .FirstOrDefault(layout => layout.Id == workspace.SelectedDeskLayoutId)?.Definitions ?? SpaceDefinitions.Current;
+
     private int SpaceRows => Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - 226) / 42);
-    private int SpaceCount => spaceRequestsTab ? SpaceDefinitions.Current.Requests.Count : SpaceDefinitions.Current.Types.Count;
+    private int SpaceCount => spaceRequestsTab ? CurrentSpaceDefinitions.Requests.Count : CurrentSpaceDefinitions.Types.Count;
     private ScreenRectangle SpaceRow(int row) => new(12, 224 + row * 42, 330, 38);
 
     private void OpenSpaceDefinitions()
     {
         try
         {
-            _ = SpaceDefinitions;
+            _ = CurrentSpaceDefinitions;
             editorMode = EditorMode.DeskPlacement;
             CancelInProgressPointerInteraction();
             CreateToolbar();
@@ -58,8 +62,16 @@ public sealed partial class VenueEditorGame
 
     private void SaveSpaceDefinitions(SpaceDefinitionCatalog catalog)
     {
-        SpaceDefinitions.Save(catalog);
-        spaceDefinitionStatus = "アプリ共通のフレーム定義を保存しました。";
+        if (workspace is { } owner)
+        {
+            owner.Execute(new CircleSpaceCoordinator.Engine.Model.SetFrameLayoutDefinitions(owner.SelectedDeskLayoutId, catalog), selectedPlanEdit: false);
+            spaceDefinitionStatus = "このフレーム配置の定義を更新しました。イベントを保存して残してください。";
+        }
+        else
+        {
+            SpaceDefinitions.Save(catalog);
+            spaceDefinitionStatus = "アプリ共通のフレーム定義を保存しました。";
+        }
         spaceSelected = Math.Clamp(spaceSelected, 0, Math.Max(0, SpaceCount - 1));
     }
 
@@ -67,7 +79,7 @@ public sealed partial class VenueEditorGame
     {
         if ((!create || duplicate) && SpaceCount == 0) return;
         CancelInProgressPointerInteraction();
-        var catalog = SpaceDefinitions.Current;
+        var catalog = CurrentSpaceDefinitions;
         if (spaceRequestsTab)
         {
             var source = create && !duplicate ? new SpaceRequestDefinition(Guid.NewGuid().ToString("N"), "", "", []) : catalog.Requests[spaceSelected];
@@ -98,11 +110,11 @@ public sealed partial class VenueEditorGame
     private void DeleteSpaceDefinition()
     {
         if (SpaceCount == 0) return;
-        var catalog = SpaceDefinitions.Current;
+        var catalog = CurrentSpaceDefinitions;
         var index = spaceSelected;
         var name = spaceRequestsTab ? catalog.Requests[index].Value : catalog.Types[index].Name;
         var requests = spaceRequestsTab;
-        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "フレーム定義を削除", $"「{name}」をアプリ共通の定義から削除します。"), action =>
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "フレーム定義を削除", $"「{name}」をこのフレーム配置の定義から削除します。"), action =>
         {
             if (action != ModalDialogAction.Accept) return;
             try
@@ -154,7 +166,7 @@ public sealed partial class VenueEditorGame
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => textRenderer?.Draw(item.Button.AccessibleName, ToRectangle(area, 4), ToButtonColor(color), 17, true));
-        var catalog = SpaceDefinitions.Current;
+        var catalog = CurrentSpaceDefinitions;
         spaceScroll = Math.Clamp(spaceScroll, 0, Math.Max(0, SpaceCount - SpaceRows));
         for (var row = 0; row < SpaceRows && row + spaceScroll < SpaceCount; row++)
         {
@@ -165,8 +177,8 @@ public sealed partial class VenueEditorGame
         }
         void Text(string value, int y, int size = 18) => textRenderer?.Draw(value,
             new Rectangle(370, y, Math.Max(1, GraphicsDevice.Viewport.Width - 390), 30), Color.White, size);
-        Text("アプリ共通のフレーム定義", 124, 23);
-        Text("すべてのイベント・フレーム配置・サークル配置案で同じ定義を使います", 162, 16);
+        Text("このフレーム配置の定義", 124, 23);
+        Text("定義の編集はこのフレーム配置に保存します。", 162, 16);
         if (SpaceCount == 0) { Text("［追加］から定義を作成してください", 222); return; }
         if (spaceRequestsTab)
         {

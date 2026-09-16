@@ -16,12 +16,13 @@ public sealed class ProjectWorkspace : IEditorWorkspace
     {
         ArgumentNullException.ThrowIfNull(project);
         project = LayoutProjection.MigrateLegacyPlans(project);
-        if (project.Plans.Count == 0)
-            throw new InvalidOperationException("A workspace requires at least one plan.");
+        if (project.DeskLayouts.Count == 0)
+            throw new InvalidOperationException("A workspace requires at least one frame layout.");
 
         history = new ProjectEditHistory(project);
-        SelectedPlanId = selectedPlanId ?? project.Plans[0].Id;
-        EnsurePlanExists(SelectedPlanId);
+        this.selectedPlanId = selectedPlanId ?? project.Plans.FirstOrDefault()?.Id ?? "";
+        if (project.Plans.Count == 0) selectedDeskLayoutId = project.DeskLayouts[0].Id;
+        else EnsurePlanExists(SelectedPlanId);
     }
 
     public CircleSpaceProject Project => history.Current;
@@ -91,7 +92,7 @@ public sealed class ProjectWorkspace : IEditorWorkspace
         }
     }
 
-    public bool CanRemoveSelectedDeskLayout => !Project.CircleLayouts
+    public bool CanRemoveSelectedDeskLayout => Project.DeskLayouts.Count > 1 && !Project.CircleLayouts
         .Any(circle => circle.DeskLayoutId == SelectedDeskLayoutId);
 
     public bool CanUndo => history.CanUndo;
@@ -110,11 +111,11 @@ public sealed class ProjectWorkspace : IEditorWorkspace
     {
         ArgumentNullException.ThrowIfNull(project);
         project = LayoutProjection.MigrateLegacyPlans(project);
-        if (project.Plans.Count == 0)
-            throw new InvalidOperationException("A workspace requires at least one plan.");
+        if (project.DeskLayouts.Count == 0)
+            throw new InvalidOperationException("A workspace requires at least one frame layout.");
         history.Reset(project);
-        selectedDeskLayoutId = null;
-        SelectedPlanId = project.Plans[0].Id;
+        selectedDeskLayoutId = project.Plans.Count == 0 ? project.DeskLayouts[0].Id : null;
+        selectedPlanId = project.Plans.FirstOrDefault()?.Id ?? "";
     }
 
     public void Apply(Func<CircleSpaceProject, string, CircleSpaceProject> edit)
@@ -203,7 +204,7 @@ public sealed class ProjectWorkspace : IEditorWorkspace
     private void ReconcileSelection()
     {
         if (Project.Plans.All(plan => plan.Id != selectedPlanId))
-            selectedPlanId = Project.Plans[0].Id;
+            selectedPlanId = Project.Plans.FirstOrDefault()?.Id ?? "";
         if (selectedDeskLayoutId is not null)
         {
             if (Project.DeskLayouts.Any(desk => desk.Id == selectedDeskLayoutId))
@@ -211,6 +212,8 @@ public sealed class ProjectWorkspace : IEditorWorkspace
             else
                 selectedDeskLayoutId = null;
         }
+        if (Project.Plans.Count == 0 && selectedDeskLayoutId is null)
+            selectedDeskLayoutId = Project.DeskLayouts[0].Id;
     }
 
     private void EnsurePlanExists(string planId)

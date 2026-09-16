@@ -14,6 +14,16 @@
     "evaluation"
   ],
   "properties": {
+    "blockStyles": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["blockNumber", "primaryColor", "secondaryColor", "pattern"],
+        "properties": {
+          "blockNumber": { "type": "string" }, "primaryColor": { "type": "string" },
+          "secondaryColor": { "type": "string" }, "pattern": { "type": "string" }
+        }
+      }
+    },
     "exportPlanId": {
       "type": "string",
       "description": "Explicitly selected export plan ID. Omitted means undecided. Independent of the editor selection."
@@ -425,11 +435,57 @@
         "direction": { "type": "integer", "minimum": 0, "maximum": 3 }
       }
     },
+    "frameCellConnection": {
+      "type": "object", "additionalProperties": false, "required": ["firstCell", "secondCell"],
+      "properties": { "firstCell": { "$ref": "#/$defs/gridPosition" }, "secondCell": { "$ref": "#/$defs/gridPosition" } }
+    },
+    "spaceDefinitionCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["types", "requests"],
+      "properties": {
+        "connections": { "type": "array", "items": { "$ref": "#/$defs/frameCellConnection" } },
+        "schemaVersion": { "const": 1 },
+        "types": { "type": "array", "items": { "$ref": "#/$defs/spaceTypeDefinition" } },
+        "requests": { "type": "array", "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "value", "description", "targets"],
+          "properties": {
+            "id": { "$ref": "#/$defs/identifier" },
+            "value": { "type": "string", "minLength": 1 },
+            "description": { "type": "string" },
+            "targets": { "type": "array", "minItems": 1, "items": {
+              "type": "object", "additionalProperties": false, "required": ["typeId", "area"],
+              "properties": { "typeId": { "$ref": "#/$defs/identifier" }, "area": { "type": "integer", "minimum": 1 } }
+            } }
+          }
+        } }
+      }
+    },
+    "spaceTypeDefinition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "kind", "width", "height", "cells", "edges"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "name": { "$ref": "#/$defs/displayText" },
+        "kind": { "enum": ["机", "場所", "ブース"] },
+        "width": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "cells": { "type": "array", "minItems": 1, "items": {
+          "type": "object", "additionalProperties": false, "required": ["x", "y", "area"],
+          "properties": { "x": { "type": "integer", "minimum": 0 }, "y": { "type": "integer", "minimum": 0 }, "area": { "type": "integer", "minimum": 0, "maximum": 9 } }
+        } },
+        "edges": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "enum": ["開放", "壁", "入口", "正面"] } },
+        "connections": { "type": "array", "items": { "$ref": "#/$defs/frameCellConnection" } }
+      }
+    },
     "deskLayout": {
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "name", "deskPlacements"],
       "properties": {
+        "definitions": { "$ref": "#/$defs/spaceDefinitionCatalog" },
+        "isConfidential": { "type": "boolean", "default": false },
         "id": { "$ref": "#/$defs/identifier" },
         "name": { "$ref": "#/$defs/displayText" },
         "description": { "$ref": "#/$defs/displayText" },

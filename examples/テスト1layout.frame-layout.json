@@ -1,0 +1,612 @@
+{
+  "kind": "circle-space-frame-layout",
+  "formatVersion": 1,
+  "isConfidential": false,
+  "project": {
+    "schemaVersion": "1.0",
+    "project": {
+      "id": "portable-frame-layout",
+      "name": "\u67A0D",
+      "isConfidential": false
+    },
+    "genreStyles": [],
+    "blockStyles": [],
+    "venue": {
+      "id": "main-venue",
+      "name": "\u3074\u3088\u3074\u3088\u30DC\u30FC\u30EB\u30D1\u30FC\u30AF\u4F1A\u5834",
+      "width": 12,
+      "height": 9,
+      "blockedCells": [],
+      "zones": []
+    },
+    "deskTypes": [
+      {
+        "id": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+        "name": "\u9577\u30552\u30FB2\u30B5\u30FC\u30AF\u30EB\u7528\u9577\u673A",
+        "footprint": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 1,
+            "y": 0
+          }
+        ],
+        "space": {
+          "definitionId": "desk-2-seats",
+          "kind": "\u673A",
+          "width": 2,
+          "height": 1,
+          "cells": [
+            {
+              "x": 0,
+              "y": 0,
+              "area": 1
+            },
+            {
+              "x": 1,
+              "y": 0,
+              "area": 2
+            }
+          ],
+          "edges": [
+            "\u6B63\u9762",
+            "\u958B\u653E",
+            "\u958B\u653E",
+            "\u958B\u653E"
+          ]
+        }
+      }
+    ],
+    "participants": [],
+    "evaluation": {
+      "features": [],
+      "weightMaps": []
+    },
+    "deskLayouts": [
+      {
+        "definitions": {
+          "types": [
+            {
+              "id": "desk-2-seats",
+              "name": "2\u30B5\u30FC\u30AF\u30EB\u7528\u9577\u673A",
+              "kind": "\u673A",
+              "width": 2,
+              "height": 1,
+              "cells": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "area": 1
+                },
+                {
+                  "x": 1,
+                  "y": 0,
+                  "area": 1
+                }
+              ],
+              "edges": [
+                "\u6B63\u9762",
+                "\u958B\u653E",
+                "\u958B\u653E",
+                "\u958B\u653E"
+              ]
+            },
+            {
+              "id": "desk-3-seats",
+              "name": "3\u30B5\u30FC\u30AF\u30EB\u7528\u9577\u673A",
+              "kind": "\u673A",
+              "width": 3,
+              "height": 1,
+              "cells": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "area": 1
+                },
+                {
+                  "x": 1,
+                  "y": 0,
+                  "area": 1
+                },
+                {
+                  "x": 2,
+                  "y": 0,
+                  "area": 1
+                }
+              ],
+              "edges": [
+                "\u6B63\u9762",
+                "\u958B\u653E",
+                "\u958B\u653E",
+                "\u958B\u653E"
+              ]
+            },
+            {
+              "id": "desk-3-ends",
+              "name": "2\u30B5\u30FC\u30AF\u30EB\u7528\u9577\u673A",
+              "kind": "\u673A",
+              "width": 3,
+              "height": 1,
+              "cells": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "area": 1
+                },
+                {
+                  "x": 1,
+                  "y": 0,
+                  "area": 0
+                },
+                {
+                  "x": 2,
+                  "y": 0,
+                  "area": 1
+                }
+              ],
+              "edges": [
+                "\u6B63\u9762",
+                "\u958B\u653E",
+                "\u958B\u653E",
+                "\u958B\u653E"
+              ]
+            }
+          ],
+          "requests": [
+            {
+              "id": "request-1",
+              "value": "1",
+              "description": "\u9577\u30552\u30BB\u30EB\u306E\u9577\u673A\u306E\u3046\u30611\u30BB\u30EB",
+              "targets": [
+                {
+                  "typeId": "desk-2-seats",
+                  "area": 1
+                },
+                {
+                  "typeId": "desk-3-ends",
+                  "area": 1
+                },
+                {
+                  "typeId": "desk-3-seats",
+                  "area": 1
+                }
+              ]
+            },
+            {
+              "id": "request-2",
+              "value": "2",
+              "description": "\u9577\u30552\u30BB\u30EB\u306E\u9577\u673A\u5168\u4F53",
+              "targets": [
+                {
+                  "typeId": "desk-2-seats",
+                  "area": 1
+                },
+                {
+                  "typeId": "desk-3-ends",
+                  "area": 1
+                },
+                {
+                  "typeId": "desk-3-seats",
+                  "area": 1
+                }
+              ]
+            }
+          ],
+          "schemaVersion": 1
+        },
+        "isConfidential": false,
+        "id": "desk-plan-1",
+        "name": "\u67A0D",
+        "deskPlacements": [
+          {
+            "id": "desk-0001",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 1,
+              "y": 2
+            },
+            "orientation": "west",
+            "deskNumber": "9"
+          },
+          {
+            "id": "desk-0002",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 1,
+              "y": 4
+            },
+            "orientation": "west",
+            "deskNumber": "8"
+          },
+          {
+            "id": "desk-0003",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 1,
+              "y": 6
+            },
+            "orientation": "west",
+            "deskNumber": "7"
+          },
+          {
+            "id": "desk-0004",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 7,
+              "y": 1
+            },
+            "orientation": "north",
+            "deskNumber": "12"
+          },
+          {
+            "id": "desk-0005",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 4,
+              "y": 6
+            },
+            "orientation": "south",
+            "deskNumber": "6"
+          },
+          {
+            "id": "desk-0006",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 6,
+              "y": 6
+            },
+            "orientation": "south",
+            "deskNumber": "5"
+          },
+          {
+            "id": "desk-0007",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 5,
+              "y": 1
+            },
+            "orientation": "north",
+            "deskNumber": "11"
+          },
+          {
+            "id": "desk-0008",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 8,
+              "y": 6
+            },
+            "orientation": "south",
+            "deskNumber": "4"
+          },
+          {
+            "id": "desk-0009",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 10,
+              "y": 5
+            },
+            "orientation": "east",
+            "deskNumber": "3"
+          },
+          {
+            "id": "desk-0010",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 10,
+              "y": 3
+            },
+            "orientation": "east",
+            "deskNumber": "2"
+          },
+          {
+            "id": "desk-0011",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 10,
+              "y": 1
+            },
+            "orientation": "east",
+            "deskNumber": "1"
+          },
+          {
+            "id": "desk-0012",
+            "deskTypeId": "space-desk-2-seats-43ac9cc36da607eea93df795b540ff5aa040164886f32bdef7841148835ed676",
+            "anchor": {
+              "x": 3,
+              "y": 1
+            },
+            "orientation": "north",
+            "deskNumber": "10"
+          }
+        ],
+        "islandConnectors": [
+          {
+            "id": "island-link-0001",
+            "firstDeskId": "desk-0001",
+            "secondDeskId": "desk-0012",
+            "firstCell": {
+              "x": 1,
+              "y": 1
+            },
+            "secondCell": {
+              "x": 3,
+              "y": 1
+            }
+          },
+          {
+            "id": "island-link-0002",
+            "firstDeskId": "desk-0004",
+            "secondDeskId": "desk-0011",
+            "firstCell": {
+              "x": 8,
+              "y": 1
+            },
+            "secondCell": {
+              "x": 10,
+              "y": 1
+            }
+          },
+          {
+            "id": "island-link-0003",
+            "firstDeskId": "desk-0003",
+            "secondDeskId": "desk-0005",
+            "firstCell": {
+              "x": 1,
+              "y": 6
+            },
+            "secondCell": {
+              "x": 3,
+              "y": 6
+            }
+          },
+          {
+            "id": "island-link-0004",
+            "firstDeskId": "desk-0008",
+            "secondDeskId": "desk-0009",
+            "firstCell": {
+              "x": 8,
+              "y": 6
+            },
+            "secondCell": {
+              "x": 10,
+              "y": 6
+            }
+          }
+        ],
+        "disabledIslandConnections": [],
+        "islandStarts": [
+          {
+            "deskPlacementId": "desk-0011",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "direction": 1
+          }
+        ],
+        "facingRegions": [],
+        "seatLabels": [
+          {
+            "deskPlacementId": "desk-0009",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "a",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0009",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "a",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0010",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "a",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0010",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "a",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0011",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "a",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0011",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "a",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0005",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "b",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0005",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "b",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0006",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "b",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0006",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "b",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0008",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "b",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0008",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "b",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0001",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "c",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0001",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "c",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0002",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "c",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0002",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "c",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0003",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "c",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0003",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "c",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0004",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "d",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0004",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "d",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0007",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "d",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0007",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "d",
+            "seatName": "2"
+          },
+          {
+            "deskPlacementId": "desk-0012",
+            "relativeCell": {
+              "x": 0,
+              "y": 0
+            },
+            "blockName": "d",
+            "seatName": "1"
+          },
+          {
+            "deskPlacementId": "desk-0012",
+            "relativeCell": {
+              "x": 1,
+              "y": 0
+            },
+            "blockName": "d",
+            "seatName": "2"
+          }
+        ]
+      }
+    ],
+    "circleLayouts": []
+  }
+}

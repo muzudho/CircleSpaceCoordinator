@@ -58,7 +58,7 @@ public sealed partial class VenueEditorGame
         void Add(string label, Action execute, bool enabled = true)
         {
             var columns = EventActionColumns;
-            var rows = (9 + columns - 1) / columns;
+            var rows = (10 + columns - 1) / columns;
             var step = Math.Clamp((eventHeight - 164d) / rows, 30, 44);
             var width = (EventSidebarWidth - (columns - 1) * 12) / columns;
             var bounds = new ScreenRectangle(eventWidth - 24 - EventSidebarWidth + (eventButtons.Count % columns) * (width + 12),
@@ -67,6 +67,7 @@ public sealed partial class VenueEditorGame
         }
         Add("開く", () => { if (SelectedEvent is { } item) OpenEventProject(item.Project.Path); }, usable);
         Add("新規作成", CreateEventProject);
+        Add("フレーム配置を読込", ImportFrameLayout);
         Add("既存ファイルを登録", RegisterEventProject);
         Add("複製", DuplicateEventProject, usable);
         Add("マル秘に設定", MarkEventConfidential, usable && selected?.Confidential == false);

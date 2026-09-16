@@ -128,6 +128,8 @@ public static class ProjectJsonSerializer
         var deskLayouts = source.DeskLayouts.Select(item => new DeskLayout(
             item.Id, item.Name, item.DeskPlacements.Select(ToCore).ToArray())
         {
+            Definitions = item.Definitions,
+            IsConfidential = item.IsConfidential,
             Description = item.Description,
             IslandStarts = item.IslandStarts.ToList(),
             IslandConnectors = item.IslandConnectors.Select(ToCore).ToArray(),
@@ -279,6 +281,8 @@ public static class ProjectJsonSerializer
         },
         DeskLayouts = migrated.DeskLayouts.Select(item => new DeskLayoutDocument
         {
+            Definitions = item.Definitions,
+            IsConfidential = item.IsConfidential,
             Id = item.Id,
             Name = item.Name,
             Description = item.Description,
@@ -536,6 +540,8 @@ public static class ProjectJsonSerializer
 
     private sealed class DeskLayoutDocument
     {
+        public SpaceDefinitionCatalog? Definitions { get; set; }
+        public bool IsConfidential { get; set; }
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public string? Description { get; set; }

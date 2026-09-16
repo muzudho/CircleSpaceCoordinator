@@ -3,6 +3,7 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 using CircleSpaceCoordinator.Desktop.Core.Interaction;
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.Core.Geometry;
+using CircleSpaceCoordinator.Core.Model;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StationeryUI.Canvas;

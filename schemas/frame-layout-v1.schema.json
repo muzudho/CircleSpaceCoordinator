@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/frame-layout-v1.schema.json",
+  "title": "Circle Space Coordinator portable frame layout v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "formatVersion", "isConfidential", "project"],
+  "properties": {
+    "kind": { "const": "circle-space-frame-layout" },
+    "formatVersion": { "const": 1 },
+    "isConfidential": { "type": "boolean" },
+    "project": {
+      "allOf": [
+        { "$ref": "circle-space-project-v1.schema.json" },
+        {
+          "required": ["deskLayouts", "circleLayouts"],
+          "properties": {
+            "deskLayouts": { "minItems": 1, "maxItems": 1, "items": { "required": ["definitions", "isConfidential"] } },
+            "circleLayouts": { "maxItems": 0 },
+            "participants": { "maxItems": 0 },
+            "plans": false,
+            "evaluationResults": false,
+            "participantTableSource": false,
+            "editorView": false,
+            "exportPlanId": false,
+            "genreStyles": { "maxItems": 0 },
+            "evaluation": { "properties": { "features": { "maxItems": 0 }, "weightMaps": { "maxItems": 0 } } }
+          }
+        }
+      ]
+    }
+  }
+}

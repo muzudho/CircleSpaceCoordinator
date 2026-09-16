@@ -11,6 +11,13 @@ public static class EditorOperationHandler
 {
     public static CircleSpaceProject Apply(CircleSpaceProject project, EditorOperation operation) => operation switch
     {
+        SetFrameLayoutDefinitions op => SetDefinitions(project, op),
+        SetFrameLayoutConfidential op => project.DeskLayouts.Any(layout => layout.Id == op.layoutId)
+            ? project with { DeskLayouts = project.DeskLayouts.Select(layout => layout.Id == op.layoutId ? layout with { IsConfidential = true } : layout).ToArray() }
+            : throw new InvalidOperationException("フレーム配置が存在しません。"),
+        SetVenueName op => !string.IsNullOrWhiteSpace(op.name)
+            ? project with { Venue = project.Venue with { Name = op.name.Trim() } }
+            : throw new InvalidOperationException("会場名を入力してください。"),
         DeskLayoutServiceFillAvailableCells op => DeskLayoutService.FillAvailableCells(project, op.planId, op.deskTypeId, op.idPrefix),
         DeskSeatLabelEditorReplaceLabels op => DeskSeatLabelEditor.ReplaceLabels(project, op.planId, op.labels),
         DeskSeatLabelEditorSetLabel op => DeskSeatLabelEditor.SetLabel(project, op.planId, op.deskPlacementId, op.relativeCell, op.blockName, op.seatName),
@@ -44,7 +51,9 @@ public static class EditorOperationHandler
         LayoutCatalogServiceDuplicateDeskLayout op => LayoutCatalogService.DuplicateDeskLayout(project, op.sourceId, op.id, op.name),
         LayoutCatalogServiceCreateCircleLayout op => LayoutCatalogService.CreateCircleLayout(project, op.id, op.name, op.deskLayoutId, op.description),
         LayoutCatalogServiceRemoveCircleLayout op => LayoutCatalogService.RemoveCircleLayout(project, op.circleLayoutId),
-        LayoutCatalogServiceRemoveDeskLayout op => LayoutCatalogService.RemoveDeskLayout(project, op.deskLayoutId),
+        LayoutCatalogServiceRemoveDeskLayout op => project.DeskLayouts.Count > 1
+            ? LayoutCatalogService.RemoveDeskLayout(project, op.deskLayoutId)
+            : throw new InvalidOperationException("最後のフレーム配置は削除できません。"),
         LayoutCatalogServiceReassignCircleLayout op => LayoutCatalogService.ReassignCircleLayout(project, op.circleLayoutId, op.deskLayoutId),
         LayoutCatalogServiceRenameDeskLayout op => LayoutCatalogService.RenameDeskLayout(project, op.deskLayoutId, op.name),
         LayoutCatalogServiceMoveDeskLayout op => LayoutCatalogService.MoveDeskLayout(project, op.deskLayoutId, op.direction),
@@ -67,4 +76,13 @@ public static class EditorOperationHandler
         SetChannelWeights op => ChannelEditor.SetWeights(project, op.planId, op.channelId, op.cells, op.weight),
         _ => throw new ArgumentException("Unsupported editor operation."),
     };
+
+    private static CircleSpaceProject SetDefinitions(CircleSpaceProject project, SetFrameLayoutDefinitions operation)
+    {
+        operation.definitions.Validate(requireRepresentativeCell: false);
+        if (!project.DeskLayouts.Any(layout => layout.Id == operation.layoutId))
+            throw new InvalidOperationException("フレーム配置が存在しません。");
+        return project with { DeskLayouts = project.DeskLayouts.Select(layout => layout.Id == operation.layoutId
+            ? layout with { Definitions = operation.definitions } : layout).ToArray() };
+    }
 }

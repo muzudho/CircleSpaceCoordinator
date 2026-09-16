@@ -31,8 +31,8 @@ public sealed partial class VenueEditorGame
     private int catalogWidth;
     private int catalogHeight;
 
-    private SpaceTypeDefinition? NextSpace => spaceDefinitions?.Current.Types.FirstOrDefault(t => t.Id == nextSpaceId)
-        ?? spaceDefinitions?.Current.Types.FirstOrDefault();
+    private SpaceTypeDefinition? NextSpace => CurrentSpaceDefinitions.Types.FirstOrDefault(t => t.Id == nextSpaceId)
+        ?? CurrentSpaceDefinitions.Types.FirstOrDefault();
     private SpaceTypeDefinition? cachedNextDefinition;
     private DeskType? cachedNextType;
     private DeskType? NextSpaceType
@@ -54,13 +54,13 @@ public sealed partial class VenueEditorGame
     {
         try
         {
-            _ = SpaceDefinitions;
+            _ = CurrentSpaceDefinitions;
             CancelInProgressPointerInteraction();
             catalogChoice = NextSpace?.Id;
             spaceRequestsTab = false;
-            spaceSelected = Math.Max(0, SpaceDefinitions.Current.Types.ToList().FindIndex(t => t.Id == catalogChoice));
+            spaceSelected = Math.Max(0, CurrentSpaceDefinitions.Types.ToList().FindIndex(t => t.Id == catalogChoice));
             catalogOrientation = nextDeskOrientation;
-            catalogPage = Math.Max(0, SpaceDefinitions.Current.Types.ToList().FindIndex(t => t.Id == catalogChoice)) / 6;
+            catalogPage = Math.Max(0, CurrentSpaceDefinitions.Types.ToList().FindIndex(t => t.Id == catalogChoice)) / 6;
             spaceCatalogOpen = true;
             spaceCatalogDrain = true;
             BuildCatalogButtons();
@@ -83,14 +83,14 @@ public sealed partial class VenueEditorGame
         var panel = CatalogBounds;
         var cardWidth = (panel.Width * 0.65 - 32) / 3;
         var cardHeight = (panel.Height - 260) / 2;
-        var types = SpaceDefinitions.Current.Types;
+        var types = CurrentSpaceDefinitions.Types;
         catalogPage = Math.Clamp(catalogPage, 0, Math.Max(0, (SpaceCount - 1) / 6));
         void Button(string label, ScreenRectangle area, Action run, bool enabled = true) =>
             catalogButtons.Add((new IconButtonModel(area, label) { IsEnabled = enabled }, run));
         for (var index = 0; index < Math.Min(6, SpaceCount - catalogPage * 6); index++)
         {
             var selectedIndex = catalogPage * 6 + index;
-            var label = spaceRequestsTab ? SpaceDefinitions.Current.Requests[selectedIndex].Value : types[selectedIndex].Name;
+            var label = spaceRequestsTab ? CurrentSpaceDefinitions.Requests[selectedIndex].Value : types[selectedIndex].Name;
             Button(label, new ScreenRectangle(panel.X + 12 + index % 3 * cardWidth, panel.Y + 110 + index / 3 * cardHeight,
                 cardWidth - 6, cardHeight - 8), () => {
                     spaceSelected = selectedIndex;
@@ -123,7 +123,7 @@ public sealed partial class VenueEditorGame
     private void SelectCatalogTab(bool requests)
     {
         spaceRequestsTab = requests;
-        spaceSelected = requests ? 0 : Math.Max(0, SpaceDefinitions.Current.Types.ToList().FindIndex(t => t.Id == catalogChoice));
+        spaceSelected = requests ? 0 : Math.Max(0, CurrentSpaceDefinitions.Types.ToList().FindIndex(t => t.Id == catalogChoice));
         catalogPage = spaceSelected / 6;
         BuildCatalogButtons();
     }
@@ -132,7 +132,7 @@ public sealed partial class VenueEditorGame
     {
         if (!spaceCatalogOpen) return;
         spaceSelected = Math.Clamp(spaceSelected, 0, Math.Max(0, SpaceCount - 1));
-        if (!spaceRequestsTab) catalogChoice = SpaceDefinitions.Current.Types.ElementAtOrDefault(spaceSelected)?.Id;
+        if (!spaceRequestsTab) catalogChoice = CurrentSpaceDefinitions.Types.ElementAtOrDefault(spaceSelected)?.Id;
         catalogPage = spaceSelected / 6;
         BuildCatalogButtons();
         spaceCatalogDrain = true;
@@ -158,7 +158,7 @@ public sealed partial class VenueEditorGame
         if (UpdateModalDialog(keyboard, mouse)) return true;
         if (catalogWidth != GraphicsDevice.Viewport.Width || catalogHeight != GraphicsDevice.Viewport.Height) BuildCatalogButtons();
         if (IsPressed(keyboard, Keys.Escape)) { CloseSpaceCatalog(false); return true; }
-        if (IsPressed(keyboard, Keys.Enter) && !spaceRequestsTab && SpaceDefinitions.Current.Types.Any(t => t.Id == catalogChoice)) { CloseSpaceCatalog(true); return true; }
+        if (IsPressed(keyboard, Keys.Enter) && !spaceRequestsTab && CurrentSpaceDefinitions.Types.Any(t => t.Id == catalogChoice)) { CloseSpaceCatalog(true); return true; }
         if (!spaceRequestsTab && IsPressed(keyboard, Keys.Q)) catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 3) % 4);
         if (!spaceRequestsTab && IsPressed(keyboard, Keys.E)) catalogOrientation = (QuarterTurn)(((int)catalogOrientation + 1) % 4);
         if (mouse.ScrollWheelValue != previousMouse.ScrollWheelValue)
@@ -221,8 +221,8 @@ public sealed partial class VenueEditorGame
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 170));
         DrawRectangle(panel, new Color(24, 32, 42));
         DrawOutline(panel, 2, new Color(110, 160, 170));
-        textRenderer?.Draw("フレームカタログ（アプリ共通）", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 12, panel.Width - 32, 32)), Color.White, 22, true);
-        var types = SpaceDefinitions.Current.Types.Skip(catalogPage * 6).Take(6).ToArray();
+        textRenderer?.Draw("フレームカタログ（この配置）", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 12, panel.Width - 32, 32)), Color.White, 22, true);
+        var types = CurrentSpaceDefinitions.Types.Skip(catalogPage * 6).Take(6).ToArray();
         for (var index = 0; index < catalogButtons.Count; index++)
         {
             var button = catalogButtons[index].Model;
@@ -239,25 +239,25 @@ public sealed partial class VenueEditorGame
                     else textRenderer?.Draw(button.AccessibleName, ToRectangle(area, 4), ToButtonColor(color), 16, true);
                 });
         }
-        if (!spaceRequestsTab && SpaceDefinitions.Current.Types.FirstOrDefault(t => t.Id == catalogChoice) is { } chosen)
+        if (!spaceRequestsTab && CurrentSpaceDefinitions.Types.FirstOrDefault(t => t.Id == catalogChoice) is { } chosen)
         {
             var x = panel.X + panel.Width * 0.68;
             DrawSpaceTypePreview(chosen, catalogOrientation, new ScreenRectangle(x, panel.Y + 110, panel.Width * 0.29, panel.Height - 320));
             textRenderer?.Draw($"{chosen.Name} ／ {FormatOrientation(catalogOrientation)}", ToRectangle(new ScreenRectangle(x, panel.Y + panel.Height - 204, panel.Width * 0.29, 42)), Color.White, 17);
         }
-        if (spaceRequestsTab && SpaceDefinitions.Current.Requests.ElementAtOrDefault(spaceSelected) is { } request)
+        if (spaceRequestsTab && CurrentSpaceDefinitions.Requests.ElementAtOrDefault(spaceSelected) is { } request)
         {
             var summary = request.Value + "\n" + request.Description + "\n割当可能なフレーム\n" + string.Join("\n", request.Targets.Select(target =>
-                SpaceDefinitions.Current.Types.FirstOrDefault(t => t.Id == target.TypeId)?.Name));
+                CurrentSpaceDefinitions.Types.FirstOrDefault(t => t.Id == target.TypeId)?.Name));
             textRenderer?.Draw(summary, ToRectangle(new ScreenRectangle(panel.X + panel.Width * 0.68, panel.Y + 110,
                 panel.Width * 0.29, panel.Height - 270)), Color.White, 16);
         }
         if (SpaceCount == 0)
             textRenderer?.Draw("［追加］から定義を作成してください", ToRectangle(new ScreenRectangle(panel.X + 16, panel.Y + 130, panel.Width * 0.6, 40)), Color.LightGray, 17);
-        textRenderer?.Draw("編集画面の［保存］は全イベント共通。カタログのキャンセルでは戻りません。",
+        textRenderer?.Draw("編集画面の［保存］でこの配置の定義を更新。イベントの保存でファイルに残ります。",
             ToRectangle(new ScreenRectangle(panel.X + 12, panel.Y + panel.Height - 48, panel.Width - 280, 40)), Color.LightGray, 13);
         DrawStatusBar(spaceRequestsTab ? "申込スペースを追加・編集できます。フレームの配置は［フレーム］タブから。Escで閉じます。"
-            : "追加・編集は［保存］で共通定義に反映。［配置に決定］/ Enterで次のフレームを選択。Q / Eで回転。");
+            : "追加・編集は［保存］でこの配置に反映。［配置に決定］/ Enterで次のフレームを選択。Q / Eで回転。");
     }
 
     private void DrawSpaceTypePreview(SpaceTypeDefinition type, QuarterTurn orientation, ScreenRectangle area)

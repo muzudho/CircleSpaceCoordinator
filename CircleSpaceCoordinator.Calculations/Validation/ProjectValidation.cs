@@ -10,6 +10,13 @@ public static class ProjectValidator
         ArgumentNullException.ThrowIfNull(project);
         var issues = new List<ValidationIssue>();
 
+        foreach (var layout in project.DeskLayouts)
+            if (layout.Definitions is { } definitions)
+            {
+                try { definitions.Validate(requireRepresentativeCell: false); }
+                catch (InvalidDataException ex) { Add("deskLayout.definitions.invalid", $"deskLayouts[{layout.Id}].definitions", ex.Message); }
+            }
+
         if (project.ParticipantTableSource is { } source &&
             (source.FileName is null || source.SheetName is null || source.Headers is null || source.ColumnKeys is null ||
              source.Headers.Count != source.ColumnKeys.Count || source.Headers.Any(header => header is null) ||
@@ -141,7 +148,16 @@ public static class ProjectValidator
             ValidatePlan(plan, project.Venue, deskTypes, participants, Add);
 
         foreach (var layout in project.DeskLayouts)
+        {
+            ValidatePlan(new Plan(layout.Id, layout.Name, layout.DeskPlacements, [])
+            {
+                IslandConnectors = layout.IslandConnectors,
+                DisabledIslandConnections = layout.DisabledIslandConnections,
+                FacingRegions = layout.FacingRegions,
+                SeatLabels = layout.SeatLabels,
+            }, project.Venue, deskTypes, participants, Add);
             ValidateStarts(layout.IslandStarts, layout.DeskPlacements, deskTypes, $"deskLayouts[{layout.Id}]", Add);
+        }
 
         return issues;
 

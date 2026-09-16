@@ -24,6 +24,9 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Portable frame layouts retain definitions, topology and confidentiality without circle data", PortableFrameRoundTrip),
+            ("Portable imports reject malformed data and never replace existing event files", PortableFrameRejections),
+            ("Local frame definitions and venue metadata survive remote history and persistence", PortableFrameEditing),
             ("Editing key repeat delays, repeats and resets across release, IME and focus changes", EditingKeyRepeats),
             ("Flag sequences order frame and cell numbers with atomic remote undo and persistence", FlagSequenceNumbering),
             ("Flag numbering rejects branching trees and unreachable selected cells", FlagNumberingRejectsTrees),
@@ -126,6 +129,135 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void PortableFrameRoundTrip()
+    {
+        var catalog = SpaceDefinitionCatalog.CreateDefault();
+        var type = SpaceTypeFactory.Create(catalog.Types[0]);
+        var original = CreateProject();
+        original = original with { DeskTypes = [type], Venue = original.Venue with
+        { Name = "２０２６年夏ぴよぴよ会館東棟２階", BlockedCells = new HashSet<GridPosition> { new(4, 3) },
+          Zones = [new VenueZone("zone", "東棟", new HashSet<GridPosition> { new(0, 0) })] },
+            Plans = [original.Plans[0] with { DeskPlacements = [original.Plans[0].DeskPlacements[0] with { DeskTypeId = type.Id, DeskNumber = "12" }] }] };
+        original = LayoutProjection.MigrateLegacyPlans(original);
+        var layout = original.DeskLayouts[0] with
+        {
+            Definitions = catalog,
+            IsConfidential = true,
+            IslandStarts = [new("desk-1", new(0, 0), QuarterTurn.North)],
+            SeatLabels = [new("desk-1", new(0, 0), "あ", "１")],
+            FacingRegions = [new("facing", new(0, 0), new(1, 1))],
+            DisabledIslandConnections = [new(new(0, 0), new(1, 0))],
+        };
+        original = original with { DeskLayouts = [layout], Description = "PRIVATE EVENT NOTES" };
+        var before = ProjectJsonSerializer.Save(original);
+        var json = FrameLayoutPortableService.Export(original, layout.Id, new([], []));
+        var imported = FrameLayoutPortableService.Import(json);
+        AssertEqual(before, ProjectJsonSerializer.Save(original));
+        AssertEqual(false, json.Contains("PRIVATE EVENT NOTES"));
+        AssertEqual(false, json.Contains("fictional-circle-001"));
+        AssertEqual(original.Venue.Name, imported.Venue.Name);
+        AssertEqual(true, imported.Venue.BlockedCells.SetEquals(original.Venue.BlockedCells));
+        AssertEqual(1, imported.Venue.Zones.Count);
+        AssertEqual(0, imported.Participants.Count);
+        AssertEqual(0, imported.CircleLayouts.Count);
+        AssertEqual(0, imported.Plans.Count);
+        AssertEqual(true, imported.IsConfidential);
+        AssertEqual(true, imported.Id != original.Id);
+        var restored = imported.DeskLayouts.Single();
+        AssertEqual(true, restored.IsConfidential);
+        AssertEqual("12", restored.DeskPlacements[0].DeskNumber);
+        AssertEqual(layout.IslandStarts[0], restored.IslandStarts[0]);
+        AssertEqual(layout.SeatLabels[0], restored.SeatLabels[0]);
+        AssertEqual(layout.FacingRegions[0], restored.FacingRegions[0]);
+        AssertEqual(layout.DisabledIslandConnections[0], restored.DisabledIslandConnections[0]);
+        AssertEqual(2, restored.Definitions!.Requests.Count);
+        AssertEqual(true, restored.Definitions.Types.Any(item => item.Id == "desk-whole")); // Unplaced request target.
+        var twice = FrameLayoutPortableService.Import(FrameLayoutPortableService.Export(imported, restored.Id, new([], [])));
+        AssertEqual(true, twice.IsConfidential);
+        AssertEqual(ProjectJsonSerializer.Save(imported with { Id = twice.Id }), ProjectJsonSerializer.Save(twice));
+        using var remote = CircleSpaceCoordinator.EditorClient.EditorConnection.Current.Open(ProjectJsonSerializer.Save(imported));
+        AssertEqual(false, remote.HasSelectedCircleLayout);
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.PlanDeskEditorSetDeskNumber(remote.SelectedPlanId, "desk-1", "13"));
+        AssertEqual("13", remote.Project.DeskLayouts[0].DeskPlacements[0].DeskNumber);
+        remote.Undo();
+        AssertEqual("12", remote.Project.DeskLayouts[0].DeskPlacements[0].DeskNumber);
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.LayoutCatalogServiceCreateCircleLayout("circle-new", "新しい案", restored.Id), selectedPlanEdit: false);
+        AssertEqual(1, remote.Project.CircleLayouts.Count);
+        AssertEqual(0, remote.Project.CircleLayouts[0].Assignments.Count);
+        remote.Undo();
+        AssertEqual(false, remote.HasSelectedCircleLayout);
+        AssertEqual(0, remote.Project.CircleLayouts.Count);
+        remote.Redo();
+        AssertEqual(true, remote.HasSelectedCircleLayout);
+    }
+
+    private static void PortableFrameRejections()
+    {
+        var project = LayoutProjection.MigrateLegacyPlans(CreateProject());
+        var json = FrameLayoutPortableService.Export(project, project.DeskLayouts[0].Id, new([], []));
+        void Reject(string invalid)
+        {
+            var rejected = false;
+            try { FrameLayoutPortableService.Import(invalid); }
+            catch { rejected = true; }
+            AssertEqual(true, rejected);
+        }
+        Reject(json.Replace("\"formatVersion\": 1", "\"formatVersion\": 999"));
+        Reject(json.Replace("\"isConfidential\": false,", ""));
+        Reject(json.Replace("\"definitions\": {", "\"unknownDefinitions\": {"));
+        Reject(json.Replace("\"deskTypeId\": \"standard-desk\"", "\"deskTypeId\": \"missing\""));
+        Reject(json.Replace("\"width\": 5", "\"width\": 1"));
+        Reject("{}");
+        Reject(ProjectJsonSerializer.Save(project));
+        var path = Path.Combine(Path.GetTempPath(), "portable-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var imported = FrameLayoutPortableService.Import(json);
+            FrameLayoutPortableService.SaveNewEvent(path, imported);
+            var saved = File.ReadAllText(path);
+            var refused = false;
+            try { FrameLayoutPortableService.SaveNewEvent(path, imported with { Name = "replacement" }); }
+            catch (IOException) { refused = true; }
+            AssertEqual(true, refused);
+            AssertEqual(saved, File.ReadAllText(path));
+            AssertEqual(imported.Venue.Name, ProjectFileService.Load(path).Venue.Name);
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
+        var catalog = SpaceDefinitionCatalog.CreateDefault();
+        var type = SpaceTypeFactory.Create(catalog.Types[0]);
+        project = project with { DeskTypes = [type], DeskLayouts = [project.DeskLayouts[0] with
+        { DeskPlacements = [project.DeskLayouts[0].DeskPlacements[0] with { DeskTypeId = type.Id }] }] };
+        var changed = catalog with { Types = catalog.Types.Select(item => item.Id == catalog.Types[0].Id ? item with { Width = 3 } : item).ToArray() };
+        var conflict = false;
+        try { FrameLayoutPortableService.Export(project, project.DeskLayouts[0].Id, changed); }
+        catch (InvalidDataException) { conflict = true; }
+        AssertEqual(true, conflict);
+    }
+
+    private static void PortableFrameEditing()
+    {
+        var project = LayoutCatalogService.CreateDeskLayout(CreateProject(), "other", "Other");
+        using var remote = CircleSpaceCoordinator.EditorClient.EditorConnection.Current.Open(ProjectJsonSerializer.Save(project));
+        var id = remote.Project.DeskLayouts[0].Id;
+        var catalog = SpaceDefinitionCatalog.CreateDefault();
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.SetFrameLayoutDefinitions(id, catalog), selectedPlanEdit: false);
+        AssertEqual(2, remote.Project.DeskLayouts[0].Definitions!.Requests.Count);
+        AssertEqual<SpaceDefinitionCatalog?>(null, remote.Project.DeskLayouts[1].Definitions);
+        remote.Undo();
+        AssertEqual<SpaceDefinitionCatalog?>(null, remote.Project.DeskLayouts[0].Definitions);
+        remote.Redo();
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.SetVenueName("夏会場２階"), selectedPlanEdit: false);
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.SetFrameLayoutConfidential(id), selectedPlanEdit: false);
+        var restored = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(remote.Project));
+        AssertEqual("夏会場２階", restored.Venue.Name);
+        AssertEqual(true, restored.DeskLayouts[0].IsConfidential);
+        AssertEqual(false, restored.DeskLayouts[1].IsConfidential);
+        AssertEqual(2, restored.DeskLayouts[0].Definitions!.Requests.Count);
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.LayoutCatalogServiceDuplicateDeskLayout(id, "copy", "Copy"), selectedPlanEdit: false);
+        AssertEqual(true, remote.Project.DeskLayouts.Single(item => item.Id == "copy").IsConfidential);
+        AssertEqual(2, remote.Project.DeskLayouts.Single(item => item.Id == "copy").Definitions!.Requests.Count);
     }
 
     private static void FrameLayoutOrder()
