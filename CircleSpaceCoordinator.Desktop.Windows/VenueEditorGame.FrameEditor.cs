@@ -37,7 +37,9 @@ public sealed partial class VenueEditorGame
         return new((GraphicsDevice.Viewport.Width - 1000 * scale) / 2 + x * scale,
             (GraphicsDevice.Viewport.Height - 660 * scale) / 2 + y * scale, width * scale, height * scale);
     }
-    private double FrameCellSize => Math.Min(48, Math.Min(580d / frameDraft!.Width, 330d / frameDraft.Height));
+    private double FrameCellSize => Math.Min(64, Math.Min(320d / frameDraft!.Width, 220d / frameDraft.Height));
+    private ScreenRectangle FrameGridLayout => new(350 - FrameCellSize * frameDraft!.Width / 2,
+        360 - FrameCellSize * frameDraft.Height / 2, FrameCellSize * frameDraft.Width, FrameCellSize * frameDraft.Height);
 
     private static readonly Color FrameCellColor = new(100, 107, 114);
 
@@ -113,15 +115,23 @@ public sealed partial class VenueEditorGame
             for (var edge = 0; edge < 4; edge++)
             {
                 var index = edge;
-                Add(FrameEdgeNames[edge] + "：" + draft.Edges[edge] + " ▸", 650, 230 + edge * 52, 330,
+                var grid = FrameGridLayout;
+                var position = edge switch
+                {
+                    0 => new ScreenPoint(350 - 75, grid.Y - 48),
+                    1 => new ScreenPoint(grid.X + grid.Width + 12, 360 - 18),
+                    2 => new ScreenPoint(350 - 75, grid.Y + grid.Height + 12),
+                    _ => new ScreenPoint(grid.X - 162, 360 - 18),
+                };
+                Add(FrameEdgeNames[edge] + "：" + draft.Edges[edge] + " ▸", position.X, position.Y, 150,
                     () => draft.Edges[index] = FrameEdgeValues[(Array.IndexOf(FrameEdgeValues, draft.Edges[index]) + 1) % FrameEdgeValues.Length]);
             }
-            Add("接続を編集", 650, 440, 330, () =>
+            Add("接続を編集", 710, 390, 270, () =>
             {
                 frameConnectionMode = !frameConnectionMode;
                 frameConnectionStart = null;
             }, selected: frameConnectionMode);
-            Add("隣接セルの接続に戻す", 650, 488, 330, () =>
+            Add("隣接セルの接続に戻す", 710, 438, 270, () =>
             {
                 draft.ResetAdjacentConnections();
                 frameConnectionStart = null;
@@ -247,7 +257,8 @@ public sealed partial class VenueEditorGame
         }
         if (!draft.IsRequest)
         {
-            var grid = FrameBounds(20, 222, FrameCellSize * draft.Width, FrameCellSize * draft.Height);
+            var layout = FrameGridLayout;
+            var grid = FrameBounds(layout.X, layout.Y, layout.Width, layout.Height);
             if (frameConnectionMode)
             {
                 if (rightPress) frameConnectionStart = null;
@@ -295,12 +306,16 @@ public sealed partial class VenueEditorGame
         {
             Text($"{draft.Width} × {draft.Height} セル", 460, 116, 520);
             Text("セルをクリック：配置可能／配置未確定を切替", 20, 170, 620);
-            Text("種類・各辺のボタンは押すたびに切替", 650, 190, 330, 16);
+            Text("辺のボタンを押すたびに切替", 710, 210, 270, 16);
+            Text("壁：オレンジの太線", 710, 246, 270, 16);
+            Text("入口：緑の線・中央が開口", 710, 276, 270, 16);
+            Text("正面：水色の線 ／ 開放：線なし", 710, 306, 270, 15);
+            var layout = FrameGridLayout;
             for (var y = 0; y < draft.Height; y++)
             for (var x = 0; x < draft.Width; x++)
             {
                 var area = draft.AreaAt(x, y);
-                var bounds = FrameBounds(20 + x * FrameCellSize, 222 + y * FrameCellSize, FrameCellSize - 2, FrameCellSize - 2);
+                var bounds = FrameBounds(layout.X + x * FrameCellSize, layout.Y + y * FrameCellSize, FrameCellSize - 2, FrameCellSize - 2);
                 DrawRectangle(bounds, FrameCellColor);
                 DrawOutline(bounds, 1, Color.Gray);
                 if (area > 0) DrawFrameCellMarker(bounds);
@@ -308,7 +323,7 @@ public sealed partial class VenueEditorGame
             }
             ScreenPoint Centre(GridPosition cell)
             {
-                var bounds = FrameBounds(20 + (cell.X + 0.5) * FrameCellSize, 222 + (cell.Y + 0.5) * FrameCellSize, 0, 0);
+                var bounds = FrameBounds(layout.X + (cell.X + 0.5) * FrameCellSize, layout.Y + (cell.Y + 0.5) * FrameCellSize, 0, 0);
                 return new(bounds.X, bounds.Y);
             }
             foreach (var link in frameConnectionMode ? draft.Connections : [])
@@ -320,6 +335,8 @@ public sealed partial class VenueEditorGame
                 DrawCircle(first, 3 * FrameScale, Color.Gold);
                 DrawCircle(second, 3 * FrameScale, Color.Gold);
             }
+            DrawSpaceEdges(draft.Edges, QuarterTurn.North,
+                FrameBounds(layout.X, layout.Y, layout.Width, layout.Height));
             if (frameConnectionStart is { } start) DrawCircle(Centre(start), 6 * FrameScale, Color.Turquoise);
             Text(frameConnectionMode ? "配置可能セルを2つ選択：接続を追加／削除。同じセル・右クリック：選択解除。"
                 : "オレンジの丸＝配置可能セル ／ 丸なし＝配置未確定セル。縮小時は範囲外のセル・接続を保存時に除去。", 20, 558, 960, 16);

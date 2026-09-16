@@ -279,13 +279,22 @@ public sealed partial class VenueEditorGame
             DrawOutline(rect, 1, Color.Gray);
             if (item.Placeable) DrawFrameCellMarker(rect);
         }
+        DrawSpaceEdges(type.Edges, orientation, new ScreenRectangle(x, y, columns * size, rows * size));
+    }
+
+    private void DrawSpaceEdges(IReadOnlyList<string> edges, QuarterTurn orientation, ScreenRectangle bounds)
+    {
+        var x = bounds.X;
+        var y = bounds.Y;
+        var right = x + bounds.Width;
+        var bottom = y + bounds.Height;
         for (var edge = 0; edge < 4; edge++)
         {
             var side = (edge + (int)orientation) % 4;
-            var kind = type.Edges[edge];
+            var kind = edges[edge];
             var color = kind == "壁" ? Color.Orange : kind == "入口" ? Color.LightGreen : Color.LightBlue;
-            var start = side switch { 0 => new ScreenPoint(x, y), 1 => new ScreenPoint(x + columns * size, y), 2 => new ScreenPoint(x + columns * size, y + rows * size), _ => new ScreenPoint(x, y + rows * size) };
-            var end = side switch { 0 => new ScreenPoint(x + columns * size, y), 1 => new ScreenPoint(x + columns * size, y + rows * size), 2 => new ScreenPoint(x, y + rows * size), _ => new ScreenPoint(x, y) };
+            var start = side switch { 0 => new ScreenPoint(x, y), 1 => new ScreenPoint(right, y), 2 => new ScreenPoint(right, bottom), _ => new ScreenPoint(x, bottom) };
+            var end = side switch { 0 => new ScreenPoint(right, y), 1 => new ScreenPoint(right, bottom), 2 => new ScreenPoint(x, bottom), _ => new ScreenPoint(x, y) };
             if (kind is "壁" or "正面") DrawLine(start, end, kind == "壁" ? 4 : 2, color);
             if (kind == "入口")
             {
