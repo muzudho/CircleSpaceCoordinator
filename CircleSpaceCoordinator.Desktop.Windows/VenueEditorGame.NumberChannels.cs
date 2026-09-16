@@ -95,6 +95,7 @@ public sealed partial class VenueEditorGame
     private void DrawNumberLabels()
     {
         if (workspace is null || editorMode != EditorMode.DeskPlacement) return;
+        if (IsBlockNumberChannelSelected) { DrawBlockNumberLabels(); return; }
         var plan = workspace.SelectedPlan;
         var types = workspace.Project.DeskTypes.ToDictionary(type => type.Id);
         var labels = plan.SeatLabels.ToDictionary(label => (label.DeskPlacementId, label.RelativeCell));

@@ -35,6 +35,7 @@ internal static class Program
             ("Genre appearance drafts validate colors, preserve unused styles and apply as one undoable edit", GenreAppearanceDrafts),
             ("Shared appearance mappings accept block numbers and preserve isolated edits and unused styles", BlockAppearanceDrafts),
             ("Block mappings collect frame labels and survive remote history and JSON", BlockStylesRoundTrip),
+            ("Block view repeats labels every four cells and respects rotated seat footprints", BlockChannelDisplay),
             ("Frame drafts isolate edits, retain hidden cells until save and validate references", FrameDraftEdits),
             ("Returning to events saves or discards and closes the engine workspace; cancel and save failure keep it open", EventProjectCloseTransitions),
             ("Block cell and frame numbers can be edited independently and survive history", IndependentNumberChannels),
@@ -789,6 +790,37 @@ internal static class Program
         rejected = false;
         try { invalid.Build(); } catch (InvalidDataException ex) { rejected = ex.Message.Contains("東A"); }
         AssertEqual(true, rejected);
+    }
+
+    private static void BlockChannelDisplay()
+    {
+        var cells = Enumerable.Range(0, 8).SelectMany(y => Enumerable.Range(0, 8).Select(x => new GridPosition(x, y))).ToArray();
+        var type = new DeskType("large", "Large", cells);
+        var placement = new DeskPlacement("frame", type.Id, new(0, 0), QuarterTurn.North);
+        var plan = new Plan("plan", "Plan", [placement], [])
+        {
+            SeatLabels = cells.Select(cell => new DeskSeatLabel(placement.Id, cell, "A", "")).ToArray(),
+        };
+        var project = CreateProject() with { DeskTypes = [type], Plans = [plan] };
+        var view = BlockChannelView.Create(project, plan);
+        AssertEqual(64, view.Cells.Count);
+        AssertEqual(4, view.Labels.Count);
+        AssertEqual(true, view.Labels.Keys.ToHashSet().SetEquals([new(1, 1), new(5, 1), new(1, 5), new(5, 5)]));
+        var mixed = plan with { SeatLabels = plan.SeatLabels.Select(label => label.RelativeCell == new GridPosition(0, 0)
+            ? label with { BlockName = "tiny" } : label).ToArray() };
+        AssertEqual("tiny", BlockChannelView.Create(project, mixed).Labels[new(0, 0)]);
+        AssertEqual(0, BlockChannelView.Create(project, plan with { SeatLabels = [] }).Labels.Count);
+        var seatType = type with { Space = new("large", "booth", 8, 8,
+            [new(0, 0, 1), new(1, 0, 0), new(2, 0, 1)], ["", "", "", ""]) };
+        foreach (var orientation in Enum.GetValues<QuarterTurn>())
+        {
+            var rotated = placement with { Anchor = new(10, 10), Orientation = orientation };
+            var rotatedPlan = plan with { DeskPlacements = [rotated] };
+            var rotatedView = BlockChannelView.Create(project with { DeskTypes = [seatType] }, rotatedPlan);
+            AssertEqual(2, rotatedView.Cells.Count);
+            AssertEqual(true, rotatedView.Cells.Keys.ToHashSet().SetEquals(rotated.GetSeatCells(seatType)));
+            AssertEqual(true, rotatedView.Cells.Values.All(value => value == "A"));
+        }
     }
 
     private static void BlockStylesRoundTrip()

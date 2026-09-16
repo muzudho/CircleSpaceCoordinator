@@ -773,6 +773,7 @@ public sealed partial class VenueEditorGame : Game
             {
                 DrawGrid();
                 DrawBlockedCells();
+                DrawBlockBackgrounds();
                 DrawDesks();
                 if (!IsWeightChannelSelected && selectedNumberChannel == 1) DrawMissingDeskNumbers();
                 if (IsWeightChannelSelected) DrawChannelWeights();
@@ -1564,10 +1565,18 @@ public sealed partial class VenueEditorGame : Game
         if (editorMode == EditorMode.GenrePlacement)
             return;
 
-        if (editorMode == EditorMode.IslandDefinition)
+        if (editorMode == EditorMode.IslandDefinition || IsBlockNumberChannelSelected)
         {
             foreach (var desk in workspace.GetSelectedPlanSnapshot().Desks)
                 DrawDeskWireframe(desk.OccupiedCells, desk.Orientation, GenreDeskWireframeColor);
+            if (IsBlockNumberChannelSelected && dragController?.PreviewAnchor is { } wireAnchor &&
+                dragController.DraggedDeskId is { } wireDeskId)
+            {
+                var placed = workspace.SelectedPlan.DeskPlacements.Single(item => item.Id == wireDeskId);
+                var type = workspace.Project.DeskTypes.Single(item => item.Id == placed.DeskTypeId);
+                DrawDeskWireframe(type.Footprint.Select(cell => wireAnchor + cell.Rotate(placed.Orientation)),
+                    placed.Orientation, OperationTargetColor);
+            }
             return;
         }
 
@@ -1908,6 +1917,7 @@ public sealed partial class VenueEditorGame : Game
             var bounds = GetCellRegionBounds(new GridPosition(selected.Left, selected.Top),
                 new GridPosition(selected.Right, selected.Bottom));
             DrawRectangle(bounds, SelectionHighlightColor);
+            if (IsBlockNumberChannelSelected) DrawOutline(bounds, 2, OperationTargetColor);
         }
         if (draggedCellRange is { } dragged)
         {

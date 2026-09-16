@@ -3,6 +3,12 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 public sealed partial class VenueEditorGame
 {
     private const double StatusHintDurationSeconds = 5;
+    private static readonly string[] BlockNumberHints =
+    [
+        "Ctrl＋ドラッグ：セル単位で範囲選択（フレームの一部も選択できます）",
+        "Ctrl を離して選択範囲内をクリック：ブロック番号を一括入力",
+        "空欄で確定：番号を削除　［色・網掛けの対応］：ブロックの表示設定",
+    ];
     private static readonly string[] FrameNumberHints =
     [
         "Ctrl キーを押しながらマウスドラッグで複数フレーム選択",
@@ -26,10 +32,11 @@ public sealed partial class VenueEditorGame
 
     private string GetRotatingFrameNumberHint(IReadOnlyList<string> details)
     {
-        var hints = IsFrameNumberChannelSelected ? FrameNumberHints : FramePlacementHints;
-        if (statusHintContext is null)
+        var hints = IsBlockNumberChannelSelected ? BlockNumberHints : IsFrameNumberChannelSelected ? FrameNumberHints : FramePlacementHints;
+        var context = IsBlockNumberChannelSelected ? "block-number" : IsFrameNumberChannelSelected ? "frame-number" : "frame-placement";
+        if (statusHintContext != context)
         {
-            statusHintContext = "frame-number";
+            statusHintContext = context;
             statusHintStartedAt = statusHintTime;
             statusHintPages = hints.Concat(details).ToArray();
             statusHintPageIndex = 0;
