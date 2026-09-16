@@ -33,6 +33,7 @@ public static class EditorOperationHandler
         VenueEditorAddPillar op => VenueEditor.AddPillar(project, op.cell),
         VenueEditorRemovePillar op => VenueEditor.RemovePillar(project, op.cell),
         VenueEditorResize op => VenueEditor.Resize(project, op.width, op.height, op.offsetX, op.offsetY),
+        SetIslandStart op => VenueTopologyEditor.SetStart(project, op.planId, op.cell, op.remove),
         VenueTopologyEditorAddConnector op => VenueTopologyEditor.AddConnector(project, op.planId, op.firstDeskId, op.secondDeskId, op.firstCell, op.secondCell),
         VenueTopologyEditorAddFacingRegion op => VenueTopologyEditor.AddFacingRegion(project, op.planId, op.first, op.second),
         VenueTopologyEditorToggleAutomaticConnection op => VenueTopologyEditor.ToggleAutomaticConnection(project, op.planId, op.first, op.second),

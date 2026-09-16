@@ -24,6 +24,9 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Island entrance sides restrict exits while cycles and multiple roots retain shortest distances", IslandDistanceTrees),
+            ("Island starts survive remote edits, sharing, transforms, history and persistence", IslandStartEditing),
+            ("Island distances use enabled seat connections and ignore facing regions", IslandDistanceConnections),
             ("Dialog validation distinguishes clearing numbers from empty names and rejects invalid weights", DialogValidation),
             ("Participant cell selection preserves Unicode and copies reversed multiline ranges", ParticipantCellSelection),
             ("Frame numbers support bulk input and clearing with one undo", BulkFrameNumbers),
@@ -1051,6 +1054,111 @@ internal static class Program
             catch (CircleSpaceCoordinator.Core.Validation.ProjectValidationException) { rejected = true; }
             AssertEqual(true, rejected);
         }
+    }
+
+    private static void IslandDistanceTrees()
+    {
+        GridPosition a = new(0, 0), b = new(1, 0), c = new(0, 1), d = new(1, 1), isolated = new(4, 0);
+        var graph = new VenueTopologyGraph(new Dictionary<GridPosition, IReadOnlySet<GridPosition>>
+        {
+            [a] = new HashSet<GridPosition> { b, c }, [b] = new HashSet<GridPosition> { a, d },
+            [c] = new HashSet<GridPosition> { a, d }, [d] = new HashSet<GridPosition> { b, c },
+            [isolated] = new HashSet<GridPosition>(),
+        }, [], new Dictionary<GridPosition, string>());
+        var frame = new DeskPlacement("frame", "type", new(0, 0), QuarterTurn.North);
+        var plan = new Plan("plan", "Plan", [frame], []) { IslandStarts = [new("frame", a, QuarterTurn.East)] };
+        var tree = IslandTraversal.Build(plan, graph);
+        AssertEqual(0, tree[a].Distance);
+        AssertEqual(1, tree[b].Distance);
+        AssertEqual(2, tree[d].Distance);
+        AssertEqual(3, tree[c].Distance); // Exit touches the root, but must be reached through the entrance path.
+        AssertEqual<GridPosition?>(d, tree[c].ParentCell);
+        AssertEqual(false, tree.ContainsKey(isolated));
+        var south = IslandTraversal.Build(plan with { IslandStarts = [new("frame", a, QuarterTurn.South)] }, graph);
+        AssertEqual(1, south[c].Distance);
+        AssertEqual(3, south[b].Distance);
+        AssertEqual<GridPosition?>(c, south[d].ParentCell);
+        var north = IslandTraversal.Build(plan with { IslandStarts = [new("frame", a, QuarterTurn.North)] }, graph);
+        AssertEqual(1, north.Count); // No entrance connection in this direction.
+        var multi = IslandTraversal.Build(plan with { IslandStarts = [.. plan.IslandStarts, new("frame", d, QuarterTurn.West)] }, graph);
+        AssertEqual(0, multi[d].Distance);
+        AssertEqual(1, multi[c].Distance);
+        AssertEqual<GridPosition?>(null, multi[d].ParentCell);
+        foreach (var pair in multi.Where(pair => pair.Value.ParentCell is not null))
+            AssertEqual(pair.Value.Distance - 1, multi[pair.Value.ParentCell!.Value].Distance);
+        AssertEqual(0, IslandTraversal.Build(plan with { IslandStarts = [] }, graph).Count);
+        var branch = graph with { Neighbors = new Dictionary<GridPosition, IReadOnlySet<GridPosition>>
+        {
+            [a] = new HashSet<GridPosition> { b }, [b] = new HashSet<GridPosition> { a, c, d },
+            [c] = new HashSet<GridPosition> { b }, [d] = new HashSet<GridPosition> { b },
+        } };
+        var branched = IslandTraversal.Build(plan, branch);
+        AssertEqual(2, branched[c].Distance);
+        AssertEqual(2, branched[d].Distance);
+        AssertEqual<GridPosition?>(b, branched[c].ParentCell);
+        AssertEqual<GridPosition?>(b, branched[d].ParentCell);
+    }
+
+    private static void IslandDistanceConnections()
+    {
+        var type = new DeskType("ends", "Ends", [new(0, 0), new(1, 0), new(2, 0)])
+        {
+            Space = new("ends", "desk", 3, 1, [new(0, 0, 1), new(1, 0, 0), new(2, 0, 1)], [])
+            { Connections = [new(new(0, 0), new(2, 0))] },
+        };
+        var plan = new Plan("plan", "Plan", [new("a", type.Id, new(0, 0), QuarterTurn.North), new("b", type.Id, new(5, 0), QuarterTurn.North)], [])
+        { IslandStarts = [new("a", new(0, 0), QuarterTurn.East)], IslandConnectors = [new("link", "a", "b", new(2, 0), new(5, 0))] };
+        var project = CreateProject() with { DeskTypes = [type], Plans = [plan] };
+        var distances = IslandTraversal.Build(plan, VenueTopologyAnalyzer.Build(project, plan));
+        AssertEqual(1, distances[new(2, 0)].Distance);
+        AssertEqual(2, distances[new(5, 0)].Distance);
+        AssertEqual(3, distances[new(7, 0)].Distance);
+        AssertEqual(false, distances.ContainsKey(new(1, 0)));
+        var cut = plan with { DisabledIslandConnections = [new(new(0, 0), new(2, 0))] };
+        AssertEqual(1, IslandTraversal.Build(cut, VenueTopologyAnalyzer.Build(project, cut)).Count);
+        var facing = plan with { IslandConnectors = [], FacingRegions = [new("facing", new(0, 0), new(7, 0))] };
+        AssertEqual(false, IslandTraversal.Build(facing, VenueTopologyAnalyzer.Build(project, facing)).ContainsKey(new(5, 0)));
+    }
+
+    private static void IslandStartEditing()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"island-starts-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "event.json");
+            var source = CreateAssignmentProject(1);
+            ProjectFileService.Save(path, source with { Venue = source.Venue with { Height = 5 } });
+            using var remote = DesktopApplication.LoadWorkspace(path);
+            var commands = new EditorCommandController(remote);
+            AssertEqual(true, commands.SetIslandStart(new(0, 0)).Applied);
+            AssertEqual(true, commands.SetIslandStart(new(3, 0)).Applied);
+            AssertEqual(2, remote.SelectedPlan.IslandStarts.Count);
+            AssertEqual(true, commands.SetIslandStart(new(0, 0)).Applied);
+            AssertEqual(QuarterTurn.East, remote.SelectedPlan.IslandStarts.First(start => start.RelativeCell == new GridPosition(0, 0)).Direction);
+            AssertEqual(true, commands.DuplicateSelectedPlan().Applied);
+            AssertEqual(true, remote.Project.Plans.All(plan => plan.IslandStarts.Count == 2));
+            var before = ProjectJsonSerializer.Save(remote.Project);
+            AssertEqual(true, commands.SetIslandStart(new(0, 0), remove: true).Applied);
+            AssertEqual(true, remote.Project.Plans.All(plan => plan.IslandStarts.Count == 1));
+            remote.Undo();
+            AssertEqual(before, ProjectJsonSerializer.Save(remote.Project));
+            remote.Redo();
+            AssertEqual(1, remote.SelectedPlan.IslandStarts.Count);
+            remote.Undo();
+            var saved = ProjectJsonSerializer.Save(remote.Project);
+            AssertEqual(saved, ProjectJsonSerializer.Save(ProjectJsonSerializer.Load(saved)));
+            var original = remote.SelectedPlan;
+            var moved = PlanDeskEditor.MoveDesk(remote.Project, original.Id, "desk-1", new(0, 2));
+            var movedPlan = moved.Plans.Single(plan => plan.Id == original.Id);
+            AssertEqual(new GridPosition(0, 2), movedPlan.IslandStarts.Single(start => start.DeskPlacementId == "desk-1").GetCell(movedPlan.DeskPlacements[0]));
+            var rotated = PlanDeskEditor.RotateDesk(moved, original.Id, "desk-1", QuarterTurn.East);
+            var rotatedPlan = rotated.Plans.Single(plan => plan.Id == original.Id);
+            AssertEqual(QuarterTurn.South, rotatedPlan.IslandStarts.Single(start => start.DeskPlacementId == "desk-1").GetDirection(rotatedPlan.DeskPlacements[0]));
+            AssertEqual(true, commands.RemoveDeskAt(new(0, 0)).Applied);
+            AssertEqual(true, remote.Project.Plans.All(plan => plan.IslandStarts.All(start => start.DeskPlacementId != "desk-1")));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
     }
 
     private static void OccupiedFrameDeletion()

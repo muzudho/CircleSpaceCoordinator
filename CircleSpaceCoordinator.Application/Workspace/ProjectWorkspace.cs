@@ -154,6 +154,7 @@ public sealed class ProjectWorkspace : IEditorWorkspace
                     IslandConnectors = result.IslandConnectors,
                     DisabledIslandConnections = result.DisabledIslandConnections,
                     FacingRegions = result.FacingRegions,
+                    IslandStarts = result.IslandStarts,
                 }).ToArray(),
             };
         });
@@ -195,6 +196,7 @@ public sealed class ProjectWorkspace : IEditorWorkspace
             IslandConnectors = desk.IslandConnectors,
             DisabledIslandConnections = desk.DisabledIslandConnections,
             FacingRegions = desk.FacingRegions,
+            IslandStarts = desk.IslandStarts,
         };
     }
 

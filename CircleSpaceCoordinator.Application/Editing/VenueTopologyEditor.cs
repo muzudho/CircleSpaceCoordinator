@@ -7,6 +7,24 @@ using CircleSpaceCoordinator.Core.Validation;
 
 public static class VenueTopologyEditor
 {
+    public static CircleSpaceProject SetStart(CircleSpaceProject project, string planId, GridPosition cell, bool remove = false)
+    {
+        var plan = project.Plans.Single(item => item.Id == planId);
+        var types = project.DeskTypes.ToDictionary(item => item.Id);
+        var desk = plan.DeskPlacements.FirstOrDefault(item => item.GetSeatCells(types[item.DeskTypeId]).Contains(cell));
+        if (desk is null) return project;
+        var relative = new GridPosition(cell.X - desk.Anchor.X, cell.Y - desk.Anchor.Y)
+            .Rotate((QuarterTurn)((4 - (int)desk.Orientation) % 4));
+        var existing = plan.IslandStarts.FirstOrDefault(item => item.DeskPlacementId == desk.Id && item.RelativeCell == relative);
+        if (remove && existing is null) return project;
+        var starts = plan.IslandStarts.Where(item => item != existing).ToList();
+        if (!remove)
+            starts.Add(new(desk.Id, relative, existing is null
+                ? (QuarterTurn)((4 - (int)desk.Orientation) % 4)
+                : (QuarterTurn)(((int)existing.Direction + 1) % 4)));
+        return Replace(project, planId, plan with { IslandStarts = starts });
+    }
+
     public static CircleSpaceProject AddConnector(
         CircleSpaceProject project, string planId, string firstDeskId, string secondDeskId,
         GridPosition? firstCell = null, GridPosition? secondCell = null)

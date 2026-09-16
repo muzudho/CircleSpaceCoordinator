@@ -196,6 +196,9 @@ public sealed class EditorCommandController(IEditorWorkspace workspace)
         string firstDeskId, string secondDeskId, GridPosition firstCell, GridPosition secondCell) => Apply(
         new VenueTopologyEditorAddConnector( workspace.SelectedPlanId, firstDeskId, secondDeskId, firstCell, secondCell));
 
+    public EditorCommandResult SetIslandStart(GridPosition cell, bool remove = false) => Apply(
+        new SetIslandStart(workspace.SelectedPlanId, cell, remove));
+
     public EditorCommandResult AddFacingRegion(GridPosition first, GridPosition second) => Apply(
         new VenueTopologyEditorAddFacingRegion( workspace.SelectedPlanId, first, second));
 

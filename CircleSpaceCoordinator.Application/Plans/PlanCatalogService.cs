@@ -93,6 +93,7 @@ public static class PlanCatalogService
             IslandConnectors = source.IslandConnectors.Select(item => item with { }).ToArray(),
             DisabledIslandConnections = source.DisabledIslandConnections.Select(item => item with { }).ToArray(),
             FacingRegions = source.FacingRegions.Select(item => item with { }).ToArray(),
+            IslandStarts = source.IslandStarts.Select(item => item with { }).ToArray(),
             SeatLabels = source.SeatLabels.Select(item => item with { }).ToArray(),
         };
         return AppendCirclePlan(project, sourcePlanId, duplicate);
@@ -118,6 +119,7 @@ public static class PlanCatalogService
             IslandConnectors = optimizedPlan.IslandConnectors.Select(item => item with { }).ToArray(),
             DisabledIslandConnections = optimizedPlan.DisabledIslandConnections.Select(item => item with { }).ToArray(),
             FacingRegions = optimizedPlan.FacingRegions.Select(item => item with { }).ToArray(),
+            IslandStarts = optimizedPlan.IslandStarts.Select(item => item with { }).ToArray(),
             SeatLabels = optimizedPlan.SeatLabels.Select(item => item with { }).ToArray(),
         };
         return AppendCirclePlan(project, optimizedPlan.Id, copy);
@@ -167,6 +169,7 @@ public static class PlanCatalogService
             IslandConnectors = source.IslandConnectors.Select(item => item with { }).ToArray(),
             DisabledIslandConnections = source.DisabledIslandConnections.Select(item => item with { }).ToArray(),
             FacingRegions = source.FacingRegions.Select(item => item with { }).ToArray(),
+            IslandStarts = source.IslandStarts.Select(item => item with { }).ToArray(),
         };
         return EnsureValid(project with { Plans = plans });
     }

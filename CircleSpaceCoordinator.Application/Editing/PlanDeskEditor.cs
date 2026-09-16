@@ -61,6 +61,7 @@ public static class PlanDeskEditor
             return current with
             {
                 DeskPlacements = current.DeskPlacements.Where(item => item.Id != deskPlacementId).ToArray(),
+                IslandStarts = current.IslandStarts.Where(item => item.DeskPlacementId != deskPlacementId).ToArray(),
                 SeatLabels = current.SeatLabels.Where(item => item.DeskPlacementId != deskPlacementId).ToArray(),
                 IslandConnectors = current.IslandConnectors.Where(item => item.FirstDeskId != deskPlacementId && item.SecondDeskId != deskPlacementId).ToArray(),
                 DisabledIslandConnections = current.DisabledIslandConnections.Where(item => !removedCells.Contains(item.FirstCell) && !removedCells.Contains(item.SecondCell)).ToArray(),

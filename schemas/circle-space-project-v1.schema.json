@@ -415,6 +415,16 @@
         }
       }
     },
+    "islandStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deskPlacementId", "relativeCell", "direction"],
+      "properties": {
+        "deskPlacementId": { "$ref": "#/$defs/identifier" },
+        "relativeCell": { "$ref": "#/$defs/gridPosition" },
+        "direction": { "type": "integer", "minimum": 0, "maximum": 3 }
+      }
+    },
     "deskLayout": {
       "type": "object",
       "additionalProperties": false,
@@ -426,6 +436,7 @@
         "deskPlacements": { "type": "array", "items": { "$ref": "#/$defs/deskPlacement" } },
         "islandConnectors": { "type": "array", "items": { "$ref": "#/$defs/islandConnector" } },
         "disabledIslandConnections": { "type": "array", "items": { "$ref": "#/$defs/disabledIslandConnection" } },
+        "islandStarts": { "type": "array", "items": { "$ref": "#/$defs/islandStart" } },
         "facingRegions": { "type": "array", "items": { "$ref": "#/$defs/facingRegion" } },
         "seatLabels": { "type": "array", "items": { "$ref": "#/$defs/deskSeatLabel" } }
       }
@@ -478,6 +489,7 @@
           "type": "array",
           "items": { "$ref": "#/$defs/disabledIslandConnection" }
         },
+        "islandStarts": { "type": "array", "items": { "$ref": "#/$defs/islandStart" } },
         "facingRegions": {
           "type": "array",
           "items": { "$ref": "#/$defs/facingRegion" }

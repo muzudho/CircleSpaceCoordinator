@@ -1437,6 +1437,8 @@ public sealed partial class VenueEditorGame : Game
             DrawCircle(secondPoint, highlighted ? 6d : 4d, highlighted ? Color.White : new Color(255, 190, 92));
         }
 
+        DrawIslandDistances();
+
         if (topologyFirstCell is { } selectedCell)
             DrawLine(GetCellCenter(selectedCell), pointer, 3d, new Color(255, 190, 92, 180));
         if (topologyFirstCorner is { } corner)
@@ -2480,6 +2482,8 @@ public sealed partial class VenueEditorGame : Game
         };
         var islandActions = new[]
         {
+            ToolbarAction.AddIslandStart,
+            ToolbarAction.RemoveIslandStart,
             ToolbarAction.AddIslandConnector,
             ToolbarAction.AddFacingRegion,
             ToolbarAction.ToggleAutomaticIslandConnection,
@@ -2541,7 +2545,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.SwapAddresses or ToolbarAction.EditDeskNumber or
         ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
         ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
-        ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => 0,
+        ToolbarAction.AddIslandStart or ToolbarAction.RemoveIslandStart or ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => 0,
         ToolbarAction.ToggleEvaluationAnalysis => 1,
         _ => 2,
     };
@@ -2572,7 +2576,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.AssignParticipant => workspace?.HasSelectedCircleLayout == true && participantController?.SelectedParticipantId is not null,
                 ToolbarAction.MoveDesk or ToolbarAction.AddDesk or ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.FillDesks or
                 ToolbarAction.RotateLeft or ToolbarAction.RotateRight or ToolbarAction.UnassignParticipant or
-                ToolbarAction.AddIslandConnector or ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology or
+                ToolbarAction.AddIslandConnector or ToolbarAction.AddIslandStart or ToolbarAction.RemoveIslandStart or ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology or
                 ToolbarAction.DecreaseWidth or ToolbarAction.IncreaseWidth or ToolbarAction.DecreaseHeight or ToolbarAction.IncreaseHeight => workspace is not null,
                 ToolbarAction.CaptureScreenshot => true,
                 ToolbarAction.ReturnToEventList => workspace is not null,
@@ -2727,7 +2731,7 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.ShrinkLeft => FormatOutcome(commandController.ResizeVenue(-1, 0, -1, 0)),
             ToolbarAction.PanViewport or ToolbarAction.MoveDesk or ToolbarAction.AddDesk or ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
             ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
-            ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => SelectCanvasTool(action),
+            ToolbarAction.AddIslandStart or ToolbarAction.RemoveIslandStart or ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => SelectCanvasTool(action),
             _ => (false, "unavailable"),
         };
 
@@ -2804,6 +2808,8 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.RemovePillar => commandController.RemovePillarAt(cell),
             ToolbarAction.AssignParticipant => participantController.AssignSelectedAt(cell),
             ToolbarAction.UnassignParticipant => participantController.UnassignAt(cell),
+            ToolbarAction.AddIslandStart => commandController.SetIslandStart(cell),
+            ToolbarAction.RemoveIslandStart => commandController.SetIslandStart(cell, remove: true),
             ToolbarAction.AddIslandConnector => AddIslandConnectorAt(cell),
             ToolbarAction.AddFacingRegion => AddFacingRegionAt(cell),
             ToolbarAction.RemoveTopology => RemoveTopologyAt(pointer, cell),
@@ -3019,6 +3025,13 @@ public sealed partial class VenueEditorGame : Game
                 DrawCircle(center, 12d, color);
                 DrawLine(center, new ScreenPoint(center.X, center.Y - 12d), 2d, color);
                 DrawLine(center, new ScreenPoint(center.X + 11d, center.Y + 5d), 2d, color);
+                break;
+            case ToolbarAction.AddIslandStart:
+            case ToolbarAction.RemoveIslandStart:
+                DrawLine(new ScreenPoint(center.X - 8, center.Y + 12), new ScreenPoint(center.X - 8, center.Y - 12), 3, color);
+                DrawOutline(new ScreenRectangle(center.X - 8, center.Y - 12, 19, 12), 3, color);
+                if (action == ToolbarAction.RemoveIslandStart)
+                    DrawLine(new ScreenPoint(center.X - 12, center.Y + 10), new ScreenPoint(center.X + 12, center.Y - 10), 3, color);
                 break;
             case ToolbarAction.AddIslandConnector:
                 DrawLine(new ScreenPoint(center.X - 12d, center.Y + 8d), new ScreenPoint(center.X + 12d, center.Y - 8d), 3d, color);
@@ -3273,6 +3286,8 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・セル番を出力先の Excel / CSV へ書き出す",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",
         ToolbarAction.EditGenreStyles => "ジャンルと色・網掛けパターンの対応を編集する",
+        ToolbarAction.AddIslandStart => "スタートを配置する（同じセルを再クリックで入口を右回転。入口側から距離を数え、出口へ直接進まない）",
+        ToolbarAction.RemoveIslandStart => "スタートを削除する（旗のあるセルをクリック）",
         ToolbarAction.AddIslandConnector => "島接続補助直線を追加する（配置可能セルを2回選択）",
         ToolbarAction.ToggleAutomaticIslandConnection => "自動島接続を有効・無効に切り替える（線をクリック）",
         ToolbarAction.AddFacingRegion => "向かい合わせ領域矩形を追加する（対角を2回選択）",
@@ -3907,6 +3922,8 @@ internal enum ToolbarAction
     SelectExportPlan,
     OptimizeCirclePlacement,
     EditGenreStyles,
+    AddIslandStart,
+    RemoveIslandStart,
     AddIslandConnector,
     AddFacingRegion,
     ToggleAutomaticIslandConnection,

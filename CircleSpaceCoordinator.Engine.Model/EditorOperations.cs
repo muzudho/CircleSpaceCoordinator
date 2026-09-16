@@ -55,7 +55,9 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(UpsertChannel), "UpsertChannel")]
 [JsonDerivedType(typeof(RemoveChannel), "RemoveChannel")]
 [JsonDerivedType(typeof(SetChannelWeights), "SetChannelWeights")]
+[JsonDerivedType(typeof(SetIslandStart), "SetIslandStart")]
 public abstract record EditorOperation;
+public sealed record SetIslandStart(string planId, GridPosition cell, bool remove = false) : EditorOperation, IPlanOperation;
 public interface IPlanOperation { string planId { get; } }
 
 public sealed record DeskLayoutServiceFillAvailableCells(string planId, string deskTypeId, string idPrefix = "auto-desk") : EditorOperation, IPlanOperation;

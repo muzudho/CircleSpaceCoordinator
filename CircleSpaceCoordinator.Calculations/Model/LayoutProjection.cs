@@ -16,6 +16,7 @@ public static class LayoutProjection
                     IslandConnectors = desk.IslandConnectors,
                     DisabledIslandConnections = desk.DisabledIslandConnections,
                     FacingRegions = desk.FacingRegions,
+                    IslandStarts = desk.IslandStarts,
                     SeatLabels = desk.SeatLabels,
                 };
             }).ToArray();
@@ -30,6 +31,7 @@ public static class LayoutProjection
             IslandConnectors = plan.IslandConnectors,
             DisabledIslandConnections = plan.DisabledIslandConnections,
             FacingRegions = plan.FacingRegions,
+            IslandStarts = plan.IslandStarts,
             SeatLabels = plan.SeatLabels,
         }).ToArray();
         var circles = project.Plans.Select(plan => new CircleLayout(plan.Id, plan.Name, $"desk-{plan.Id}", plan.Assignments)
@@ -68,6 +70,7 @@ public static class LayoutProjection
                 IslandConnectors = plan.IslandConnectors,
                 DisabledIslandConnections = plan.DisabledIslandConnections,
                 FacingRegions = plan.FacingRegions,
+                IslandStarts = plan.IslandStarts,
                 SeatLabels = plan.SeatLabels,
             };
         }).ToArray();

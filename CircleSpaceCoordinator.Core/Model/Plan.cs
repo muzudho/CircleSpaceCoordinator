@@ -30,6 +30,7 @@ public sealed record DeskLayout(
     public string? Description { get; init; }
     public IReadOnlyList<IslandConnector> IslandConnectors { get; init; } = [];
     public IReadOnlyList<DisabledIslandConnection> DisabledIslandConnections { get; init; } = [];
+    public IReadOnlyList<IslandStart> IslandStarts { get; init; } = [];
     public IReadOnlyList<FacingRegion> FacingRegions { get; init; } = [];
     public IReadOnlyList<DeskSeatLabel> SeatLabels { get; init; } = [];
 }
@@ -59,6 +60,7 @@ public sealed record Plan(
     /// <summary>Automatically detected physical links excluded from logical island connectivity.</summary>
     public IReadOnlyList<DisabledIslandConnection> DisabledIslandConnections { get; init; } = [];
 
+    public IReadOnlyList<IslandStart> IslandStarts { get; init; } = [];
     public IReadOnlyList<FacingRegion> FacingRegions { get; init; } = [];
 
     public IReadOnlyList<DeskSeatLabel> SeatLabels { get; init; } = [];

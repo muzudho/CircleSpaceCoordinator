@@ -109,6 +109,7 @@ public static class ProjectJsonSerializer
             }).ToArray())
         {
             Description = item.Description,
+            IslandStarts = item.IslandStarts.ToList(),
             IslandConnectors = item.IslandConnectors.Select(connector => new IslandConnector(
                 connector.Id, connector.FirstDeskId, connector.SecondDeskId,
                 connector.FirstCell is null ? null : ToCore(connector.FirstCell),
@@ -128,6 +129,7 @@ public static class ProjectJsonSerializer
             item.Id, item.Name, item.DeskPlacements.Select(ToCore).ToArray())
         {
             Description = item.Description,
+            IslandStarts = item.IslandStarts.ToList(),
             IslandConnectors = item.IslandConnectors.Select(ToCore).ToArray(),
             DisabledIslandConnections = item.DisabledIslandConnections.Select(ToCore).ToArray(),
             FacingRegions = item.FacingRegions.Select(ToCore).ToArray(),
@@ -151,6 +153,7 @@ public static class ProjectJsonSerializer
                     IslandConnectors = desk.IslandConnectors,
                     DisabledIslandConnections = desk.DisabledIslandConnections,
                     FacingRegions = desk.FacingRegions,
+                    IslandStarts = desk.IslandStarts,
                     SeatLabels = desk.SeatLabels,
                 };
             }).ToArray();
@@ -280,6 +283,7 @@ public static class ProjectJsonSerializer
             Name = item.Name,
             Description = item.Description,
             DeskPlacements = item.DeskPlacements.Select(FromCore).ToList(),
+            IslandStarts = item.IslandStarts.ToList(),
             IslandConnectors = item.IslandConnectors.Select(FromCore).ToList(),
             DisabledIslandConnections = item.DisabledIslandConnections.Select(FromCore).ToList(),
             FacingRegions = item.FacingRegions.Select(FromCore).ToList(),
@@ -525,6 +529,7 @@ public static class ProjectJsonSerializer
         public List<AssignmentDocument> Assignments { get; set; } = [];
         public List<IslandConnectorDocument> IslandConnectors { get; set; } = [];
         public List<DisabledIslandConnectionDocument> DisabledIslandConnections { get; set; } = [];
+        public List<IslandStart> IslandStarts { get; set; } = [];
         public List<FacingRegionDocument> FacingRegions { get; set; } = [];
         public List<DeskSeatLabelDocument> SeatLabels { get; set; } = [];
     }
@@ -537,6 +542,7 @@ public static class ProjectJsonSerializer
         public List<DeskPlacementDocument> DeskPlacements { get; set; } = [];
         public List<IslandConnectorDocument> IslandConnectors { get; set; } = [];
         public List<DisabledIslandConnectionDocument> DisabledIslandConnections { get; set; } = [];
+        public List<IslandStart> IslandStarts { get; set; } = [];
         public List<FacingRegionDocument> FacingRegions { get; set; } = [];
         public List<DeskSeatLabelDocument> SeatLabels { get; set; } = [];
     }

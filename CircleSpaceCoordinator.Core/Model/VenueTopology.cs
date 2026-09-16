@@ -13,3 +13,10 @@ public sealed record IslandConnector(
 public sealed record DisabledIslandConnection(GridPosition FirstCell, GridPosition SecondCell);
 
 public sealed record FacingRegion(string Id, GridPosition FirstCorner, GridPosition SecondCorner);
+
+/// <summary>A maze root attached to a frame; both cell and direction are relative to that frame.</summary>
+public sealed record IslandStart(string DeskPlacementId, GridPosition RelativeCell, QuarterTurn Direction)
+{
+    public GridPosition GetCell(DeskPlacement desk) => desk.Anchor + RelativeCell.Rotate(desk.Orientation);
+    public QuarterTurn GetDirection(DeskPlacement desk) => (QuarterTurn)(((int)Direction + (int)desk.Orientation) % 4);
+}

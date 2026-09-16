@@ -140,6 +140,9 @@ public static class ProjectValidator
         foreach (var plan in project.Plans)
             ValidatePlan(plan, project.Venue, deskTypes, participants, Add);
 
+        foreach (var layout in project.DeskLayouts)
+            ValidateStarts(layout.IslandStarts, layout.DeskPlacements, deskTypes, $"deskLayouts[{layout.Id}]", Add);
+
         return issues;
 
         void Add(string code, string path, string message) => issues.Add(new ValidationIssue(code, path, message));
@@ -151,6 +154,22 @@ public static class ProjectValidator
         }
     }
 
+    private static void ValidateStarts(IReadOnlyList<IslandStart> starts, IReadOnlyList<DeskPlacement> placements,
+        IReadOnlyDictionary<string, DeskType> types, string path, Action<string, string, string> add)
+    {
+        foreach (var duplicate in starts.GroupBy(item => (item.DeskPlacementId, item.RelativeCell)).Where(group => group.Count() > 1))
+            add("islandStart.duplicate", path, "Only one start is allowed per cell.");
+        foreach (var start in starts)
+        {
+            var desk = placements.FirstOrDefault(item => item.Id == start.DeskPlacementId);
+            if (!Enum.IsDefined(start.Direction))
+                add("islandStart.direction", path, "Start direction must be a quarter turn.");
+            if (desk is null || !types.TryGetValue(desk.DeskTypeId, out var type) ||
+                !desk.GetSeatCells(type).Contains(start.GetCell(desk)))
+                add("islandStart.cell", path, "Start must be on an assignable frame cell.");
+        }
+    }
+
     private static void ValidatePlan(
         Plan plan,
         Venue venue,
@@ -159,6 +178,7 @@ public static class ProjectValidator
         Action<string, string, string> add)
     {
         var path = $"plans[{plan.Id}]";
+        ValidateStarts(plan.IslandStarts, plan.DeskPlacements, deskTypes, path, add);
         foreach (var duplicate in plan.DeskPlacements.GroupBy(item => item.Id).Where(group => group.Count() > 1))
             add("id.duplicate", $"{path}.deskPlacements", $"Desk placement ID '{duplicate.Key}' is duplicated.");
         foreach (var duplicate in plan.IslandConnectors.GroupBy(item => item.Id).Where(group => group.Count() > 1))
