@@ -49,6 +49,7 @@ try
     var client = new Editor.EditorClient(channel);
     var json = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "sample.json"));
     await ExtendedChecks.Run(Address(editorHost), json);
+    await VacantSeatChecks.Run(Address(editorHost));
     await Expect(StatusCode.InvalidArgument, async () => await client.OpenAsync(new OpenRequest { ProjectJson = "{" }));
     var opened = await client.OpenAsync(new OpenRequest { ProjectJson = json });
     var id = opened.WorkspaceId;

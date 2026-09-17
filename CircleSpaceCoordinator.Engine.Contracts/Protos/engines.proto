@@ -5,6 +5,7 @@ option csharp_namespace = "CircleSpaceCoordinator.Engine.Contracts.V1";
 // JSON payloads use the existing schemaVersion-bearing project exchange format.
 // Paths and GUI objects never cross the process boundary.
 service Editor {
+  rpc FillVacantSeats (FillVacantSeatsRequest) returns (WorkspaceState);
   rpc StartJob (EditorOptimizeRequest) returns (JobHandle);
   rpc WatchJob (JobHandle) returns (stream JobEvent);
   rpc StopJob (JobHandle) returns (Empty);
@@ -22,6 +23,7 @@ service Editor {
 }
 
 service Thinking {
+  rpc FillVacantSeats (ThinkingRequest) returns (ThinkingResult);
   rpc Describe (Empty) returns (EngineInfo);
   rpc Run (ThinkingJobRequest) returns (stream JobEvent);
   rpc Stop (JobHandle) returns (Empty);
@@ -29,6 +31,10 @@ service Thinking {
 }
 
 message Empty {}
+message FillVacantSeatsRequest {
+  string workspace_id = 1;
+  int64 expected_revision = 2;
+}
 message OpenRequest { string project_json = 1; }
 message WorkspaceRequest { string workspace_id = 1; }
 message WorkspaceState {

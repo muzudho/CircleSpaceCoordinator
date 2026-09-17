@@ -96,6 +96,10 @@ public sealed class RemoteWorkspace : IEditorWorkspace, IDisposable
                 await connection.Client.StopJobAsync(handle, EditorConnection.Deadline()).ConfigureAwait(false);
         }
     }
+    public async Task<WorkspaceState> FillVacantSeatsAsync(CancellationToken cancellationToken = default) =>
+        await connection.Client.FillVacantSeatsAsync(new FillVacantSeatsRequest
+        { WorkspaceId = Id, ExpectedRevision = Revision }, deadline: DateTime.UtcNow.AddMinutes(2),
+            cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
     public void Dispose()
     {
         try { connection.Client.Close(new WorkspaceRequest { WorkspaceId = Id }, EditorConnection.Deadline()); }

@@ -2478,6 +2478,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var genreActions = new[]
         {
+            ToolbarAction.FillVacantSeats,
             ToolbarAction.EditGenreStyles,
             ToolbarAction.ToggleEvaluationAnalysis,
         };
@@ -2577,6 +2578,7 @@ public sealed partial class VenueEditorGame : Game
         {
             button.Model.IsEnabled = button.Action switch
             {
+                ToolbarAction.FillVacantSeats => workspace?.HasSelectedCircleLayout == true && optimizationTask is null && backgroundOperation is null,
                 ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes => true,
                 ToolbarAction.SpaceDefinitionsMode => true,
                 ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu => workspace is not null,
@@ -2628,6 +2630,11 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
+        if (action == ToolbarAction.FillVacantSeats)
+        {
+            FillVacantSeats();
+            return (true, "fill_vacant_seats");
+        }
         if (action is ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes)
         {
             if (action == ToolbarAction.ToggleFrameModes) frameModesCollapsed = !frameModesCollapsed;
@@ -3030,6 +3037,11 @@ public sealed partial class VenueEditorGame : Game
     private static Color ToButtonColor(ButtonColor color) => new(color.R, color.G, color.B, color.A);
     private void DrawToolbarIcon(ToolbarAction action, ScreenRectangle bounds, Color color)
     {
+        if (action == ToolbarAction.FillVacantSeats)
+        {
+            DrawWizardIcon(bounds, color);
+            return;
+        }
         if (action is ToolbarAction.FaceNorth or ToolbarAction.FaceEast or ToolbarAction.FaceSouth or ToolbarAction.FaceWest)
         {
             var orientation = action switch
@@ -3312,6 +3324,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
+        ToolbarAction.FillVacantSeats => "未配置・仮置きのサークル石を、合体ルールを守って空いている配置可能セルへ一括配置する",
         ToolbarAction.ExportFrameLayout => "選択中のフレーム配置を、会場名・定義・島定義と一緒に書き出す",
         ToolbarAction.ImportFrameLayout => "フレーム配置データを読み込み、現在のイベントに配置案を追加する",
         ToolbarAction.SpaceDefinitionsMode => "このフレーム配置の型と申込スペースを編集する",
@@ -3908,6 +3921,7 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    FillVacantSeats,
     ToggleFrameModes,
     ToggleCircleModes,
     ExportFrameLayout,

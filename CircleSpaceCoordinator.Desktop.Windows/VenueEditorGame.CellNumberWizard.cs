@@ -18,17 +18,19 @@ public sealed partial class VenueEditorGame
         OperationButtonRenderer.Draw(button,
             (area, color) => DrawRectangle(area, ToButtonColor(color)),
             (area, width, color) => DrawOutline(area, width, ToButtonColor(color)),
-            (area, color) =>
-            {
-                var x = area.X + area.Width / 2;
-                var y = area.Y + area.Height / 2;
-                DrawLine(new(x - 12, y + 12), new(x + 6, y - 6), 4, ToButtonColor(color));
-                var gold = new Color(255, 215, 90);
-                DrawLine(new(x + 8, y - 15), new(x + 8, y - 3), 2, gold);
-                DrawLine(new(x + 2, y - 9), new(x + 14, y - 9), 2, gold);
-                DrawLine(new(x - 9, y - 13), new(x - 9, y - 7), 2, gold);
-                DrawLine(new(x - 12, y - 10), new(x - 6, y - 10), 2, gold);
-            });
+            (area, color) => DrawWizardIcon(area, ToButtonColor(color)));
+    }
+
+    private void DrawWizardIcon(ScreenRectangle area, Color color)
+    {
+        var x = area.X + area.Width / 2;
+        var y = area.Y + area.Height / 2;
+        DrawLine(new(x - 12, y + 12), new(x + 6, y - 6), 4, color);
+        var gold = new Color(255, 215, 90);
+        DrawLine(new(x + 8, y - 15), new(x + 8, y - 3), 2, gold);
+        DrawLine(new(x + 2, y - 9), new(x + 14, y - 9), 2, gold);
+        DrawLine(new(x - 9, y - 13), new(x - 9, y - 7), 2, gold);
+        DrawLine(new(x - 12, y - 10), new(x - 6, y - 10), 2, gold);
     }
 
     private void OpenCellNumberWizard()
