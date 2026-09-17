@@ -2497,12 +2497,28 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.CaptureScreenshot,
         };
         const double modeWidth = 158d;
+        var modeX = 12d;
         for (var index = 0; index < modeActions.Length; index++)
         {
             var action = modeActions[index];
+            if (action is ToolbarAction.DeskPlacementMode or ToolbarAction.GenrePlacementMode)
+            {
+                var frameGroup = action == ToolbarAction.DeskPlacementMode;
+                var collapsed = frameGroup ? frameModesCollapsed : circleModesCollapsed;
+                var groupName = frameGroup ? "フレーム配置・島定義" : "ジャンル配置・サークル配置";
+                toolbarButtons.Add(new ToolbarButton(
+                    frameGroup ? ToolbarAction.ToggleFrameModes : ToolbarAction.ToggleCircleModes,
+                    new IconButtonModel(new ScreenRectangle(modeX, 7d, 24d, 24d),
+                        $"{groupName}を{(collapsed ? "展開する" : "収納する")}")));
+                modeX += 30d;
+            }
+            if (frameModesCollapsed && action is (ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode) ||
+                circleModesCollapsed && action is (ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode))
+                continue;
             toolbarButtons.Add(new ToolbarButton(
                 action,
-                new IconButtonModel(new ScreenRectangle(12d + index * modeWidth, 7d, modeWidth - 8d, 40d), GetAccessibleName(action))));
+                new IconButtonModel(new ScreenRectangle(modeX, 7d, modeWidth - 8d, 40d), GetAccessibleName(action))));
+            modeX += modeWidth;
         }
         var modeSpecificActions = editorMode switch
         {
@@ -2561,6 +2577,7 @@ public sealed partial class VenueEditorGame : Game
         {
             button.Model.IsEnabled = button.Action switch
             {
+                ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes => true,
                 ToolbarAction.SpaceDefinitionsMode => true,
                 ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu => workspace is not null,
                 ToolbarAction.PreviousPlan or ToolbarAction.NextPlan => GetDisplayedPlans().Count > 1,
@@ -2611,6 +2628,14 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
+        if (action is ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes)
+        {
+            if (action == ToolbarAction.ToggleFrameModes) frameModesCollapsed = !frameModesCollapsed;
+            else circleModesCollapsed = !circleModesCollapsed;
+            CreateToolbar();
+            UpdateToolbar(pointer);
+            return (true, "mode_group_toggled");
+        }
         if (action is ToolbarAction.FaceNorth or ToolbarAction.FaceEast or ToolbarAction.FaceSouth or ToolbarAction.FaceWest)
         {
             nextDeskOrientation = action switch
@@ -2967,6 +2992,11 @@ public sealed partial class VenueEditorGame : Game
             DrawRectangle(new ScreenRectangle(separatorX, 65d, 1d, 32d), new Color(80, 87, 98));
         foreach (var button in toolbarButtons)
         {
+            if (button.Action is ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes)
+            {
+                DrawModeGroupToggle(button);
+                continue;
+            }
             OperationButtonRenderer.Draw(button.Model,
                 (bounds, color) => DrawRectangle(bounds, ToButtonColor(color)),
                 (bounds, thickness, color) => DrawOutline(bounds, thickness, ToButtonColor(color)),
@@ -3878,6 +3908,8 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    ToggleFrameModes,
+    ToggleCircleModes,
     ExportFrameLayout,
     ImportFrameLayout,
     SpaceDefinitionsMode,
