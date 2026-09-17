@@ -47,11 +47,12 @@ public sealed partial class VenueEditorGame
     private void DrawOffSeatToken(ScreenRectangle bounds, string? genreId, bool hollow, string? label = null)
     {
         var style = GetGenreStyle(genreId);
-        FillRoundToken(bounds, bounds, hollow ? CanvasGridColor : style.Primary);
-        if (!hollow) DrawGenrePattern(bounds, style.Pattern, style.Secondary, round: true);
+        FillRoundToken(bounds, bounds, CircleStoneFill(hollow ? CanvasGridColor : style.Primary));
+        if (!hollow && !UseTranslucentCircleStones) DrawGenrePattern(bounds, style.Pattern, style.Secondary, round: true);
         var center = new ScreenPoint(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
         DrawCircle(center, Math.Min(bounds.Width, bounds.Height) / 2, OffSeatColor);
-        if (label is not null)
+        if (label is not null && UseTranslucentCircleStones) DrawCircleStoneLabel(label, bounds);
+        else if (label is not null)
             textRenderer?.Draw(label, ToRectangle(bounds, 5), Color.White, VenueTextSize(12), true);
     }
 

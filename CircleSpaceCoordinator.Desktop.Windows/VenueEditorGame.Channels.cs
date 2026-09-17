@@ -240,10 +240,11 @@ public sealed partial class VenueEditorGame
             allowEmpty: true, validate: EditorDialogValidation.Weight);
     }
 
-    private void DrawChannelWeights()
+    private void DrawChannelWeights(string? channelId = null, bool underStones = false)
     {
         if (workspace is null) return;
-        var map = workspace.Project.Evaluation.WeightMaps.Single(item => item.FeatureId == selectedChannelId);
+        var map = workspace.Project.Evaluation.WeightMaps.FirstOrDefault(item => item.FeatureId == (channelId ?? selectedChannelId));
+        if (map is null) return;
         foreach (var cell in GetWeightChannelCells())
         {
             var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
@@ -262,7 +263,10 @@ public sealed partial class VenueEditorGame
             }
             var luminance = 0.2126 * Linear(background.R) + 0.7152 * Linear(background.G) + 0.0722 * Linear(background.B);
             var foreground = luminance > 0.179 ? Color.Black : Color.White;
-            textRenderer?.Draw($"{weight:0.000}", ToRectangle(bounds, 2), foreground, VenueTextSize(12), true);
+            var labelBounds = underStones
+                ? new ScreenRectangle(bounds.X + 2, bounds.Y + bounds.Height - Math.Min(bounds.Height / 3, 18),
+                    bounds.Width - 4, Math.Min(bounds.Height / 3, 18)) : bounds;
+            textRenderer?.Draw($"{weight:0.000}", ToRectangle(labelBounds, underStones ? 0 : 2), foreground, VenueTextSize(12), true);
         }
     }
 

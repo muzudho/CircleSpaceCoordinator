@@ -804,8 +804,9 @@ public sealed partial class VenueEditorGame : Game
                 DrawBlockedCells();
                 DrawBlockBackgrounds();
                 DrawDesks();
-                if (!IsWeightChannelSelected && selectedNumberChannel == 1) DrawMissingDeskNumbers();
+                if (!IsWeightChannelSelected && !ShowCircleHeatmap && selectedNumberChannel == 1) DrawMissingDeskNumbers();
                 if (IsWeightChannelSelected) DrawChannelWeights();
+                else if (ShowCircleHeatmap) DrawChannelWeights(CircleHeatmapChannelId, underStones: true);
                 else DrawNumberLabels();
                 DrawDeskPlacementGhost();
                 DrawPillarGhost();
@@ -814,7 +815,7 @@ public sealed partial class VenueEditorGame : Game
                 // Genre tiles cover desk orientation markers where they overlap.
                 if (editorMode == EditorMode.GenrePlacement)
                     DrawGenreDeskWireframes();
-                if (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement)
+                if ((editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement) && !ShowCircleHeatmap)
                     DrawGenreAssignments();
                 if (editorMode == EditorMode.GenrePlacement)
                 {
@@ -2258,14 +2259,15 @@ public sealed partial class VenueEditorGame : Game
         var ghostColor = editorMode == EditorMode.GenrePlacement && workspace is not null
             ? GetGenreStyle(workspace.Project.Participants.Single(item => item.Id == token.ParticipantId).GenreId).Primary
             : new Color(92, 151, 213, 205);
-        DrawRectangle(bounds, ghostColor);
+        DrawRectangle(bounds, CircleStoneFill(ghostColor));
         if (editorMode == EditorMode.GenrePlacement && workspace is not null)
         {
             var style = GetGenreStyle(workspace.Project.Participants.Single(item => item.Id == token.ParticipantId).GenreId);
             DrawGenrePattern(bounds, style.Pattern, style.Secondary);
         }
         DrawOutline(bounds, 3d, new Color(207, 239, 255));
-        textRenderer?.Draw(editorMode == EditorMode.CirclePlacement ? GetCircleLabel(token) : token.Number.ToString(),
+        if (UseTranslucentCircleStones) DrawCircleStoneLabel(GetCircleLabel(token), bounds);
+        else textRenderer?.Draw(editorMode == EditorMode.CirclePlacement ? GetCircleLabel(token) : token.Number.ToString(),
             ToRectangle(bounds, 2), Color.White, 14, true);
     }
 
@@ -2361,9 +2363,9 @@ public sealed partial class VenueEditorGame : Game
                     DrawOutline(cellTokenBounds, 2d, new Color(202, 220, 239));
                     continue;
                 }
-                DrawRectangle(cellTokenBounds, token.Assigned ? new Color(61, 112, 181) : new Color(94, 72, 132));
+                DrawRectangle(cellTokenBounds, CircleStoneFill(token.Assigned ? new Color(61, 112, 181) : new Color(94, 72, 132)));
                 DrawOutline(cellTokenBounds, 2d, new Color(202, 220, 239));
-                textRenderer?.Draw(label, ToRectangle(cellTokenBounds, 3), Color.White, VenueTextSize(12), true);
+                DrawCircleStoneLabel(label, cellTokenBounds);
             }
             return;
         }
@@ -2376,9 +2378,9 @@ public sealed partial class VenueEditorGame : Game
             topLeft.Y + 6d,
             bottomRight.X - topLeft.X - 12d,
             bottomRight.Y - topLeft.Y - 12d);
-        DrawRectangle(bounds, token.Assigned ? new Color(61, 112, 181) : new Color(94, 72, 132));
+        DrawRectangle(bounds, CircleStoneFill(token.Assigned ? new Color(61, 112, 181) : new Color(94, 72, 132)));
         DrawOutline(bounds, 2d, token.CombinedSpaceId is null ? new Color(202, 220, 239) : new Color(228, 191, 255));
-        textRenderer?.Draw(label, ToRectangle(bounds, 3), Color.White, VenueTextSize(12), true);
+        DrawCircleStoneLabel(label, bounds);
     }
 
     private string GetCircleLabel(ParticipantToken token)
@@ -2471,6 +2473,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var circleActions = new[]
         {
+            ToolbarAction.ToggleCircleStoneTransparency,
             ToolbarAction.OptimizeCirclePlacement,
             ToolbarAction.AssignParticipant,
             ToolbarAction.UnassignParticipant,
@@ -2546,7 +2549,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action is ToolbarAction.ExportFrameLayout or ToolbarAction.ImportFrameLayout ? 134d : action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments ? 170d :
+            var buttonWidth = action is ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportFrameLayout ? 134d : action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
                 action,
@@ -2567,7 +2570,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.RotateLeft or ToolbarAction.RotateRight or
         ToolbarAction.AssignParticipant or ToolbarAction.UnassignParticipant or ToolbarAction.AddIslandConnector or
         ToolbarAction.AddIslandStart or ToolbarAction.RemoveIslandStart or ToolbarAction.AddFacingRegion or ToolbarAction.ToggleAutomaticIslandConnection or ToolbarAction.RemoveTopology => 0,
-        ToolbarAction.ToggleEvaluationAnalysis => 1,
+        ToolbarAction.ToggleEvaluationAnalysis or ToolbarAction.ToggleCircleStoneTransparency => 1,
         _ => 2,
     };
 
@@ -2578,6 +2581,7 @@ public sealed partial class VenueEditorGame : Game
         {
             button.Model.IsEnabled = button.Action switch
             {
+                ToolbarAction.ToggleCircleStoneTransparency => ShowCircleHeatmap,
                 ToolbarAction.FillVacantSeats => workspace?.HasSelectedCircleLayout == true && optimizationTask is null && backgroundOperation is null,
                 ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes => true,
                 ToolbarAction.SpaceDefinitionsMode => true,
@@ -2607,6 +2611,7 @@ public sealed partial class VenueEditorGame : Game
                 _ => false,
             };
             button.Model.IsSelected = button.Action == activeCanvasTool && !(button.Action == ToolbarAction.EditSeatName && IsAddressSwapMode) ||
+                button.Action == ToolbarAction.ToggleCircleStoneTransparency && UseTranslucentCircleStones ||
                 button.Action == ToolbarAction.SwapAddresses && IsAddressSwapMode ||
                 button.Action == ToolbarAction.SpaceDefinitionsMode && editorMode == EditorMode.SpaceDefinitions ||
                 button.Action == GetToolMenu(activeCanvasTool) ||
@@ -2630,6 +2635,12 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
+        if (action == ToolbarAction.ToggleCircleStoneTransparency)
+        {
+            if (!ShowCircleHeatmap) return (false, "no_numeric_channel");
+            translucentCircleStones = !translucentCircleStones;
+            return (true, $"translucent={translucentCircleStones}");
+        }
         if (action == ToolbarAction.FillVacantSeats)
         {
             FillVacantSeats();
@@ -3012,9 +3023,10 @@ public sealed partial class VenueEditorGame : Game
                     var foreground = ToButtonColor(color);
                     if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
-                    else if (button.Action is ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
+                    else if (button.Action is ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
                         {
+                            ToolbarAction.ToggleCircleStoneTransparency => "石を半透明",
                             ToolbarAction.ExportFrameLayout => "配置データ書出し",
                             ToolbarAction.ImportFrameLayout => "配置データ読込",
                             ToolbarAction.ImportParticipants => "Excel / CSV 読込",
@@ -3324,6 +3336,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
+        ToolbarAction.ToggleCircleStoneTransparency => "数値チャンネルで石の塗りを半透明にし、下地の重みを見る（再クリックで戻す）",
         ToolbarAction.FillVacantSeats => "未配置・仮置きのサークル石を、合体ルールを守って空いている配置可能セルへ一括配置する",
         ToolbarAction.ExportFrameLayout => "選択中のフレーム配置を、会場名・定義・島定義と一緒に書き出す",
         ToolbarAction.ImportFrameLayout => "フレーム配置データを読み込み、現在のイベントに配置案を追加する",
@@ -3921,6 +3934,7 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    ToggleCircleStoneTransparency,
     FillVacantSeats,
     ToggleFrameModes,
     ToggleCircleModes,

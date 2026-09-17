@@ -7,6 +7,26 @@ using StationeryUI.Canvas;
 public sealed partial class VenueEditorGame
 {
     private int circleChannelScroll;
+    private bool translucentCircleStones;
+    private string? CircleHeatmapChannelId => editorMode == EditorMode.CirclePlacement &&
+        CurrentCircleDisplay.DisplayField == "channel" ? CurrentCircleDisplay.ChannelId : null;
+    private bool ShowCircleHeatmap => CircleHeatmapChannelId is { } id &&
+        workspace?.Project.Evaluation.WeightMaps.Any(map => map.FeatureId == id) == true;
+    private bool UseTranslucentCircleStones => ShowCircleHeatmap && translucentCircleStones;
+    private Color CircleStoneFill(Color color) => UseTranslucentCircleStones ? color * 0.18f : color;
+
+    private void DrawCircleStoneLabel(string label, ScreenRectangle bounds)
+    {
+        var area = ToRectangle(bounds, 3);
+        if (UseTranslucentCircleStones)
+        {
+            // Keep the circle's value readable on blue, white and red heatmap cells.
+            foreach (var offset in new[] { new Point(-1, 0), new Point(1, 0), new Point(0, -1), new Point(0, 1) })
+                textRenderer?.Draw(label, new Rectangle(area.X + offset.X, area.Y + offset.Y, area.Width, area.Height),
+                    Color.Black, VenueTextSize(12), true);
+        }
+        textRenderer?.Draw(label, area, Color.White, VenueTextSize(12), true);
+    }
     private string? lastCircleDisplayKey;
     private CircleLabelDisplaySettings? circleDisplayOverride;
     private CircleLabelDisplaySettings CurrentCircleDisplay
@@ -68,7 +88,7 @@ public sealed partial class VenueEditorGame
         DrawChannelScrollbar();
         var selectedChannel = channels.First(item => item.Field == display.DisplayField &&
             (item.Field != "channel" || item.ChannelId == display.ChannelId));
-        textRenderer?.Draw(selectedChannel.Detail, new Rectangle((int)panel.X + 8,
+        textRenderer?.Draw(selectedChannel.Detail + (ShowCircleHeatmap ? " / 下地: 重み" : ""), new Rectangle((int)panel.X + 8,
             (int)(panel.Y + panel.Height) - 46, 248, 24), new Color(184, 204, 214), 12);
         textRenderer?.Draw("クリックで表示切替 / ホイールでリスト移動", new Rectangle((int)panel.X + 8,
             (int)(panel.Y + panel.Height) - 22, 248, 20), Color.LightGray, 11);
