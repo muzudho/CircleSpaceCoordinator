@@ -46,8 +46,8 @@ public static class ChannelEditor
     public static CircleSpaceProject SetWeights(CircleSpaceProject project, string planId, string id,
         IReadOnlyList<GridPosition> cells, double weight)
     {
-        if (!double.IsFinite(weight) || weight < 0 || weight > 1)
-            throw new ArgumentOutOfRangeException(nameof(weight), "重みは 0～1 の実数で入力してください。");
+        if (!double.IsFinite(weight) || weight < -1 || weight > 1)
+            throw new ArgumentOutOfRangeException(nameof(weight), "重みは -1～1 の実数で入力してください。");
         var plan = project.Plans.Single(item => item.Id == planId);
         var types = project.DeskTypes.ToDictionary(item => item.Id);
         var deskCells = plan.DeskPlacements.SelectMany(desk => desk.GetSeatCells(types[desk.DeskTypeId])).ToHashSet();

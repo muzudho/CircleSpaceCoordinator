@@ -55,13 +55,15 @@ internal static class ExtendedChecks
             { SourceValues = new Dictionary<string, string> { ["Books"] = "1" } }).ToArray()), false);
         workspace.Execute(new UpsertChannel("books", "Books", "Books"), false);
         var scoringCell = workspace.SelectedPlan.Assignments[0].ScoringPosition;
-        workspace.Execute(new SetChannelWeights("p", "books", [scoringCell], 0.75));
-        Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == 0.75, "remote channel score");
+        workspace.Execute(new SetChannelWeights("p", "books", [scoringCell], -0.75));
+        Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == -0.75, "remote negative channel score");
         workspace.Undo();
         Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == 0, "remote channel undo");
         workspace.Redo();
-        Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == 0.75, "remote channel redo");
+        Check(workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore == -0.75, "remote channel redo");
         var channelProject = connection.Decode(connection.Encode(workspace.Project));
+        Check(channelProject.Evaluation.WeightMaps.Single(item => item.FeatureId == "books").GetWeight(scoringCell) == -0.75,
+            "negative channel weight persistence");
         Check(channelProject.Evaluation.Features[0].SourceColumn == "Books" && channelProject.Participants[0].SourceValues["Books"] == "1",
             "remote channel persistence");
         workspace.LoadProject(connection.Decode(json));

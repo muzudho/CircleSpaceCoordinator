@@ -18,11 +18,11 @@ public static class EditorDialogValidation
         var point = value.IndexOf(separator, StringComparison.Ordinal);
         return (point < 0 || value.Length - point - separator.Length <= 3)
             && decimal.TryParse(value, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
-                CultureInfo.CurrentCulture, out parsed) && parsed >= 0 && parsed <= 1;
+                CultureInfo.CurrentCulture, out parsed) && parsed >= -1 && parsed <= 1;
     }
 
     public static string? Weight(string value) => TryParseWeight(value, out _)
-        ? null : "0～1、小数点以下3桁までの数値を入力してください。空欄は0になります。";
+        ? null : "-1.000～1.000、小数点以下3桁までの数値を入力してください。空欄は0になります。";
     public static string? CircleIdPattern(string value)
     {
         try { _ = new Regex(value, RegexOptions.None, TimeSpan.FromMilliseconds(100)); return null; }

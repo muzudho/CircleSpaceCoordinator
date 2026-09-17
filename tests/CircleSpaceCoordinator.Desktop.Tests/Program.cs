@@ -2265,12 +2265,14 @@ internal static class Program
         AssertEqual<string?>(null, EditorDialogValidation.Name("  ", allowEmpty: true));
         AssertEqual(true, EditorDialogValidation.ChannelName(" 番地 ") is not null);
         AssertEqual<string?>(null, EditorDialogValidation.ChannelName("優先度"));
-        foreach (var value in new[] { "", " ", "0", "1", 0.001m.ToString(), 0.123m.ToString(), 1.000m.ToString() }) AssertEqual<string?>(null, EditorDialogValidation.Weight(value));
-        foreach (var value in new[] { "NaN", "-1", "2", "1e-3", "文字", 0.1234m.ToString(), 1.001m.ToString(), 0.0001m.ToString() }) AssertEqual(true, EditorDialogValidation.Weight(value) is not null);
+        foreach (var value in new[] { "", " ", "0", "1", "-1", (-0.001m).ToString(), (-0.375m).ToString(), 0.001m.ToString(), 0.123m.ToString(), 1.000m.ToString() }) AssertEqual<string?>(null, EditorDialogValidation.Weight(value));
+        foreach (var value in new[] { "NaN", (-1.001m).ToString(), (-0.0001m).ToString(), "2", "1e-3", "文字", 0.1234m.ToString(), 1.001m.ToString(), 0.0001m.ToString() }) AssertEqual(true, EditorDialogValidation.Weight(value) is not null);
         AssertEqual(true, EditorDialogValidation.TryParseWeight("  ", out var emptyWeight));
         AssertEqual(0m, emptyWeight);
         AssertEqual(true, EditorDialogValidation.TryParseWeight(0.375m.ToString(), out var preciseWeight));
         AssertEqual(0.375m, preciseWeight);
+        AssertEqual(true, EditorDialogValidation.TryParseWeight((-0.375m).ToString(), out var negativeWeight));
+        AssertEqual(-0.375m, negativeWeight);
         AssertEqual<string?>(null, EditorDialogValidation.CircleIdPattern(""));
         AssertEqual<string?>(null, EditorDialogValidation.CircleIdPattern("^(.*)$"));
         AssertEqual(true, EditorDialogValidation.CircleIdPattern("[") is not null);

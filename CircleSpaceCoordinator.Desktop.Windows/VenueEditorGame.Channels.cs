@@ -217,7 +217,7 @@ public sealed partial class VenueEditorGame
         var map = workspace.Project.Evaluation.WeightMaps.Single(item => item.FeatureId == selectedChannelId);
         var channelId = selectedChannelId!;
         var planId = workspace.SelectedPlanId;
-        var value = decimal.Round((decimal)Math.Clamp(map.GetWeight(cell), 0, 1), 3);
+        var value = decimal.Round((decimal)Math.Clamp(map.GetWeight(cell), -1, 1), 3);
         var owner = workspace;
         OpenWeightInput(value, cells.Length, weight =>
         {
@@ -236,7 +236,7 @@ public sealed partial class VenueEditorGame
                 throw new InvalidOperationException(EditorDialogValidation.Weight(input));
             accepted(weight);
             rangeSwapStatus = $"{cellCount} セルの重みを {weight:0.000} に変更しました";
-        }, "0.000～1.000、小数点以下3桁までで入力してください。\n空欄で確定すると0になります。キャンセルでは変更しません。", 32,
+        }, "-1.000～1.000、小数点以下3桁までで入力してください。\n空欄で確定すると0になります。キャンセルでは変更しません。", 32,
             allowEmpty: true, validate: EditorDialogValidation.Weight);
     }
 
@@ -249,10 +249,10 @@ public sealed partial class VenueEditorGame
         {
             var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
             var weight = map.GetWeight(cell);
-            var normalized = (float)Math.Clamp(weight, 0, 1);
-            var background = normalized <= 0.5f
-                ? Color.Lerp(Color.Blue, Color.White, normalized * 2)
-                : Color.Lerp(Color.White, Color.Red, (normalized - 0.5f) * 2);
+            var normalized = (float)Math.Clamp(weight, -1, 1);
+            var background = normalized < 0
+                ? Color.Lerp(Color.White, Color.Orange, -normalized)
+                : Color.Lerp(Color.White, Color.SkyBlue, normalized);
             DrawRectangle(bounds, background);
             DrawOutline(bounds, 1, new Color(106, 129, 145));
             // Choose the higher-contrast text color using relative luminance.

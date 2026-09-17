@@ -20,7 +20,7 @@ public sealed partial class VenueEditorGame
         var area = ToRectangle(bounds, 3);
         if (UseTranslucentCircleStones)
         {
-            // Keep the circle's value readable on blue, white and red heatmap cells.
+            // Keep the circle's value readable on orange, white and sky-blue heatmap cells.
             foreach (var offset in new[] { new Point(-1, 0), new Point(1, 0), new Point(0, -1), new Point(0, 1) })
                 textRenderer?.Draw(label, new Rectangle(area.X + offset.X, area.Y + offset.Y, area.Width, area.Height),
                     Color.Black, VenueTextSize(12), true);
