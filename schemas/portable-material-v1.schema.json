@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/portable-material-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "name",
+    "isConfidential"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "venue",
+        "frame-definition",
+        "request-definition"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "isConfidential": {
+      "type": "boolean"
+    },
+    "definitions": {
+      "anyOf": [
+        {
+          "$ref": "circle-space-project-v1.schema.json#/$defs/spaceDefinitionCatalog"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "venue": {
+      "$ref": "channel-knowledge-v1.schema.json#/properties/venue"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "kind": {
+          "const": "venue"
+        },
+        "venue": {
+          "type": "object"
+        },
+        "definitions": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "venue"
+      ]
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "frame-definition"
+        },
+        "venue": {
+          "type": "null"
+        },
+        "definitions": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "minItems": 0,
+              "maxItems": 0
+            },
+            "types": {
+              "minItems": 1,
+              "maxItems": 1
+            }
+          }
+        }
+      },
+      "required": [
+        "definitions"
+      ]
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "request-definition"
+        },
+        "venue": {
+          "type": "null"
+        },
+        "definitions": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "minItems": 1,
+              "maxItems": 1
+            }
+          }
+        }
+      },
+      "required": [
+        "definitions"
+      ]
+    }
+  ],
+  "description": "Runtime validates exact request dependencies, geometry, IDs and confidentiality propagation."
+}

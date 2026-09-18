@@ -48,7 +48,7 @@ public static class FrameLayoutPortableService
             }
         catalog = catalog with { Types = definitions.ToArray() };
         catalog.Validate(requireRepresentativeCell: false);
-        var confidential = project.IsConfidential || layout.IsConfidential;
+        var confidential = project.IsConfidential || layout.IsConfidential || catalog.IsConfidential;
         var portable = new CircleSpaceProject(project.SchemaVersion, "portable-frame-layout", layout.Name,
             project.Venue, types, [], new EvaluationConfiguration([], []), [])
         {

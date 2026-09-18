@@ -14,7 +14,7 @@ using CircleSpaceCoordinator.Infrastructure.Json;
 using StationeryUI.Canvas;
 using CircleSpaceCoordinator.OptimizationEngine;
 
-internal static class Program
+internal static partial class Program
 {
     private static async Task<int> Main()
     {
@@ -24,6 +24,9 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Portable materials preserve dependencies, names, confidentiality and atomic history", PortableMaterials),
+            ("Portable fragments insert with remapped topology and replace only unreferenced layouts", PortableFragments),
+            ("Portable library metadata and common catalog imports protect stale files and undo", PortableLibraryAndCatalog),
             ("Channel knowledge shares rules and weights without participant data and binds explicitly", PortableKnowledgeRoundTrip),
             ("Portable selection crosses gRPC, filters dependencies, previews and commits atomically", PortableSelectionRoundTrip),
             ("Portable frame layouts retain definitions, topology and confidentiality without circle data", PortableFrameRoundTrip),

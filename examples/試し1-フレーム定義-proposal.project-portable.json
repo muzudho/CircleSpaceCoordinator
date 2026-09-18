@@ -1,0 +1,49 @@
+{
+  "kind": "circle-space-project-portable",
+  "formatVersion": 2,
+  "name": "\u8A66\u3057\uFF11-\u30D5\u30EC\u30FC\u30E0\u5B9A\u7FA9",
+  "description": "",
+  "tags": [],
+  "isConfidential": false,
+  "items": [],
+  "materials": [
+    {
+      "id": "frame-definition:desk-plan-1:desk-2-seats",
+      "kind": "frame-definition",
+      "name": "2\u30B5\u30FC\u30AF\u30EB\u7528\u9577\u673A",
+      "isConfidential": false,
+      "definitions": {
+        "types": [
+          {
+            "id": "desk-2-seats",
+            "name": "2\u30B5\u30FC\u30AF\u30EB\u7528\u9577\u673A",
+            "kind": "\u673A",
+            "width": 2,
+            "height": 1,
+            "cells": [
+              {
+                "x": 0,
+                "y": 0,
+                "area": 1
+              },
+              {
+                "x": 1,
+                "y": 0,
+                "area": 1
+              }
+            ],
+            "edges": [
+              "\u6B63\u9762",
+              "\u958B\u653E",
+              "\u958B\u653E",
+              "\u958B\u653E"
+            ]
+          }
+        ],
+        "requests": [],
+        "schemaVersion": 1
+      },
+      "venue": null
+    }
+  ]
+}

@@ -19,6 +19,8 @@ public sealed record SpaceRequestDefinition(string Id, string Value, string Desc
 public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> Types, IReadOnlyList<SpaceRequestDefinition> Requests)
 {
     public int SchemaVersion { get; init; } = 1;
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsConfidential { get; init; }
 
     public SpaceDefinitionCatalog NormalizeCellStates() => this with
     {
@@ -51,7 +53,7 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
 
     public void Validate(bool requireRepresentativeCell = true)
     {
-        if (SchemaVersion != 1) throw new InvalidDataException("未対応のフレーム定義形式です。");
+        if (SchemaVersion is not (1 or 2)) throw new InvalidDataException("未対応のフレーム定義形式です。");
         if (Types is null || Requests is null) throw new InvalidDataException("型と申込スペースの一覧が必要です。");
         if (Types.Any(type => type is null) || Requests.Any(request => request is null))
             throw new InvalidDataException("空の定義は使えません。");

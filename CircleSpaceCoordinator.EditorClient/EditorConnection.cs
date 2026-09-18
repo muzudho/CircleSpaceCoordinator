@@ -26,6 +26,8 @@ public sealed class EditorConnection : IDisposable
     public string ExportPortable(PortableExportRequest request) => Portable("export", WireJson.Write(request));
     public PortablePackage ParsePortable(string json) => WireJson.Read<PortablePackage>(Portable("parse", json));
     public PortablePreview PreviewPortable(PortablePreviewRequest request) => WireJson.Read<PortablePreview>(Portable("preview", WireJson.Write(request)));
+    public SpaceDefinitionCatalog PreviewPortableCatalog(PortableCatalogRequest request) => WireJson.Read<SpaceDefinitionCatalog>(Portable("catalog-preview", WireJson.Write(request)));
+    public string UpdatePortableMetadata(PortableMetadataRequest request) => Portable("metadata", WireJson.Write(request));
     private string Portable(string action, string json) => Invoke(() => Client.Portable(
         new PortableRequest { Action = action, Json = json }, Deadline())).Json;
     public static CallOptions Deadline() => new(deadline: DateTime.UtcNow.AddSeconds(15));

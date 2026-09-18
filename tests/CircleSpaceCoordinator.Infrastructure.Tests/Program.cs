@@ -72,6 +72,21 @@ internal static class Program
 
     private static void PortableFixtures()
     {
+        var materialJson = File.ReadAllText("examples/fictional-materials.project-portable.json");
+        var materials = ProjectPortableSerializer.Load(materialJson);
+        AssertEqual(3, materials.Document.Materials!.Length);
+        AssertEqual(0, materials.Projects.Length);
+        var fragment = ProjectPortableSerializer.Load(File.ReadAllText("examples/fictional-fragment.project-portable.json"));
+        AssertEqual("frame-fragment", fragment.Document.Items[0].Kind);
+        AssertEqual(1, fragment.Projects[0].DeskLayouts[0].DeskPlacements.Count);
+        foreach (var field in new[] { "id", "kind", "name", "isConfidential" })
+        {
+            var node = System.Text.Json.Nodes.JsonNode.Parse(materialJson)!;
+            node["materials"]![0]!.AsObject().Remove(field);
+            var rejected = false;
+            try { ProjectPortableSerializer.Load(node.ToJsonString()); } catch (JsonException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
         var layouts = ProjectPortableSerializer.Load(File.ReadAllText("examples/fictional-proposals.project-portable.json"));
         AssertEqual(2, layouts.Projects.Length);
         AssertEqual(layouts.Projects[0].DeskTypes[0].Id, layouts.Projects[1].DeskTypes[0].Id);

@@ -10,6 +10,25 @@ public sealed class SpaceDefinitionStore
     public string Path { get; }
     public SpaceDefinitionCatalog Current { get; private set; }
     private string? savedJson;
+    private SpaceDefinitionCatalog? portableUndo;
+    private string? portableAfter;
+    public bool CanUndoPortableImport => portableUndo is not null && portableAfter == savedJson;
+
+    public void ImportPortable(SpaceDefinitionCatalog catalog)
+    {
+        var before = Current;
+        Save(catalog, requireRepresentativeCell: false);
+        portableUndo = before;
+        portableAfter = savedJson;
+    }
+
+    public void UndoPortableImport()
+    {
+        if (!CanUndoPortableImport) throw new InvalidOperationException("取り消せる共通カタログ登録がありません。");
+        Save(portableUndo!, requireRepresentativeCell: false);
+        portableUndo = null;
+        portableAfter = null;
+    }
 
     public SpaceDefinitionStore(string path)
     {
@@ -25,10 +44,10 @@ public sealed class SpaceDefinitionStore
         Current = Current.NormalizeCellStates();
     }
 
-    public void Save(SpaceDefinitionCatalog catalog)
+    public void Save(SpaceDefinitionCatalog catalog, bool requireRepresentativeCell = true)
     {
-        catalog.Validate();
-        catalog = catalog.NormalizeCellStates();
+        catalog.Validate(requireRepresentativeCell);
+        catalog = catalog.NormalizeCellStates() with { SchemaVersion = catalog.IsConfidential ? 2 : catalog.SchemaVersion };
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
         var temporary = Path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         // A second running application must reload instead of silently overwriting edits.

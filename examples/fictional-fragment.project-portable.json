@@ -1,0 +1,110 @@
+{
+  "kind": "circle-space-project-portable",
+  "formatVersion": 2,
+  "name": "Fictional frame fragment",
+  "description": "One frame at its original absolute coordinates. Import with an explicit offset.",
+  "tags": [
+    "fictional",
+    "fragment"
+  ],
+  "isConfidential": false,
+  "items": [
+    {
+      "id": "A",
+      "kind": "frame-fragment",
+      "name": "Proposal A",
+      "data": {
+        "kind": "circle-space-frame-layout",
+        "formatVersion": 1,
+        "isConfidential": false,
+        "project": {
+          "schemaVersion": "1.0",
+          "project": {
+            "id": "portable-frame-layout",
+            "name": "Proposal A",
+            "isConfidential": false
+          },
+          "venue": {
+            "id": "sample-hall",
+            "name": "サンプルホール",
+            "width": 6,
+            "height": 4,
+            "blockedCells": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "zones": [
+              {
+                "id": "entrance-side",
+                "name": "入口側",
+                "cells": [
+                  {
+                    "x": 0,
+                    "y": 3
+                  },
+                  {
+                    "x": 1,
+                    "y": 3
+                  },
+                  {
+                    "x": 2,
+                    "y": 3
+                  }
+                ]
+              }
+            ]
+          },
+          "deskTypes": [
+            {
+              "id": "standard-desk",
+              "name": "標準机",
+              "footprint": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                }
+              ]
+            }
+          ],
+          "participants": [],
+          "evaluation": {
+            "features": [],
+            "weightMaps": []
+          },
+          "deskLayouts": [
+            {
+              "deskPlacements": [
+                {
+                  "id": "plan-0-desk-01",
+                  "deskTypeId": "standard-desk",
+                  "anchor": {
+                    "x": 1,
+                    "y": 2
+                  },
+                  "orientation": "north"
+                }
+              ],
+              "id": "A",
+              "name": "Proposal A",
+              "isConfidential": false,
+              "description": "Fictional aisle proposal A",
+              "definitions": {
+                "types": [],
+                "requests": []
+              }
+            }
+          ],
+          "circleLayouts": [],
+          "blockStyles": [],
+          "genreStyles": []
+        }
+      }
+    }
+  ]
+}

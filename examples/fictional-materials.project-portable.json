@@ -1,0 +1,134 @@
+{
+  "kind": "circle-space-project-portable",
+  "formatVersion": 2,
+  "name": "Fictional reusable materials",
+  "description": "A frame definition, a request with its dependency, and a venue. No participant data.",
+  "tags": [
+    "fictional",
+    "materials"
+  ],
+  "isConfidential": false,
+  "items": [],
+  "materials": [
+    {
+      "id": "frame-definition:sample",
+      "kind": "frame-definition",
+      "name": "Sample frame",
+      "isConfidential": false,
+      "definitions": {
+        "types": [
+          {
+            "id": "local-frame",
+            "name": "Definition A",
+            "kind": "机",
+            "width": 2,
+            "height": 1,
+            "cells": [
+              {
+                "x": 0,
+                "y": 0,
+                "area": 1
+              },
+              {
+                "x": 1,
+                "y": 0,
+                "area": 1
+              }
+            ],
+            "edges": [
+              "開放",
+              "開放",
+              "開放",
+              "開放"
+            ]
+          }
+        ],
+        "requests": []
+      }
+    },
+    {
+      "id": "request-definition:sample",
+      "kind": "request-definition",
+      "name": "Sample request",
+      "isConfidential": false,
+      "definitions": {
+        "types": [
+          {
+            "id": "local-frame",
+            "name": "Definition A",
+            "kind": "机",
+            "width": 2,
+            "height": 1,
+            "cells": [
+              {
+                "x": 0,
+                "y": 0,
+                "area": 1
+              },
+              {
+                "x": 1,
+                "y": 0,
+                "area": 1
+              }
+            ],
+            "edges": [
+              "開放",
+              "開放",
+              "開放",
+              "開放"
+            ]
+          }
+        ],
+        "requests": [
+          {
+            "id": "request-one",
+            "value": "1",
+            "description": "Rule A",
+            "targets": [
+              {
+                "typeId": "local-frame",
+                "area": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "venue:sample",
+      "kind": "venue",
+      "name": "Sample venue",
+      "isConfidential": false,
+      "venue": {
+        "name": "サンプルホール",
+        "width": 6,
+        "height": 4,
+        "blockedCells": [
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "zones": [
+          {
+            "name": "入口側",
+            "cells": [
+              {
+                "x": 0,
+                "y": 3
+              },
+              {
+                "x": 1,
+                "y": 3
+              },
+              {
+                "x": 2,
+                "y": 3
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -71,7 +71,7 @@ public static class FrameLayoutImportService
             migrated.CircleLayouts.All(layout => layout.Assignments.Count == 0 && layout.TemporaryPlacements.Count == 0);
     }
 
-    private static bool SameGeometry(Venue first, Venue second) =>
+    public static bool SameGeometry(Venue first, Venue second) =>
         first.Width == second.Width && first.Height == second.Height && first.BlockedCells.SetEquals(second.BlockedCells) &&
         first.Zones.Count == second.Zones.Count && first.Zones.All(zone =>
             second.Zones.Any(other => other.Name == zone.Name && other.Cells.SetEquals(zone.Cells)));

@@ -449,7 +449,8 @@
       "required": ["types", "requests"],
       "properties": {
         "connections": { "type": "array", "items": { "$ref": "#/$defs/frameCellConnection" } },
-        "schemaVersion": { "const": 1 },
+        "schemaVersion": { "enum": [1, 2] },
+        "isConfidential": { "type": "boolean" },
         "types": { "type": "array", "items": { "$ref": "#/$defs/spaceTypeDefinition" } },
         "requests": { "type": "array", "items": {
           "type": "object", "additionalProperties": false,
@@ -592,6 +593,7 @@
       "additionalProperties": false,
       "required": ["id", "deskTypeId", "anchor", "orientation"],
       "properties": {
+        "deskNumber": { "type": ["string", "null"] },
         "id": {
           "$ref": "#/$defs/identifier"
         },

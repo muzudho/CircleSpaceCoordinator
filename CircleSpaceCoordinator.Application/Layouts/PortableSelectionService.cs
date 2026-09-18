@@ -31,7 +31,7 @@ public static class PortableSelectionService
             }
         catalog = catalog with { Types = definitions.ToArray() };
         catalog.Validate(requireRepresentativeCell: false);
-        var confidential = project.IsConfidential || layout.IsConfidential;
+        var confidential = project.IsConfidential || layout.IsConfidential || catalog.IsConfidential;
         var portable = new CircleSpaceProject(project.SchemaVersion, "portable-frame-layout", layout.Name,
             project.Venue, types, [], new EvaluationConfiguration([], []), [])
         {
@@ -46,20 +46,40 @@ public static class PortableSelectionService
     {
         if (selection.Count is < 1 or > 100 || selection.Select(item => item.ItemId).Distinct().Count() != selection.Count)
             throw new InvalidOperationException("取込み対象を重複なく選択してください。");
+        if (package.Materials.Count(material => material.Kind == "venue" && selection.Any(item => item.ItemId == material.Id)) > 1)
+            throw new InvalidOperationException("採用する会場は１件だけ選択してください。");
+        var targetEdits = selection.Where(selected => selected.TargetLayoutId is not null &&
+            (selected.Mode is "insert" or "replace" || package.Materials.Any(material =>
+                material.Id == selected.ItemId && material.Kind is "frame-definition" or "request-definition")));
+        if (targetEdits.GroupBy(selected => selected.TargetLayoutId).Any(group =>
+            group.Any(selected => selected.Mode == "replace") && group.Count() > 1))
+            throw new InvalidOperationException("置換先の配置案への取込みは１件ずつ確定してください。同じ案への追加と置換は同時に実行できません。");
         // Build a detached candidate. The workspace commits only after every item succeeds.
+        project = LayoutProjection.MigrateLegacyPlans(project);
         foreach (var selected in selection)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(selected.NewId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(selected.Name);
+            if (selected.Mode is not ("add" or "insert" or "replace")) throw new InvalidOperationException("未対応の取込み方法です。");
+            var material = package.Materials.SingleOrDefault(item => item.Id == selected.ItemId);
+            if (material is not null)
+            {
+                if (selected.Mode != "add") throw new InvalidOperationException("素材は追加方式で取り込んでください。");
+                project = PortableMaterialService.Apply(project, material, selected, package.IsConfidential || material.IsConfidential);
+                continue;
+            }
             var knowledge = package.Knowledge.SingleOrDefault(item => "knowledge:" + item.Id == selected.ItemId);
             if (knowledge is not null)
             {
+                if (selected.Mode != "add") throw new InvalidOperationException("知見は新規追加してください。");
                 project = ChannelKnowledgeService.Add(project, knowledge with { Id = selected.NewId, Name = selected.Name,
                     IsConfidential = package.IsConfidential || knowledge.IsConfidential });
                 continue;
             }
             var item = package.Items.Single(item => item.Id == selected.ItemId);
-            project = FrameLayoutImportService.Add(project,
-                item.Project with { IsConfidential = package.IsConfidential || item.Project.IsConfidential }, selected.NewId, selected.Name);
+            project = PortableFragmentService.Apply(project, item, selected, package.IsConfidential);
         }
+        project = project with { Plans = LayoutProjection.ToPlans(project) };
         var issues = ProjectValidator.Validate(project);
         if (issues.Count > 0) throw new ProjectValidationException(issues);
         return project;
