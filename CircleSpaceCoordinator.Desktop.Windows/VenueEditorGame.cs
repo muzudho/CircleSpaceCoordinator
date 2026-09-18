@@ -845,6 +845,7 @@ public sealed partial class VenueEditorGame : Game
                     DrawVacantSeats();
                     DrawAssignments();
                     DrawParticipantDragGhost();
+                    if (ShowCircleHeatmap) DrawCircleWeightLabels();
                 }
                 DrawRangeSelection();
                 DrawAddressSwapFramePreview();

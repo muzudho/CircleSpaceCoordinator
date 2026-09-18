@@ -298,6 +298,8 @@ public sealed partial class VenueEditorGame
                 : Color.Lerp(Color.White, Color.SkyBlue, normalized);
             DrawRectangle(bounds, background);
             DrawOutline(bounds, 1, new Color(106, 129, 145));
+            // In circle placement, draw the values separately after the stones.
+            if (underStones) continue;
             // Choose the higher-contrast text color using relative luminance.
             static double Linear(byte channel)
             {
@@ -306,10 +308,22 @@ public sealed partial class VenueEditorGame
             }
             var luminance = 0.2126 * Linear(background.R) + 0.7152 * Linear(background.G) + 0.0722 * Linear(background.B);
             var foreground = luminance > 0.179 ? Color.Black : Color.White;
-            var labelBounds = underStones
-                ? new ScreenRectangle(bounds.X + 2, bounds.Y + bounds.Height - Math.Min(bounds.Height / 3, 18),
-                    bounds.Width - 4, Math.Min(bounds.Height / 3, 18)) : bounds;
-            textRenderer?.Draw($"{weight:0.000}", ToRectangle(labelBounds, underStones ? 0 : 2), foreground, VenueTextSize(12), true);
+            textRenderer?.Draw($"{weight:0.000}", ToRectangle(bounds, 2), foreground, VenueTextSize(12), true);
+        }
+    }
+
+    private void DrawCircleWeightLabels()
+    {
+        var map = workspace?.Project.Evaluation.WeightMaps.FirstOrDefault(item => item.FeatureId == CircleHeatmapChannelId);
+        if (map is null) return;
+        foreach (var cell in GetWeightChannelCells())
+        {
+            var bounds = viewport.GetCellBounds(VenueCanvasMapper.ToCanvasCell(cell));
+            var height = Math.Min(bounds.Height / 3, 18);
+            var label = new ScreenRectangle(bounds.X + 2, bounds.Y + bounds.Height - height,
+                Math.Max(1, bounds.Width - 4), height);
+            DrawRectangle(label, new Color(24, 29, 36));
+            textRenderer?.Draw($"{map.GetWeight(cell):0.000}", ToRectangle(label), Color.White, VenueTextSize(12), true);
         }
     }
 
