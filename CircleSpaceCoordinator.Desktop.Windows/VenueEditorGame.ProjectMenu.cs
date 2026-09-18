@@ -28,7 +28,7 @@ public sealed partial class VenueEditorGame
     private static readonly string[] ProjectMenuDescriptions =
     [
         "現在のプロジェクトを閉じ、イベント一覧で開くプロジェクトを選びます。保存確認があります。",
-        "現在のイベントプロジェクトを保存します。",
+        "現在のイベントプロジェクトを保存します。Ctrl+Sならメニューを開かずに保存できます。",
         "選んだ配置案・素材・知見をパッケージとして書き出します。",
         "パッケージから選んだ内容を現在のイベントプロジェクトへ取り込みます。",
         "保存するか確認してプロジェクトを閉じ、イベント一覧へ移ります。",
@@ -74,6 +74,11 @@ public sealed partial class VenueEditorGame
         if (!projectMenuOpen) return;
         EnsureProjectMenuButtons();
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
+        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.S))
+        {
+            ActivateProjectMenu(1);
+            return;
+        }
         for (var i = 0; i < projectMenuButtons.Count; i++)
         {
             projectMenuButtons[i].IsEnabled = IsProjectMenuEntryEnabled(i);
@@ -141,8 +146,15 @@ public sealed partial class VenueEditorGame
             OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
-                (area, color) => textRenderer?.Draw(index == 1 && IsCurrentProjectSaved ? "保存できています" : ProjectMenuLabels[index],
-                    ToRectangle(area, 8), ToButtonColor(color), 18, true));
+                (area, color) =>
+                {
+                    var labelArea = index == 1 ? new ScreenRectangle(area.X, area.Y, Math.Max(1, area.Width - 90), area.Height) : area;
+                    textRenderer?.Draw(index == 1 && IsCurrentProjectSaved ? "保存できています" : ProjectMenuLabels[index],
+                        ToRectangle(labelArea, 8), ToButtonColor(color), 18, true);
+                    if (index == 1)
+                        textRenderer?.Draw("Ctrl+S", ToRectangle(new ScreenRectangle(area.X + area.Width - 90, area.Y, 90, area.Height), 8),
+                            ToButtonColor(color), 16);
+                });
             if (i == projectMenuFocus) DrawOutline(button.Bounds, 2, new Color(110, 180, 230));
             if (i is 1 or 3)
                 DrawRectangle(new ScreenRectangle(button.Bounds.X, button.Bounds.Y + button.Bounds.Height + 2, button.Bounds.Width, 1), new Color(100, 110, 125));
