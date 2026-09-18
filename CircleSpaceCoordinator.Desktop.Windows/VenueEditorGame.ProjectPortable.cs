@@ -15,9 +15,9 @@ public sealed partial class VenueEditorGame
             using var form = PortableForm("部分書出し — 配置案・知見を選択");
             var rows = PortableGrid(form);
             foreach (var layout in snapshot.DeskLayouts)
-                rows.Rows.Add(layout.Id == workspace.SelectedDeskLayoutId, layout.Name, layout.Description ?? "", layout.Id);
+                rows.Rows.Add(layout.Id == workspace.SelectedDeskLayoutId, layout.Name, layout.Description ?? "", layout.Id, "フレーム配置案");
             foreach (var item in snapshot.ChannelKnowledge)
-                rows.Rows[rows.Rows.Add(false, "知見：" + item.Name, item.Purpose, item.Id)].Tag = "knowledge";
+                rows.Rows[rows.Rows.Add(false, item.Name, item.Purpose, item.Id, "チャンネルの知見")].Tag = "knowledge";
             var library = new Forms.Button { Text = "知見の保存・列対応", Left = 525, Top = 10, Width = 190 };
             library.Click += (_, _) => { form.Close(); ManageChannelKnowledge(); };
             form.Controls.Add(library);
@@ -83,9 +83,9 @@ public sealed partial class VenueEditorGame
             var rows = PortableGrid(form);
             rows.Columns[1].ReadOnly = false;
             foreach (var item in package.Items)
-                rows.Rows.Add(false, item.Name, item.Project.DeskLayouts[0].Description ?? "", item.Id);
+                rows.Rows.Add(false, item.Name, item.Project.DeskLayouts[0].Description ?? "", item.Id, "フレーム配置案");
             foreach (var item in package.Knowledge)
-                rows.Rows.Add(false, item.Name, $"知見・未対応付け：{item.Purpose}／{item.InputRule.ValueMeanings}", "knowledge:" + item.Id);
+                rows.Rows.Add(false, item.Name, $"知見・未対応付け：{item.Purpose}／{item.InputRule.ValueMeanings}", "knowledge:" + item.Id, "チャンネルの知見");
             var details = new Forms.TextBox { Left = 16, Top = 340, Width = 700, Height = 118,
                 Multiline = true, ReadOnly = true, ScrollBars = Forms.ScrollBars.Vertical,
                         Text = $"{(package.IsConfidential ? "【マル秘】\r\n" : "")}{package.Name}\r\n{package.Description}\r\nタグ：{string.Join(", ", package.Tags)}\r\n知見は未対応付けで保存します。列へ対応付ける際に会場を検証します。" };
@@ -146,6 +146,11 @@ public sealed partial class VenueEditorGame
         grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "名前（読込み時は改名可）", ReadOnly = true });
         grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "説明（表示のみ）", ReadOnly = true });
         grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { Visible = false });
+        grid.Columns.Add(new Forms.DataGridViewTextBoxColumn
+        {
+            HeaderText = "種類", ReadOnly = true, DisplayIndex = 1,
+            AutoSizeMode = Forms.DataGridViewAutoSizeColumnMode.AllCells,
+        });
         form.Controls.Add(grid);
         return grid;
     }
