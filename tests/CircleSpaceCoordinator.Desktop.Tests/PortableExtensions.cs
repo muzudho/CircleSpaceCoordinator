@@ -140,13 +140,16 @@ internal static partial class Program
         Directory.CreateDirectory(directory);
         try
         {
-            var path = Path.Combine(directory, "sample.project-portable.json");
+            var path = Path.Combine(directory, "sample.package-csc.json");
             File.WriteAllText(path, json);
+            File.WriteAllText(Path.Combine(directory, "legacy.project-portable.json"), json);
+            File.WriteAllText(Path.Combine(directory, "legacy.frame-layout.json"), FrameLayoutPortableService.Export(source, "layout", source.DeskLayouts[0].Definitions!));
+            ProjectFileService.Save(Path.Combine(directory, "sample.event-project-csc.json"), source);
             File.WriteAllText(Path.Combine(directory, "bad.project-portable.json"), "{}");
             var entries = PortableLibraryService.Read(directory, connection.ParsePortable);
-            AssertEqual(2, entries.Count);
+            AssertEqual(4, entries.Count);
             AssertEqual(1, entries.Count(item => item.Error is not null));
-            var entry = entries.Single(item => item.Package is not null);
+            var entry = entries.Single(item => item.Path == path);
             AssertEqual(true, entry.Matches("TAG-ONE"));
             AssertEqual(true, entry.Matches("Original memo"));
             var edited = connection.UpdatePortableMetadata(new(entry.Json, "New name", "New memo", ["tag-two"]));

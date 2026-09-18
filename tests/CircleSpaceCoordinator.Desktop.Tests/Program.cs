@@ -2093,6 +2093,9 @@ internal static partial class Program
         {
             var projectPath = Path.Combine(directory, "recoverable-event.json");
             ProjectFileService.Save(projectPath, CreateProject() with { Name = "復旧対象イベント" });
+            var newProjectPath = Path.Combine(directory, "new.event-project-csc.json");
+            ProjectFileService.Save(newProjectPath, CreateProject() with { Name = "新形式名のイベント" });
+            File.Copy("examples/fictional-materials.project-portable.json", Path.Combine(directory, "materials.package-csc.json"));
             var settingsPath = Path.Combine(directory, "application-settings.json");
             File.WriteAllText(settingsPath, $$"""
                 {
@@ -2105,9 +2108,9 @@ internal static partial class Program
 
             var settings = new ApplicationSettingsService(settingsPath);
 
-            AssertEqual(1, settings.Current.EventProjects!.Count);
-            AssertEqual("復旧対象イベント", settings.Current.EventProjects[0].DisplayName);
-            AssertEqual(Path.GetFullPath(projectPath), settings.Current.EventProjects[0].Path);
+            AssertEqual(2, settings.Current.EventProjects!.Count);
+            AssertEqual("復旧対象イベント", settings.Current.EventProjects.Single(item => item.Path == Path.GetFullPath(projectPath)).DisplayName);
+            AssertEqual("新形式名のイベント", settings.Current.EventProjects.Single(item => item.Path == Path.GetFullPath(newProjectPath)).DisplayName);
         }
         finally
         {

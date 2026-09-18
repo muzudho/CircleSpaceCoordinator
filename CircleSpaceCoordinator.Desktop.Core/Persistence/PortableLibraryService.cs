@@ -16,7 +16,8 @@ public static class PortableLibraryService
         if (!Directory.Exists(directory)) return [];
         var entries = new List<PortableLibraryEntry>();
         foreach (var path in Directory.EnumerateFiles(directory, "*.json", SearchOption.TopDirectoryOnly)
-            .Where(path => path.EndsWith(".project-portable.json", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".frame-layout.json", StringComparison.OrdinalIgnoreCase))
+            .Where(path => path.EndsWith(".package-csc.json", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".project-portable.json", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".frame-layout.json", StringComparison.OrdinalIgnoreCase))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).Take(MaximumFiles))
         {
             try

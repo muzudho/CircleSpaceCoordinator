@@ -35,7 +35,7 @@ public sealed partial class VenueEditorGame
             libraryMenu.Items.Add("ファイルライブラリー", null, (_, _) => { form.Close(); ShowPortableLibrary(); });
             library.Click += (_, _) => libraryMenu.Show(library, new System.Drawing.Point(0, library.Height));
             form.Controls.Add(library);
-            var name = PortableText(form, "データのタイトル", 340, "配置の提案");
+            var name = PortableText(form, "パッケージのタイトル", 340, "配置の提案");
             var description = PortableText(form, "ファイル全体のメモ", 372, "");
             var tags = PortableText(form, "タグ（カンマ区切り）", 404, "");
             var secret = new Forms.CheckBox { Text = "マル秘として書き出す", Left = 16, Top = 442, Width = 300,
@@ -77,8 +77,8 @@ public sealed partial class VenueEditorGame
                     if (fragments.Count > 0) summary += "\n部分配置：元の座標・番号を保持します。境界をまたぐ接続と向かい合わせ領域は同梱しません。";
                     if (!ShowPortableReview(form, package, summary + "\nサークル実データは含みません。\n" + package.Description,
                         "書き出す内容の確認")) return;
-                    using var dialog = new Forms.SaveFileDialog { Title = "部分書出しの保存先", DefaultExt = "project-portable.json",
-                        Filter = "ポータブルデータ (*.project-portable.json)|*.project-portable.json", FileName = "proposal.project-portable.json", OverwritePrompt = true };
+                    using var dialog = new Forms.SaveFileDialog { Title = "パッケージの保存先", DefaultExt = "package-csc.json",
+                        Filter = "パッケージ (*.package-csc.json)|*.package-csc.json", FileName = "proposal.package-csc.json", OverwritePrompt = true };
                     if (dialog.ShowDialog(form) != Forms.DialogResult.OK) return;
                     if (projectSavePath is not null && string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(projectSavePath), StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException("編集中のイベントとは別のファイルを指定してください。");
@@ -101,7 +101,7 @@ public sealed partial class VenueEditorGame
         try
         {
             using var dialog = new Forms.OpenFileDialog { Title = "部分読込み", CheckFileExists = true,
-                Filter = "ポータブル・旧フレーム配置 (*.json)|*.project-portable.json;*.frame-layout.json|JSON (*.json)|*.json" };
+                Filter = "パッケージ（旧形式を含む）|*.package-csc.json;*.project-portable.json;*.frame-layout.json|JSON (*.json)|*.json" };
             if (libraryJson is null)
             {
                 if (dialog.ShowDialog() != Forms.DialogResult.OK) return;

@@ -14,20 +14,20 @@ public sealed partial class VenueEditorGame
     {
         try
         {
-            using var form = new Forms.Form { Text = "ポータブル・ライブラリー", ClientSize = new(960, 700),
+            using var form = new Forms.Form { Text = "パッケージ・ライブラリー", ClientSize = new(960, 700),
                 FormBorderStyle = Forms.FormBorderStyle.FixedDialog, MaximizeBox = false,
                 StartPosition = Forms.FormStartPosition.CenterScreen, AutoScaleMode = Forms.AutoScaleMode.Dpi };
             var folder = new Forms.TextBox { Left = 16, Top = 16, Width = 780, ReadOnly = true,
                 Text = portableLibraryDirectory ?? Path.Combine(AppContext.BaseDirectory, "portable-library") };
             var browse = new Forms.Button { Left = 812, Top = 14, Width = 130, Text = "フォルダー選択" };
-            var search = new Forms.TextBox { Left = 16, Top = 52, Width = 660, PlaceholderText = "名前・メモ・タグ・ファイル名を検索" };
+            var search = new Forms.TextBox { Left = 16, Top = 52, Width = 660, PlaceholderText = "タイトル・メモ・タグ・ファイル名を検索" };
             var refresh = new Forms.Button { Left = 688, Top = 50, Width = 110, Text = "更新" };
             var undo = new Forms.Button { Left = 810, Top = 50, Width = 132, Text = "共通登録を戻す", Enabled = SpaceDefinitions.CanUndoPortableImport };
             var grid = new Forms.DataGridView { Left = 16, Top = 90, Width = 926, Height = 255,
                 AllowUserToAddRows = false, AllowUserToDeleteRows = false, ReadOnly = true, RowHeadersVisible = false,
                 SelectionMode = Forms.DataGridViewSelectionMode.FullRowSelect, MultiSelect = false,
                 AutoSizeColumnsMode = Forms.DataGridViewAutoSizeColumnsMode.Fill };
-            foreach (var header in new[] { "名前", "メモ", "タグ", "マル秘／状態", "ファイル" }) grid.Columns.Add(header, header);
+            foreach (var header in new[] { "タイトル", "メモ", "タグ", "マル秘／状態", "ファイル" }) grid.Columns.Add(header, header);
             var preview = new Forms.Panel { Left = 16, Top = 358, Width = 450, Height = 270, BackColor = Drawing.Color.White };
             var detail = new Forms.TextBox { Left = 480, Top = 358, Width = 462, Height = 270, ReadOnly = true, Multiline = true, ScrollBars = Forms.ScrollBars.Vertical };
             var status = new Forms.Label { Left = 16, Top = 642, Width = 550, Height = 45, Text = "選択したフォルダー直下の先頭200ファイルまで表示します。" };
@@ -65,7 +65,7 @@ public sealed partial class VenueEditorGame
             }
             browse.Click += (_, _) =>
             {
-                using var dialog = new Forms.FolderBrowserDialog { Description = "ポータブルファイルの保存フォルダー", SelectedPath = folder.Text };
+                using var dialog = new Forms.FolderBrowserDialog { Description = "パッケージの保存フォルダー", SelectedPath = folder.Text };
                 if (dialog.ShowDialog(form) != Forms.DialogResult.OK) return;
                 portableLibraryDirectory = folder.Text = dialog.SelectedPath;
                 Reload();
@@ -89,7 +89,7 @@ public sealed partial class VenueEditorGame
             {
                 if (Selected() is not { Package: { } package } entry) return;
                 using var editor = PortableForm("ファイル全体のメモ・タグを編集");
-                var name = PortableText(editor, "データのタイトル", 24, package.Name);
+                var name = PortableText(editor, "パッケージのタイトル", 24, package.Name);
                 var memo = PortableText(editor, "ファイル全体のメモ", 65, package.Description);
                 memo.Multiline = true; memo.Height = 220; memo.ScrollBars = Forms.ScrollBars.Vertical;
                 var tags = PortableText(editor, "タグ（カンマ区切り）", 310, string.Join(", ", package.Tags));

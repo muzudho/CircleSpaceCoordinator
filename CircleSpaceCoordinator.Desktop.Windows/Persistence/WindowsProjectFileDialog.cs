@@ -7,10 +7,10 @@ public static class WindowsProjectFileDialog
         using var dialog = new System.Windows.Forms.OpenFileDialog
         {
             CheckFileExists = true,
-            DefaultExt = "json",
-            Filter = "Circle Space project (*.json)|*.json|All files (*.*)|*.*",
+            DefaultExt = "event-project-csc.json",
+            Filter = "イベントプロジェクト (*.event-project-csc.json)|*.event-project-csc.json|従来のプロジェクトJSON (*.json)|*.json|すべてのファイル (*.*)|*.*",
             InitialDirectory = GetInitialDirectory(currentPath, projectsDirectory),
-            Title = "Circle Space プロジェクトを開く",
+            Title = "イベントプロジェクトを開く",
         };
         return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK ? dialog.FileName : null;
     }
@@ -21,9 +21,9 @@ public static class WindowsProjectFileDialog
         {
             AddExtension = true,
             CheckPathExists = true,
-            DefaultExt = "json",
+            DefaultExt = "event-project-csc.json",
             FileName = suggestedFileName,
-            Filter = "Circle Space project (*.json)|*.json",
+            Filter = "イベントプロジェクト (*.event-project-csc.json)|*.event-project-csc.json",
             InitialDirectory = GetInitialDirectory(null, projectsDirectory),
             OverwritePrompt = true,
             Title = "イベントプロジェクトの保存先を指定",

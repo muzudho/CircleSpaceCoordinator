@@ -290,13 +290,13 @@ public sealed partial class VenueEditorGame
 
     private void PromptEventPath(string title, string initial, Action<string> accepted) =>
         OpenUnderlineInput(title, initial, path => accepted(Path.GetFullPath(path.Trim('"'))),
-            "JSON ファイルのパスを入力・貼り付けしてください。\nキャンセルすると変更せず戻ります。", 32767);
+            "イベントプロジェクト（*.event-project-csc.json）のパスを入力・貼り付けしてください。\n従来のプロジェクトJSONも登録できます。", 32767);
 
     private string SuggestedEventPath(string name)
     {
         var invalid = Path.GetInvalidFileNameChars().ToHashSet();
         var filename = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
-        return Path.Combine(settings!.Current.ProjectsDirectory, (string.IsNullOrWhiteSpace(filename) ? "event" : filename) + ".json");
+        return Path.Combine(settings!.Current.ProjectsDirectory, (string.IsNullOrWhiteSpace(filename) ? "event" : filename) + ".event-project-csc.json");
     }
 
     private void CreateEventProject() => OpenUnderlineInput("新しいイベント", "新しいイベント", name =>

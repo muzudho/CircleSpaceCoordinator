@@ -12,7 +12,7 @@ public static class ProjectFileService
     }
 
     public static string GetDefaultWorkingCopyPath()
-        => Path.Combine(GetDefaultProjectsDirectory(), "fictional-working-copy.json");
+        => Path.Combine(GetDefaultProjectsDirectory(), "fictional-working-copy.event-project-csc.json");
 
     public static string GetDefaultProjectsDirectory()
     {
