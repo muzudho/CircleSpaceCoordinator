@@ -11,6 +11,7 @@ public sealed partial class VenueEditorGame
     private int selectionIndex;
     private int selectionScroll;
     private int selectionPressed = -1;
+    private bool selectionDirect;
     private ScreenRectangle SelectionArea()
     {
         var bounds = ModalBounds();
@@ -19,7 +20,7 @@ public sealed partial class VenueEditorGame
                 (bounds.Width - 60) / 2, Math.Max(1, bounds.Height - 212));
         return new ScreenRectangle(bounds.X + 20, bounds.Y + 60, bounds.Width - 40, Math.Max(32, bounds.Height - 148));
     }
-    private int SelectionRowHeight => exportPlanChoices is null ? 32 : 70;
+    private int SelectionRowHeight => selectionDirect ? 52 : exportPlanChoices is null ? 32 : 70;
     private int SelectionPageSize => Math.Max(1, (int)(SelectionArea().Height / SelectionRowHeight));
 
     private void ShowNotice(string title, string message, Action back) =>
@@ -32,7 +33,7 @@ public sealed partial class VenueEditorGame
             Array.FindIndex(layouts, item => item.Id == selectedId), index => accepted(layouts[index].Id));
     }
 
-    private void OpenSelection(string title, IReadOnlyList<string> labels, int selected, Action<int> accepted, Action? cancelled = null)
+    private void OpenSelection(string title, IReadOnlyList<string> labels, int selected, Action<int> accepted, Action? cancelled = null, bool direct = false)
     {
         var items = labels.ToArray();
         var owner = workspace;
@@ -46,9 +47,10 @@ public sealed partial class VenueEditorGame
                 if (workspace != owner) throw new InvalidOperationException("対象のイベントが変わりました。画面を開き直してください。");
                 accepted(chosen);
             }
-            catch (Exception exception) { ShowNotice(title, exception.Message, () => OpenSelection(title, items, chosen, accepted, cancelled)); }
+            catch (Exception exception) { ShowNotice(title, exception.Message, () => OpenSelection(title, items, chosen, accepted, cancelled, direct)); }
         }, [("キャンセル", ModalDialogAction.Cancel), ("選択", ModalDialogAction.Accept)]);
         selectionLabels = items;
+        selectionDirect = direct;
         selectionIndex = Math.Clamp(selected, 0, Math.Max(0, items.Length - 1));
         selectionScroll = selectionIndex;
         selectionPressed = -1;
@@ -57,6 +59,11 @@ public sealed partial class VenueEditorGame
     private bool UpdateSelection(KeyboardState keyboard, MouseState mouse)
     {
         if (selectionLabels is null) return false;
+        if (selectionDirect && (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space)))
+        {
+            ApplyModalAction(ModalDialogAction.Accept);
+            return true;
+        }
         var area = SelectionArea();
         var page = SelectionPageSize;
         var delta = IsPressed(keyboard, Keys.Down) ? 1 : IsPressed(keyboard, Keys.Up) ? -1
@@ -81,7 +88,16 @@ public sealed partial class VenueEditorGame
         }
         if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed)
         {
-            if (row >= 0 && row < selectionLabels.Length && selectionPressed == row) selectionIndex = row;
+            if (row >= 0 && row < selectionLabels.Length && selectionPressed == row)
+            {
+                selectionIndex = row;
+                if (selectionDirect)
+                {
+                    selectionPressed = -1;
+                    ApplyModalAction(ModalDialogAction.Accept);
+                    return true;
+                }
+            }
             selectionPressed = -1;
         }
         return false;
@@ -97,12 +113,19 @@ public sealed partial class VenueEditorGame
         for (var row = 0; row < SelectionPageSize && selectionScroll + row < selectionLabels.Length; row++)
         {
             var index = selectionScroll + row;
-            var bounds = new ScreenRectangle(area.X, area.Y + row * 32, area.Width, 30);
+            var bounds = new ScreenRectangle(area.X, area.Y + row * SelectionRowHeight, area.Width, SelectionRowHeight - 2);
             if (index == selectionIndex) DrawRectangle(bounds, new Color(45, 95, 100));
+            if (selectionDirect)
+            {
+                var pointer = Mouse.GetState();
+                if (IsActive && Contains(bounds, new ScreenPoint(pointer.X, pointer.Y)))
+                    DrawRectangle(bounds, new Color(55, 110, 115));
+                DrawRectangle(new ScreenRectangle(bounds.X + 4, bounds.Y + bounds.Height - 4, bounds.Width - 8, 1), Color.LightGray);
+            }
             textRenderer?.Draw(selectionLabels[index], ToRectangle(bounds, 4), Color.White, 17);
         }
         var panel = ModalBounds();
-        textRenderer?.Draw($"{(selectionLabels.Length == 0 ? 0 : selectionIndex + 1)} / {selectionLabels.Length}　↑↓・PgUp/PgDn・ホイール",
+        textRenderer?.Draw(selectionDirect ? "項目をクリックして編集・選択 ／ ↑↓＋Enter ／ ×で閉じる" : $"{(selectionLabels.Length == 0 ? 0 : selectionIndex + 1)} / {selectionLabels.Length}　↑↓・PgUp/PgDn・ホイール",
             ToRectangle(new ScreenRectangle(area.X, panel.Y + panel.Height - 80, area.Width, 20)), Color.LightGray, 12);
     }
 }

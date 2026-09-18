@@ -181,6 +181,7 @@ public sealed partial class VenueEditorGame
     private void EditChannelDefinition(bool create)
     {
         if (workspace is null) return;
+        var owner = workspace;
         var feature = create ? null : workspace.Project.Evaluation.Features.Single(item => item.Id == selectedChannelId);
         var columns = workspace.Project.Participants.SelectMany(item => item.SourceValues.Keys).Distinct(StringComparer.Ordinal).ToArray();
         var id = feature?.Id ?? $"channel-{Guid.NewGuid():N}";
@@ -188,24 +189,40 @@ public sealed partial class VenueEditorGame
         var column = feature?.SourceColumn;
         var channelComment = feature?.CommentForChannel ?? "";
         var overallWeight = feature?.OverallWeight ?? 1;
+        var editingIndex = 0;
+        void Apply(string nextName, string? nextColumn, string nextComment, double nextWeight)
+        {
+            if (workspace != owner) throw new InvalidOperationException("編集対象が変わりました。選び直してください。");
+            if (feature is not null && name == nextName && column == nextColumn && channelComment == nextComment && overallWeight == nextWeight) return;
+            owner.Execute(new UpsertChannel(id, nextName, nextColumn)
+                { CommentForChannel = nextComment, OverallWeight = nextWeight }, selectedPlanEdit: false);
+            name = nextName;
+            column = nextColumn;
+            channelComment = nextComment;
+            overallWeight = nextWeight;
+            feature = owner.Project.Evaluation.Features.Single(item => item.Id == id);
+            selectedChannelId = id;
+            activeCanvasTool = ToolbarAction.EditSeatName;
+        }
         void ShowDraft() => OpenSelection("チャンネルの編集", [$"名前：{name}", $"列：{column ?? "（対応なし：0点）"}",
             $"Comment：{CommentExcerpt(channelComment)}　［{(channelComment.Length == 0 ? "コメント入力" : "編集")}］",
-            $"チャンネルの重み：{overallWeight:G}", "保存"], 0, index =>
+            $"チャンネルの重み：{overallWeight:G}"], editingIndex, index =>
         {
+            editingIndex = index;
             if (index == 0)
             {
-                OpenUnderlineInput("チャンネル名", name, value => { name = value; ShowDraft(); },
+                OpenUnderlineInput("チャンネル名", name, value => { Apply(value, column, channelComment, overallWeight); ShowDraft(); },
                 "番地以外のチャンネル名を入力してください（100 文字まで）。", validate: EditorDialogValidation.ChannelName, cancelled: ShowDraft); return;
             }
             if (index == 1)
             {
                 OpenSelection("取込み列（未取込みの場合は対応なし）", new[] { "（対応なし：0点）" }.Concat(columns).ToArray(),
-                Array.IndexOf(columns, column) + 1, selected => { column = selected == 0 ? null : columns[selected - 1]; ShowDraft(); }, ShowDraft); return;
+                Array.IndexOf(columns, column) + 1, selected => { Apply(name, selected == 0 ? null : columns[selected - 1], channelComment, overallWeight); ShowDraft(); }, ShowDraft, direct: true); return;
             }
             if (string.IsNullOrWhiteSpace(name) || name == "番地") { ShowNotice("チャンネル名", "番地以外のチャンネル名を入力してください。", ShowDraft); return; }
             if (index == 2)
             {
-                EditChannelCommentText(name, channelComment, value => channelComment = value);
+                EditChannelCommentText(name, channelComment, value => Apply(name, column, value, overallWeight));
                 ShowDraft();
                 return;
             }
@@ -213,19 +230,23 @@ public sealed partial class VenueEditorGame
             {
                 OpenUnderlineInput("チャンネルの重み", overallWeight.ToString("G"), input =>
                 {
-                    if (!EditorDialogValidation.TryParseChannelWeight(input, out overallWeight))
+                    if (!EditorDialogValidation.TryParseChannelWeight(input, out var weight))
                         throw new InvalidOperationException(EditorDialogValidation.ChannelWeight(input));
+                    Apply(name, column, channelComment, weight);
                     ShowDraft();
                 }, "チャンネルの得点に掛ける倍率です（初期値1）。\n重要度を上げる例：10 ／ 部数などの桁を抑える例：0.001\n0は評価への寄与なし、負数は評価の向きを反転します。\nセルごとの重み（-1～1）とは別の値です。", 64,
                     validate: EditorDialogValidation.ChannelWeight, cancelled: ShowDraft);
                 return;
             }
-            workspace.Execute(new UpsertChannel(id, name, column) { CommentForChannel = channelComment, OverallWeight = overallWeight }, selectedPlanEdit: false);
-            selectedChannelId = id;
-            channelScroll = Math.Max(0, workspace.Project.Evaluation.Features.Count + 3 - VisibleChannelRows);
-            activeCanvasTool = ToolbarAction.EditSeatName;
-        });
-        ShowDraft();
+        }, direct: true);
+        if (create)
+            OpenUnderlineInput("チャンネルを追加", "", value =>
+            {
+                Apply(value, column, channelComment, overallWeight);
+                channelScroll = Math.Max(0, owner.Project.Evaluation.Features.Count + 3 - VisibleChannelRows);
+                ShowDraft();
+            }, "名前を確定するとチャンネルを追加し、自動保存します。", validate: EditorDialogValidation.ChannelName);
+        else ShowDraft();
     }
 
     private void EditChannelWeight(GridPosition cell)

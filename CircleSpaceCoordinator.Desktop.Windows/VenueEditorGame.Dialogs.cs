@@ -34,6 +34,7 @@ public sealed partial class VenueEditorGame
         underlineEditor = null;
         weightCommentFeatureId = null;
         selectionLabels = null;
+        selectionDirect = false;
         exportColumnDraft = null;
         exportPlanChoices = null;
         exportPreviewProject = null;
@@ -67,13 +68,14 @@ public sealed partial class VenueEditorGame
         EnsureModalButtons();
         if (modalDialog.Kind == ModalDialogKind.Text) return UpdateUnderlineInput(keyboard, mouse);
         if (UpdateExportColumns(keyboard, mouse)) return true;
-        if (!UpdateExportPlanPins(keyboard, mouse)) UpdateSelection(keyboard, mouse);
+        if (!UpdateExportPlanPins(keyboard, mouse) && UpdateSelection(keyboard, mouse)) return true;
         UpdateTextViewer(keyboard, mouse);
         if (UpdateTablePreview(keyboard, mouse)) return true;
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         foreach (var (button, _) in modalButtons) button.UpdatePointer(pointer);
         if (IsPressed(keyboard, Keys.Escape))
         {
+            if (selectionDirect) return true;
             ApplyModalAction(ModalDialogAction.Cancel);
             return true;
         }
@@ -156,6 +158,12 @@ public sealed partial class VenueEditorGame
         var buttonWidth = Math.Min(130, (bounds.Width - 48) / 2);
         var right = bounds.X + bounds.Width - 20 - buttonWidth;
         var bottom = bounds.Y + bounds.Height - 58;
+        if (selectionDirect)
+        {
+            Add("×", ModalDialogAction.Cancel, bounds.X + bounds.Width - 58, bounds.Y + 10, 38);
+            modalFocus = 0;
+            return;
+        }
         if (modalChoices is { } choices)
         {
             var choiceWidth = (bounds.Width - 40 - 12 * (choices.Length - 1)) / choices.Length;
@@ -225,7 +233,7 @@ public sealed partial class VenueEditorGame
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) => textRenderer?.Draw(exportPlanChoices is { } choices && modalButtons[index].Action == ModalDialogAction.Accept && selectionIndex >= choices.Count
                     ? "未決定に戻す" : button.AccessibleName, ToRectangle(area, 5), ToButtonColor(color), 17, true));
-            if (index == modalFocus && button.IsEnabled) DrawOutline(button.Bounds, 2, OperationTargetColor);
+            if (!selectionDirect && index == modalFocus && button.IsEnabled) DrawOutline(button.Bounds, 2, OperationTargetColor);
         }
         DrawTextInputHelp();
     }
