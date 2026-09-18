@@ -147,7 +147,7 @@ public sealed partial class VenueEditorGame
         void Text(string text, ScreenRectangle bounds, int size = 18, bool bold = false) =>
             textRenderer?.Draw(text, ToRectangle(bounds), Color.White, size, bold);
         Text("イベントプロジェクト一覧", new(24, 22, GraphicsDevice.Viewport.Width - 48, 42), 28, true);
-        Text("イベントを選択して［開く］。新しいイベントもここから作成できます。", new(24, 68, GraphicsDevice.Viewport.Width - 48, 28));
+        Text("この版から編集は自動保存されます。［プロジェクト］の［すぐ保存］／［セーブポイント］も利用できます。", new(24, 68, GraphicsDevice.Viewport.Width - 48, 28));
         for (var row = 0; row < EventRows && eventScroll + row < eventProjects.Count; row++)
         {
             var index = eventScroll + row;
@@ -208,6 +208,7 @@ public sealed partial class VenueEditorGame
                 editorMode = EditorMode.DeskPlacement;
                 activeCanvasTool = ToolbarAction.MoveDesk;
                 RestoreWorkingState();
+                InitializeAutoSave();
                 CreateToolbar();
                 settings!.RememberProject(projectSavePath);
             }
@@ -229,27 +230,15 @@ public sealed partial class VenueEditorGame
     private void RequestReturnToEvents()
     {
         if (workspace is null || optimizationTask is not null) return;
-        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "プロジェクトを閉じる（イベント一覧へ）",
-            "イベントプロジェクトを保存してから閉じますか？\n保存せずに戻ると、最後の保存以降の変更は失われます。"), action =>
-        {
-            var decision = action switch
-            {
-                ModalDialogAction.Accept => ProjectCloseDecision.Save,
-                ModalDialogAction.Decrease => ProjectCloseDecision.Discard,
-                _ => ProjectCloseDecision.Cancel,
-            };
-            RunEventAction(() => ProjectCloseWorkflow.TryClose(decision, () =>
-            {
-                if (SaveProject().Success) return true;
-                ShowInAppMessage("保存できませんでした", screenshotStatus ?? "保存に失敗しました。イベントは開いたままです。");
-                return false;
-            }, CloseEventProject));
-        }, [("保存して閉じる", ModalDialogAction.Accept), ("保存せず閉じる", ModalDialogAction.Decrease), ("キャンセル", ModalDialogAction.Cancel)]);
+        if (FlushAutoSave()) CloseEventProject();
     }
 
     private void CloseEventProject()
     {
         savedProjectState = null;
+        autoSaveSession = null;
+        autoSaveOwner = null;
+        autoSaveError = null;
         projectMenuOpen = false;
         projectMenuDrain = true;
         PersistWorkingState();

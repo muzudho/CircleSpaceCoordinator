@@ -19,19 +19,20 @@ public sealed partial class VenueEditorGame
     private bool IsCurrentProjectSaved => workspace is not null && savedProjectState is { } saved &&
         ReferenceEquals(saved.Workspace, workspace) && saved.Revision == workspace.Revision && saved.Path == projectSavePath &&
         saved.Zoom == viewport.Zoom && saved.X == viewport.Origin.X && saved.Y == viewport.Origin.Y;
-    private string ProjectMenuDescription(int index) => index == 1 && IsCurrentProjectSaved
+    private string ProjectMenuDescription(int index) => index == 1 && autoSaveError is not null ? "保存失敗：" + autoSaveError : index == 1 && IsCurrentProjectSaved
         ? "現在の変更は保存できています。変更すると再び保存できます。" : ProjectMenuDescriptions[index];
-    private bool IsProjectMenuEntryEnabled(int index) => index == 5 || workspace is not null && optimizationTask is null &&
+    private bool IsProjectMenuEntryEnabled(int index) => index == 6 || workspace is not null && optimizationTask is null &&
         (index != 1 || projectSavePath is not null && !IsCurrentProjectSaved);
     private static readonly string[] ProjectMenuLabels =
-        ["開く…（イベント一覧から選択）", "保存", "一部を書き出す…", "一部を取り込む…", "閉じる（イベント一覧へ）", "×"];
+        ["開く…（イベント一覧から選択）", "すぐ保存", "一部を書き出す…", "一部を取り込む…", "閉じる（イベント一覧へ）", "セーブポイント…", "×"];
     private static readonly string[] ProjectMenuDescriptions =
     [
-        "現在のプロジェクトを閉じ、イベント一覧で開くプロジェクトを選びます。保存確認があります。",
+        "確定した編集を自動保存して閉じ、イベント一覧で開くプロジェクトを選びます。",
         "現在のイベントプロジェクトを保存します。Ctrl+Sならメニューを開かずに保存できます。",
         "選んだ配置案・素材・知見をパッケージとして書き出します。",
         "パッケージから選んだ内容を現在のイベントプロジェクトへ取り込みます。",
-        "保存するか確認してプロジェクトを閉じ、イベント一覧へ移ります。",
+        "確定した編集を自動保存してプロジェクトを閉じ、イベント一覧へ移ります。",
+        "セーブポイントの作成・復元・保護と、保存先・保持数を設定します。",
         "メニューを閉じて作業に戻ります。",
     ];
 
@@ -48,15 +49,15 @@ public sealed partial class VenueEditorGame
     private void EnsureProjectMenuButtons()
     {
         var width = Math.Min(420d, Math.Max(1, GraphicsDevice.Viewport.Width - 24d));
-        var height = Math.Min(360d, Math.Max(1, GraphicsDevice.Viewport.Height - StatusBarHeight - 64d));
+        var height = Math.Min(416d, Math.Max(1, GraphicsDevice.Viewport.Height - StatusBarHeight - 64d));
         var bounds = new ScreenRectangle(12, 54, width, height);
         if (bounds == projectMenuBounds && projectMenuButtons.Count > 0) return;
         pressedProjectMenuButton?.CancelPress();
         pressedProjectMenuButton = null;
         projectMenuBounds = bounds;
         projectMenuButtons.Clear();
-        var rowHeight = (height - 76) / 5;
-        for (var i = 0; i < 5; i++)
+        var rowHeight = (height - 76) / 6;
+        for (var i = 0; i < 6; i++)
             projectMenuButtons.Add(new(new ScreenRectangle(bounds.X + 10, bounds.Y + 54 + i * rowHeight,
                 width - 20, rowHeight - 6), ProjectMenuLabels[i]));
         projectMenuButtons.Add(new(new ScreenRectangle(bounds.X + width - 46, bounds.Y + 8, 36, 34), "メニューを閉じる"));
@@ -86,8 +87,8 @@ public sealed partial class VenueEditorGame
         }
         // Outside clicks, Escape, and focus changes never dismiss this menu.
         if (IsPressed(keyboard, Keys.Tab) || IsPressed(keyboard, Keys.Down))
-            projectMenuFocus = (projectMenuFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? 5 : 1)) % 6;
-        if (IsPressed(keyboard, Keys.Up)) projectMenuFocus = (projectMenuFocus + 5) % 6;
+            projectMenuFocus = (projectMenuFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? 6 : 1)) % 7;
+        if (IsPressed(keyboard, Keys.Up)) projectMenuFocus = (projectMenuFocus + 6) % 7;
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
             ActivateProjectMenu(projectMenuFocus);
@@ -112,7 +113,7 @@ public sealed partial class VenueEditorGame
         pressedProjectMenuButton?.CancelPress();
         pressedProjectMenuButton = null;
         projectMenuDrain = true;
-        if (index == 5) { projectMenuOpen = false; return; }
+        if (index == 6) { projectMenuOpen = false; return; }
         try
         {
             switch (index)
@@ -120,10 +121,11 @@ public sealed partial class VenueEditorGame
                 case 0:
                 case 4: RequestReturnToEvents(); break;
                 case 1:
-                    projectMenuStatus = SaveProject().Success ? "イベントプロジェクトを保存しました。" : "保存できませんでした。";
+                    projectMenuStatus = SaveProject().Success ? "イベントプロジェクトを保存しました。" : autoSaveError ?? "保存できませんでした。";
                     break;
                 case 2: ExportPortable(); break;
                 case 3: ImportPortable(); break;
+                case 5: OpenSavePoints(); break;
             }
         }
         catch (Exception ex) { ShowInAppMessage("プロジェクト", ex.Message); }

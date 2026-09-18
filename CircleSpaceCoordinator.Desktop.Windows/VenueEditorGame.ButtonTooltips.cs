@@ -9,6 +9,9 @@ public sealed partial class VenueEditorGame
     {
         var mouse = Mouse.GetState();
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
+        if (autoSaveError is not null && mouse.X >= GraphicsDevice.Viewport.Width - 260 &&
+            mouse.Y >= GraphicsDevice.Viewport.Height - StatusBarHeight)
+            return "保存失敗：" + autoSaveError;
         if (projectMenuOpen)
         {
             var index = projectMenuButtons.FindIndex(button => Contains(button.Bounds, pointer));

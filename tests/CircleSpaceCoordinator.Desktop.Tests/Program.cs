@@ -24,6 +24,7 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Autosave backs up daily, encrypts and rotates unprotected generations, rejects stale files and failed backups", AutoSaveAndSavePoints),
             ("Portable materials preserve dependencies, names, confidentiality and atomic history", PortableMaterials),
             ("Portable fragments insert with remapped topology and replace only unreferenced layouts", PortableFragments),
             ("Portable library metadata and common catalog imports protect stale files and undo", PortableLibraryAndCatalog),

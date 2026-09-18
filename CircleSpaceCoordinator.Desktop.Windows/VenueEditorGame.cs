@@ -135,7 +135,7 @@ public sealed partial class VenueEditorGame : Game
         Window.Title = ApplicationIdentity.Title;
         Window.AllowUserResizing = true;
         IsMouseVisible = true;
-        Exiting += (_, _) => PersistWorkingState();
+        Exiting += (_, args) => { if (!FlushAutoSave()) { args.Cancel = true; return; } PersistWorkingState(); };
         CreateToolbar();
         Log("application_start", success: true, detail: workspace is null ? "empty_grid" : "project_loaded");
     }
@@ -188,7 +188,7 @@ public sealed partial class VenueEditorGame : Game
         statusHintTime = gameTime.TotalGameTime.TotalSeconds;
         pollBackgroundOperation?.Invoke();
         if (!ShowsStatusHintTimer) statusHintContext = null;
-        try { UpdateEditor(gameTime); }
+        try { UpdateAutoSave(); UpdateEditor(gameTime); }
         catch (InvalidOperationException exception) when (exception.InnerException is Grpc.Core.RpcException)
         {
             CancelInProgressPointerInteraction();
@@ -3455,10 +3455,11 @@ public sealed partial class VenueEditorGame : Game
         DrawRectangle(new ScreenRectangle(0d, top, width, 2d), new Color(72, 143, 153));
         textRenderer?.Draw(
             HoveredButtonDescription(),
-            new Rectangle(14, top + 5, Math.Max(1, width - 28), 23),
+            new Rectangle(14, top + 5, Math.Max(1, width - 288), 23),
             Color.White,
             pixelHeight: 17,
             bold: true);
+        DrawAutoSaveStatus(width, top);
         var layoutDescription = HoveredDeskLayoutDescription();
         var showHintTimer = toolDescription is null && layoutDescription is null && ShowsStatusHintTimer && statusHintContext is not null;
         const int hintTimerWidth = 80;
@@ -3663,7 +3664,10 @@ public sealed partial class VenueEditorGame : Game
                     viewport.Origin.X,
                     viewport.Origin.Y),
             };
-            ProjectFileService.Save(projectSavePath, projectWithView);
+            if (!ReferenceEquals(autoSaveOwner, workspace)) InitializeAutoSave();
+            autoSaveSession!.Save(EditorConnection.Current.Encode(projectWithView), SavePoints, DateOnly.FromDateTime(DateTime.Now));
+            autoSaveError = null;
+            autoSavePending = false;
             settings?.RememberProject(projectSavePath);
             PersistWorkingState();
             screenshotStatus = $"PROJECT SAVED: {Path.GetFileName(projectSavePath)}";
@@ -3673,6 +3677,9 @@ public sealed partial class VenueEditorGame : Game
         }
         catch (Exception exception)
         {
+            autoSaveError = exception.Message;
+            savedProjectState = null;
+            autoSavePending = false;
             screenshotStatus = $"PROJECT SAVE FAILED: {exception.Message}";
             Log("project_saved", success: false, detail: $"error={exception.GetType().Name};message={exception.Message}");
             return (false, $"error={exception.GetType().Name}");

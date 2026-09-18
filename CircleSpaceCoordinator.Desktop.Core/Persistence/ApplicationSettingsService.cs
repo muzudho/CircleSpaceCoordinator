@@ -33,6 +33,8 @@ public sealed record ApplicationSettings(
 {
     [JsonPropertyOrder(-100)]
     public string SchemaVersion { get; init; } = "1.1";
+    public string? BackupDirectory { get; init; }
+    public int BackupGenerations { get; init; } = 10;
 }
 
 public sealed class ApplicationSettingsService
@@ -53,6 +55,13 @@ public sealed class ApplicationSettingsService
     }
 
     public ApplicationSettings Current { get; private set; }
+    public void ConfigureBackups(string directory, int generations)
+    {
+        if (generations is < 1 or > 1000) throw new ArgumentOutOfRangeException(nameof(generations));
+        var next = Current with { BackupDirectory = Path.GetFullPath(directory), BackupGenerations = generations };
+        SavePointStore.AtomicWrite(settingsPath, JsonSerializer.Serialize(next, JsonOptions));
+        Current = next;
+    }
 
     public void RememberProject(string projectPath)
     {
@@ -211,6 +220,8 @@ public sealed class ApplicationSettingsService
                 NormalizeCircleLabelDisplay(loaded.CircleLabelDisplay))
             {
                 SchemaVersion = "1.1",
+                BackupDirectory = string.IsNullOrWhiteSpace(loaded.BackupDirectory) ? null : Path.GetFullPath(loaded.BackupDirectory),
+                BackupGenerations = loaded.BackupGenerations is >= 1 and <= 1000 ? loaded.BackupGenerations : 10,
             };
         }
         catch (Exception) when (File.Exists(settingsPath))
