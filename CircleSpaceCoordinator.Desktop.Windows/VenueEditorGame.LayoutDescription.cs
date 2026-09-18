@@ -5,6 +5,38 @@ using Forms = System.Windows.Forms;
 
 public sealed partial class VenueEditorGame
 {
+    private string? HoveredDeskLayoutDescription()
+    {
+        if (!CanShowEditorHover || !ShowsDeskLayouts || workspace is null || hoveredPlanId is null) return null;
+        var description = UsesSeparatedLayouts
+            ? workspace.Project.DeskLayouts.FirstOrDefault(item => item.Id == hoveredPlanId)?.Description
+            : workspace.Project.Plans.FirstOrDefault(item => item.Id == hoveredPlanId)?.Description;
+        if (string.IsNullOrWhiteSpace(description)) return null;
+
+        // Limit by visible text elements, so emoji and combining marks stay intact.
+        const int maximumLength = 60;
+        var elements = System.Globalization.StringInfo.GetTextElementEnumerator(description);
+        var excerpt = new System.Text.StringBuilder();
+        var count = 0;
+        var pendingSpace = false;
+        while (elements.MoveNext())
+        {
+            var element = elements.GetTextElement();
+            if (string.IsNullOrWhiteSpace(element))
+            {
+                pendingSpace = excerpt.Length > 0;
+                continue;
+            }
+            if (count + (pendingSpace ? 1 : 0) >= maximumLength)
+                return $"説明：{excerpt}［…］";
+            if (pendingSpace) { excerpt.Append(' '); count++; }
+            pendingSpace = false;
+            excerpt.Append(element);
+            count++;
+        }
+        return $"説明：{excerpt}";
+    }
+
     private void EditDeskLayoutDescription()
     {
         if (workspace is null) return;
