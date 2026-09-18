@@ -68,6 +68,12 @@ public sealed partial class VenueEditorGame
                     if (Contains(LayoutOrderButton(direction), pointer))
                         return direction < 0 ? "選択中のフレーム配置を1つ上へ移動する" : "選択中のフレーム配置を1つ下へ移動する";
         }
+        if (editorMode == EditorMode.GenrePlacement && IsPointerInEditorCanvas(pointer) &&
+            HitTestParticipant(pointer) is { } token)
+        {
+            var genre = workspace.Project.Participants.Single(item => item.Id == token.ParticipantId).GenreId;
+            return string.IsNullOrWhiteSpace(genre) ? "（ジャンル未設定）" : genre;
+        }
         return "";
     }
 }
