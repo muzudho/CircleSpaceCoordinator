@@ -2459,6 +2459,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var deskActions = new[]
         {
+            ToolbarAction.EditDeskLayoutDescription,
             ToolbarAction.ExportFrameLayout,
             ToolbarAction.ImportFrameLayout,
             ToolbarAction.MoveDesk,
@@ -2549,7 +2550,7 @@ public sealed partial class VenueEditorGame : Game
                 toolbarSeparators.Add(actionX + 4d);
                 actionX += 14d;
             }
-            var buttonWidth = action is ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportFrameLayout ? 134d : action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments ? 170d :
+            var buttonWidth = action is ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportFrameLayout ? 134d : action is ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu ? 44d : action == ToolbarAction.SelectExportPlan ? 210d : action is ToolbarAction.ImportParticipants or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments ? 170d :
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
                 action,
@@ -2592,7 +2593,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.DuplicatePlan => workspace?.HasSelectedCircleLayout == true,
                 ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode => workspace is not null,
                 ToolbarAction.PanViewport or ToolbarAction.FitVenueToWindow => workspace is not null,
-                ToolbarAction.ImportParticipants or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportFrameLayout => workspace is not null && optimizationTask is null,
+                ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ImportParticipants or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportFrameLayout => workspace is not null && optimizationTask is null,
                 ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget => workspace is not null,
                 ToolbarAction.SelectExportColumns => workspace is not null && exportTargetSheet is not null,
                 ToolbarAction.ExportSeatAssignments => workspace is not null && exportColumnsConfirmed && preparedExport is not null,
@@ -2664,6 +2665,11 @@ public sealed partial class VenueEditorGame : Game
                 _ => QuarterTurn.West,
             };
             return (true, $"next_orientation={nextDeskOrientation}");
+        }
+        if (action == ToolbarAction.EditDeskLayoutDescription)
+        {
+            EditDeskLayoutDescription();
+            return (true, "desk_layout_description");
         }
         if (action == ToolbarAction.ExportFrameLayout)
         {
@@ -3023,10 +3029,11 @@ public sealed partial class VenueEditorGame : Game
                     var foreground = ToButtonColor(color);
                     if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
-                    else if (button.Action is ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
+                    else if (button.Action is ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
                         {
                             ToolbarAction.ToggleCircleStoneTransparency => "石を半透明",
+                            ToolbarAction.EditDeskLayoutDescription => "配置案の説明",
                             ToolbarAction.ExportFrameLayout => "部分書出し",
                             ToolbarAction.ImportFrameLayout => "部分読込み",
                             ToolbarAction.ImportParticipants => "Excel / CSV 読込",
@@ -3339,6 +3346,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.ToggleCircleStoneTransparency => "数値チャンネルで石の塗りを半透明にし、下地の重みを見る（再クリックで戻す）",
         ToolbarAction.FillVacantSeats => "未配置・仮置きのサークル石を、合体ルールを守って空いている配置可能セルへ一括配置する",
         ToolbarAction.ExportFrameLayout => "フレーム配置案を選び、会場・定義と一緒に部分書出しする",
+        ToolbarAction.EditDeskLayoutDescription => "選択中のフレーム配置案の説明を編集する。説明はイベントに保存され、部分書出しにも含まれます",
         ToolbarAction.ImportFrameLayout => "ポータブル・旧配置データから案を選んで現在のイベントに追加する",
         ToolbarAction.SpaceDefinitionsMode => "このフレーム配置の型と申込スペースを編集する",
         ToolbarAction.DeskMenu => "フレーム：追加・削除を選択",
@@ -3938,6 +3946,7 @@ internal enum ToolbarAction
     FillVacantSeats,
     ToggleFrameModes,
     ToggleCircleModes,
+    EditDeskLayoutDescription,
     ExportFrameLayout,
     ImportFrameLayout,
     SpaceDefinitionsMode,

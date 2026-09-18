@@ -60,6 +60,7 @@ public static class EditorOperationHandler
             : throw new InvalidOperationException("最後のフレーム配置は削除できません。"),
         LayoutCatalogServiceReassignCircleLayout op => LayoutCatalogService.ReassignCircleLayout(project, op.circleLayoutId, op.deskLayoutId),
         LayoutCatalogServiceRenameDeskLayout op => LayoutCatalogService.RenameDeskLayout(project, op.deskLayoutId, op.name),
+        SetDeskLayoutDescription op => LayoutCatalogService.SetDeskLayoutDescription(project, op.deskLayoutId, op.description),
         LayoutCatalogServiceMoveDeskLayout op => LayoutCatalogService.MoveDeskLayout(project, op.deskLayoutId, op.direction),
         LayoutCatalogServiceRenameCircleLayout op => LayoutCatalogService.RenameCircleLayout(project, op.circleLayoutId, op.name),
         ParticipantCatalogServiceReplaceParticipants op => ParticipantCatalogService.ReplaceParticipants(project, op.rows, op.source),

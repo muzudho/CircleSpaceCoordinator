@@ -101,6 +101,18 @@ public static class LayoutCatalogService
         return ValidateProjected(project with { DeskLayouts = desks });
     }
 
+    public static CircleSpaceProject SetDeskLayoutDescription(CircleSpaceProject project, string deskLayoutId, string? description)
+    {
+        project = LayoutProjection.MigrateLegacyPlans(project);
+        if (!project.DeskLayouts.Any(layout => layout.Id == deskLayoutId))
+            throw new KeyNotFoundException($"Desk layout '{deskLayoutId}' does not exist.");
+        return ValidateProjected(project with
+        {
+            DeskLayouts = project.DeskLayouts.Select(layout => layout.Id == deskLayoutId
+                ? layout with { Description = string.IsNullOrWhiteSpace(description) ? null : description } : layout).ToArray(),
+        });
+    }
+
     public static CircleSpaceProject RenameCircleLayout(CircleSpaceProject project, string circleLayoutId, string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

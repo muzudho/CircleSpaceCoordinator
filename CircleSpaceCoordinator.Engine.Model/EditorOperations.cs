@@ -47,6 +47,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(LayoutCatalogServiceRemoveDeskLayout), "LayoutCatalogService.RemoveDeskLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceReassignCircleLayout), "LayoutCatalogService.ReassignCircleLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceRenameDeskLayout), "LayoutCatalogService.RenameDeskLayout")]
+[JsonDerivedType(typeof(SetDeskLayoutDescription), "SetDeskLayoutDescription")]
 [JsonDerivedType(typeof(LayoutCatalogServiceMoveDeskLayout), "LayoutCatalogService.MoveDeskLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceRenameCircleLayout), "LayoutCatalogService.RenameCircleLayout")]
 [JsonDerivedType(typeof(ParticipantCatalogServiceReplaceParticipants), "ParticipantCatalogService.ReplaceParticipants")]
@@ -111,6 +112,7 @@ public sealed record LayoutCatalogServiceRemoveCircleLayout(string circleLayoutI
 public sealed record LayoutCatalogServiceRemoveDeskLayout(string deskLayoutId) : EditorOperation;
 public sealed record LayoutCatalogServiceReassignCircleLayout(string circleLayoutId, string deskLayoutId) : EditorOperation;
 public sealed record LayoutCatalogServiceRenameDeskLayout(string deskLayoutId, string name) : EditorOperation;
+public sealed record SetDeskLayoutDescription(string deskLayoutId, string? description) : EditorOperation;
 public sealed record LayoutCatalogServiceMoveDeskLayout(string deskLayoutId, int direction) : EditorOperation;
 public sealed record LayoutCatalogServiceRenameCircleLayout(string circleLayoutId, string name) : EditorOperation;
 public sealed record ParticipantCatalogServiceReplaceParticipants(IReadOnlyList<ParticipantImportRow> rows,

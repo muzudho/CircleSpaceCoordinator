@@ -22,7 +22,7 @@ public sealed partial class VenueEditorGame
             library.Click += (_, _) => { form.Close(); ManageChannelKnowledge(); };
             form.Controls.Add(library);
             var name = PortableText(form, "ファイルの名前", 340, "配置の提案");
-            var description = PortableText(form, "説明・適用条件", 372, "");
+            var description = PortableText(form, "ファイル全体のメモ", 372, "");
             var tags = PortableText(form, "タグ（カンマ区切り）", 404, "");
             var secret = new Forms.CheckBox { Text = "マル秘として書き出す", Left = 16, Top = 442, Width = 300,
                 Checked = snapshot.IsConfidential, Enabled = !snapshot.IsConfidential };
@@ -144,7 +144,7 @@ public sealed partial class VenueEditorGame
             AllowUserToDeleteRows = false, RowHeadersVisible = false, AutoSizeColumnsMode = Forms.DataGridViewAutoSizeColumnsMode.Fill };
         grid.Columns.Add(new Forms.DataGridViewCheckBoxColumn { HeaderText = "選択", FillWeight = 18 });
         grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "名前（読込み時は改名可）", ReadOnly = true });
-        grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "説明", ReadOnly = true });
+        grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "説明（表示のみ）", ReadOnly = true });
         grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { Visible = false });
         form.Controls.Add(grid);
         return grid;

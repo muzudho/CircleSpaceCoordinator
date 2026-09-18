@@ -206,6 +206,28 @@ internal static class Program
     {
         var connection = CircleSpaceCoordinator.EditorClient.EditorConnection.Current;
         var source = LayoutProjection.MigrateLegacyPlans(CreateProject());
+        using (var editing = connection.Open(ProjectJsonSerializer.Save(source)))
+        {
+            var id = editing.Project.DeskLayouts[0].Id;
+            var initial = ProjectJsonSerializer.Save(editing.Project);
+            const string description = "通路を広くした案\r\n入口側は余裕を持たせる。";
+            editing.Execute(new CircleSpaceCoordinator.Engine.Model.SetDeskLayoutDescription(id, description), selectedPlanEdit: false);
+            AssertEqual(description, editing.Project.DeskLayouts[0].Description);
+            var saved = ProjectJsonSerializer.Save(editing.Project);
+            AssertEqual(description, ProjectJsonSerializer.Load(saved).DeskLayouts[0].Description);
+            editing.Undo();
+            AssertEqual(initial, ProjectJsonSerializer.Save(editing.Project));
+            editing.Redo();
+            AssertEqual(saved, ProjectJsonSerializer.Save(editing.Project));
+            var output = connection.ParsePortable(connection.ExportPortable(new(editing.Project, [id], new([], []), "提案", "会議用のファイル全体メモ", [], false)));
+            AssertEqual(description, output.Items.Single().Project.DeskLayouts[0].Description);
+            AssertEqual("会議用のファイル全体メモ", output.Description);
+            AssertEqual(saved, ProjectJsonSerializer.Save(editing.Project));
+            editing.Execute(new CircleSpaceCoordinator.Engine.Model.SetDeskLayoutDescription(id, ""), selectedPlanEdit: false);
+            AssertEqual<string?>(null, editing.Project.DeskLayouts[0].Description);
+            editing.Undo();
+            AssertEqual(description, editing.Project.DeskLayouts[0].Description);
+        }
         var first = source.DeskLayouts[0] with { Id = "A", Name = "A", Definitions = new([], []) };
         var second = first with { Id = "B", Name = "B", SeatLabels = [new("desk-1", new(0, 0), "B", "1")] };
         var third = first with { Id = "C", Name = "C", IsConfidential = true };
