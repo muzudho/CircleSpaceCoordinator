@@ -32,6 +32,7 @@ public sealed partial class VenueEditorGame
         textInputService?.Stop();
         ResetUnderlineKeyRepeat();
         underlineEditor = null;
+        weightCommentFeatureId = null;
         selectionLabels = null;
         exportColumnDraft = null;
         exportPlanChoices = null;
@@ -135,7 +136,7 @@ public sealed partial class VenueEditorGame
         var availableHeight = GraphicsDevice.Viewport.Height - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
         var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null;
         var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
-        var height = Math.Min(large ? 620d : 350d, Math.Max(1, availableHeight - 16d));
+        var height = Math.Min(large ? 620d : weightCommentFeatureId is not null ? 460d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
             (availableHeight - height) / 2d, width, height);
     }
@@ -169,6 +170,9 @@ public sealed partial class VenueEditorGame
             Add("−", ModalDialogAction.Decrease, bounds.X + 20, bottom - 62, 44);
             Add("＋", ModalDialogAction.Increase, bounds.X + bounds.Width - 64, bottom - 62, 44);
         }
+        if (weightCommentFeatureId is not null)
+            Add(string.IsNullOrWhiteSpace(CurrentWeightComment) ? "コメント入力" : "編集", ModalDialogAction.Increase,
+                bounds.X + bounds.Width - 150, bounds.Y + bounds.Height - 204, 130);
         if (modalDialog.Kind is ModalDialogKind.Confirmation or ModalDialogKind.Minutes or ModalDialogKind.Text)
             Add("キャンセル", ModalDialogAction.Cancel, right - buttonWidth - 12, bottom, buttonWidth);
         Add(modalDialog.Kind switch
@@ -206,6 +210,7 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw($"{modalDialog.Minutes} 分（1～120）", ToRectangle(new ScreenRectangle(bounds.X + 78, bounds.Y + bounds.Height - 120,
                 bounds.Width - 156, 38)), Color.White, 22, true);
         if (modalDialog.Kind == ModalDialogKind.Text) DrawUnderlineInput();
+        if (weightCommentFeatureId is not null) DrawWeightComment();
         DrawSelection();
         DrawTextViewer();
         DrawTablePreview();

@@ -22,6 +22,7 @@ public sealed partial class VenueEditorGame
         if (spaceCatalogOpen)
             return catalogButtons.FirstOrDefault(item => Contains(item.Model.Bounds, pointer)).Model?.AccessibleName ?? "";
         if (!CanShowEditorHover) return "";
+        if (HoveredChannelComment(pointer) is { } comment) return comment;
         var toolbar = toolbarButtons.FirstOrDefault(item => Contains(item.Model.Bounds, pointer));
         if (toolbar is not null)
             return activeCanvasTool == ToolbarAction.AddDesk && toolbar.Action is ToolbarAction.RotateLeft or ToolbarAction.RotateRight
@@ -42,7 +43,7 @@ public sealed partial class VenueEditorGame
             else
             {
                 if (Contains(ChannelButton(0), pointer)) return "評価値のチャンネルを追加する";
-                if (Contains(ChannelButton(1), pointer)) return "選択中のチャンネルの読込列・名前を変更する";
+                if (Contains(ChannelButton(1), pointer)) return "選択中のチャンネルの読込列・名前・Commentを編集する";
                 if (Contains(ChannelButton(2), pointer)) return "選択中の評価値チャンネルを削除する";
                 if (ShowsChannelFooterButton && Contains(BlockStyleButton(), pointer))
                     return ShowsBlockStyleButton ? "ブロック番号と色・網掛けパターンの対応を編集する"

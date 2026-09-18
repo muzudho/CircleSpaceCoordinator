@@ -146,6 +146,23 @@ internal static partial class Program
             Participants = project.Participants.Select(item => item with { Features = new Dictionary<string, double>(),
                 SourceValues = new Dictionary<string, string> { ["Books"] = "1" } }).ToArray() };
         using var source = connection.Open(ProjectJsonSerializer.Save(project));
+        const string channelComment = "書籍サークル向けの明るさ評価。";
+        const string weightComment = "明るい席は＋1、暗い席は−1。\n判断できない席は0。";
+        AssertEqual(true, source.Project.Evaluation.Features[0].CommentForChannel is null);
+        source.Execute(new CircleSpaceCoordinator.Engine.Model.UpsertChannel("book", "書籍の有無", null)
+            { CommentForChannel = channelComment, CommentForWeight = weightComment }, selectedPlanEdit: false);
+        var commentsJson = ProjectJsonSerializer.Save(source.Project);
+        AssertEqual(true, commentsJson.Contains("\"comment-for-channel\""));
+        AssertEqual(true, commentsJson.Contains("\"comment-for-weight\""));
+        AssertEqual(weightComment, ProjectJsonSerializer.Load(commentsJson).Evaluation.Features[0].CommentForWeight);
+        source.Undo();
+        AssertEqual(true, source.Project.Evaluation.Features[0].CommentForChannel is null);
+        source.Redo();
+        AssertEqual(channelComment, source.Project.Evaluation.Features[0].CommentForChannel);
+        source.Execute(new CircleSpaceCoordinator.Engine.Model.UpsertChannel("book", "書籍の有無", null) { CommentForWeight = "" }, selectedPlanEdit: false);
+        AssertEqual("", source.Project.Evaluation.Features[0].CommentForWeight);
+        AssertEqual(channelComment, source.Project.Evaluation.Features[0].CommentForChannel);
+        source.Undo();
         var rule = new ChannelInputRule("書籍", "書籍の有無", "1=書籍あり、0=なし", true, [0, 1]);
         source.Execute(new CircleSpaceCoordinator.Engine.Model.CaptureChannelKnowledge("book", "books", "照明の明暗", "書籍を明るい席へ", rule, true), selectedPlanEdit: false);
         var captured = source.Project.ChannelKnowledge.Single();
@@ -159,6 +176,8 @@ internal static partial class Program
         AssertEqual(0, package.Items.Count);
         AssertEqual(1, package.Knowledge.Count);
         AssertEqual("1=書籍あり、0=なし", package.Knowledge[0].InputRule.ValueMeanings);
+        AssertEqual(channelComment, package.Knowledge[0].CommentForChannel);
+        AssertEqual(weightComment, package.Knowledge[0].CommentForWeight);
         var empty = project with { Participants = [], CircleLayouts = [], Plans = [], Evaluation = new([], []) };
         using var destination = connection.Open(ProjectJsonSerializer.Save(empty));
         var before = ProjectJsonSerializer.Save(destination.Project);
@@ -178,11 +197,14 @@ internal static partial class Program
         AssertEqual(true, template.Knowledge[0].Venue is null);
         AssertEqual(0, template.Knowledge[0].Cells.Length);
         AssertEqual(0.25d, template.Knowledge[0].DefaultWeight);
+        AssertEqual(weightComment, template.Knowledge[0].CommentForWeight);
         var ready = destination.Project with { Participants = project.Participants };
         using var bound = connection.Open(ProjectJsonSerializer.Save(ready));
         bound.Execute(new CircleSpaceCoordinator.Engine.Model.BindChannelKnowledge("import-books", "bound", "書籍評価", "Books"), selectedPlanEdit: false);
         AssertEqual(1d, bound.Project.Participants[0].Features["bound"]);
         AssertEqual(3d, bound.Project.Evaluation.Features.Single().Offset);
+        AssertEqual(channelComment, bound.Project.Evaluation.Features.Single().CommentForChannel);
+        AssertEqual(weightComment, bound.Project.Evaluation.Features.Single().CommentForWeight);
         AssertEqual(-1d, bound.Project.Evaluation.WeightMaps.Single().GetWeight(new(1, 0)) * bound.Project.Participants[0].Features["bound"]);
         var blank = ready with { Participants = ready.Participants.Select(item => item with { SourceValues = new Dictionary<string, string> { ["Books"] = "" } }).ToArray() };
         var blankBound = CircleSpaceCoordinator.Application.Layouts.ChannelKnowledgeService.Bind(blank, "import-books", "bound", "書籍評価", "Books");

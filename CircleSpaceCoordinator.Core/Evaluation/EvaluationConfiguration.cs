@@ -9,6 +9,12 @@ public sealed record EvaluationFeature(
     double Offset,
     double OverallWeight)
 {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonPropertyName("comment-for-channel")]
+    public string? CommentForChannel { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonPropertyName("comment-for-weight")]
+    public string? CommentForWeight { get; init; }
     public string? Description { get; init; }
     public string? SourceColumn { get; init; }
     public ChannelInputRule? InputRule { get; init; }

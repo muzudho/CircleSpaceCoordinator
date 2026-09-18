@@ -78,7 +78,7 @@ public sealed partial class VenueEditorGame
         DrawOutline(panel, 2, new Color(88, 103, 120));
         textRenderer?.Draw("チャンネル", new Rectangle((int)panel.X + 10, (int)panel.Y + 4, 240, 26), Color.White, 20, true);
         DrawLayoutButton(ChannelButton(0), "追加", false);
-        DrawLayoutButton(ChannelButton(1), "列・名前", false, IsWeightChannelSelected);
+        DrawLayoutButton(ChannelButton(1), "編集", false, IsWeightChannelSelected);
         DrawLayoutButton(ChannelButton(2), "削除", false, IsWeightChannelSelected);
         var evaluation = workspace.GetSelectedPlanSnapshot().Evaluation;
         var gaps = GetNumberChannelGaps();
@@ -186,7 +186,9 @@ public sealed partial class VenueEditorGame
         var id = feature?.Id ?? $"channel-{Guid.NewGuid():N}";
         var name = feature?.Name ?? "";
         var column = feature?.SourceColumn;
-        void ShowDraft() => OpenSelection("チャンネルの名前・列対応", [$"名前：{name}", $"列：{column ?? "（対応なし：0点）"}", "保存"], 0, index =>
+        var channelComment = feature?.CommentForChannel ?? "";
+        void ShowDraft() => OpenSelection("チャンネルの名前・列対応", [$"名前：{name}", $"列：{column ?? "（対応なし：0点）"}",
+            $"Comment：{CommentExcerpt(channelComment)}　［{(channelComment.Length == 0 ? "コメント入力" : "編集")}］", "保存"], 0, index =>
         {
             if (index == 0)
             {
@@ -199,7 +201,13 @@ public sealed partial class VenueEditorGame
                 Array.IndexOf(columns, column) + 1, selected => { column = selected == 0 ? null : columns[selected - 1]; ShowDraft(); }, ShowDraft); return;
             }
             if (string.IsNullOrWhiteSpace(name) || name == "番地") { ShowNotice("チャンネル名", "番地以外のチャンネル名を入力してください。", ShowDraft); return; }
-            workspace.Execute(new UpsertChannel(id, name, column), selectedPlanEdit: false);
+            if (index == 2)
+            {
+                EditChannelCommentText(name, channelComment, value => channelComment = value);
+                ShowDraft();
+                return;
+            }
+            workspace.Execute(new UpsertChannel(id, name, column) { CommentForChannel = channelComment }, selectedPlanEdit: false);
             selectedChannelId = id;
             channelScroll = Math.Max(0, workspace.Project.Evaluation.Features.Count + 3 - VisibleChannelRows);
             activeCanvasTool = ToolbarAction.EditSeatName;
@@ -226,6 +234,7 @@ public sealed partial class VenueEditorGame
             workspace.Execute(new SetChannelWeights(planId, channelId, cells, (double)weight));
             Log("channel_weight_edit", success: true);
         });
+        weightCommentFeatureId = channelId;
     }
 
     private void OpenWeightInput(decimal initial, int cellCount, Action<decimal> accepted)

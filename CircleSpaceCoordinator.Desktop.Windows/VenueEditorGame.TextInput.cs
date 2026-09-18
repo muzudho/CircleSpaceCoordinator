@@ -50,7 +50,7 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle UnderlineBounds()
     {
         var bounds = ModalBounds();
-        return new ScreenRectangle(bounds.X + 20, bounds.Y + bounds.Height - 136, bounds.Width - 40, 46);
+        return new ScreenRectangle(bounds.X + 20, bounds.Y + bounds.Height - (weightCommentFeatureId is null ? 136 : 272), bounds.Width - 40, 46);
     }
 
     private const int TextInputHelpHeight = 112;
@@ -209,6 +209,11 @@ public sealed partial class VenueEditorGame
 
     private void ConfirmUnderlineInput(ModalDialogAction action)
     {
+        if (action == ModalDialogAction.Increase && weightCommentFeatureId is not null)
+        {
+            EditWeightComment();
+            return;
+        }
         if (action == ModalDialogAction.Accept && underlineValidation?.Invoke(underlineEditor?.Text.Trim() ?? "") is { } error)
         {
             modalDialog!.Message = error;

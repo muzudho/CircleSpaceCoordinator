@@ -128,6 +128,14 @@ public sealed record SetBlockStyles(IReadOnlyList<BlockStyleDefinition> styles) 
 public sealed record SwapNumberAddresses(string planId, int channel, GridPosition source, GridPosition destination,
     int width, int height, IReadOnlyList<string> sourceFrameIds) : EditorOperation, IPlanOperation;
 public sealed record SetExportPlan(string? planId) : EditorOperation;
-public sealed record UpsertChannel(string id, string name, string? sourceColumn) : EditorOperation;
+public sealed record UpsertChannel(string id, string name, string? sourceColumn) : EditorOperation
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonPropertyName("comment-for-channel")]
+    public string? CommentForChannel { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonPropertyName("comment-for-weight")]
+    public string? CommentForWeight { get; init; }
+}
 public sealed record RemoveChannel(string id) : EditorOperation;
 public sealed record SetChannelWeights(string planId, string channelId, IReadOnlyList<GridPosition> cells, double weight) : EditorOperation, IPlanOperation;

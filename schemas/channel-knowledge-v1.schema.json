@@ -17,6 +17,8 @@
     "cells"
   ],
   "properties": {
+        "comment-for-channel": { "type": ["string", "null"] },
+        "comment-for-weight": { "type": ["string", "null"] },
     "id": {
       "type": "string",
       "minLength": 1

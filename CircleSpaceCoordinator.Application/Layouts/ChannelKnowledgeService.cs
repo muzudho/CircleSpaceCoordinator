@@ -16,7 +16,8 @@ public static class ChannelKnowledgeService
             feature.Scale, feature.Offset, feature.OverallWeight, confidential || project.IsConfidential || feature.IsConfidential,
             map.DefaultWeight, map.Cells.Select(pair => new KnowledgeCell(pair.Key.X, pair.Key.Y, pair.Value)).ToArray(),
             new(venue.Name, venue.Width, venue.Height, venue.BlockedCells.ToArray(),
-                venue.Zones.Select(zone => new KnowledgeZone(zone.Name, zone.Cells.ToArray())).ToArray()));
+                venue.Zones.Select(zone => new KnowledgeZone(zone.Name, zone.Cells.ToArray())).ToArray()))
+            { CommentForChannel = feature.CommentForChannel, CommentForWeight = feature.CommentForWeight };
         return Add(project, knowledge);
     }
 
@@ -45,7 +46,8 @@ public static class ChannelKnowledgeService
         result = result with { Evaluation = result.Evaluation with
         {
             Features = result.Evaluation.Features.Select(item => item.Id == featureId ? item with
-            { Description = knowledge.Description, Purpose = knowledge.Purpose, InputRule = knowledge.InputRule,
+            { CommentForChannel = knowledge.CommentForChannel, CommentForWeight = knowledge.CommentForWeight,
+                Description = knowledge.Description, Purpose = knowledge.Purpose, InputRule = knowledge.InputRule,
                 Scale = knowledge.Scale, Offset = knowledge.Offset, OverallWeight = knowledge.OverallWeight,
                 IsConfidential = knowledge.IsConfidential } : item).ToArray(),
             WeightMaps = result.Evaluation.WeightMaps.Select(item => item.FeatureId == featureId ?

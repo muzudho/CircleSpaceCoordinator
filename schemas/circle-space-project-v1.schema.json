@@ -372,6 +372,8 @@
       "properties": {
         "inputRule": { "$ref": "channel-knowledge-v1.schema.json#/$defs/inputRule" },
         "purpose": { "type": "string" },
+        "comment-for-channel": { "type": ["string", "null"] },
+        "comment-for-weight": { "type": ["string", "null"] },
         "isConfidential": { "type": "boolean" },
         "id": {
           "$ref": "#/$defs/identifier"

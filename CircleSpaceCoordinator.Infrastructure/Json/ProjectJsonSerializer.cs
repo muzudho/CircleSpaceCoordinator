@@ -82,6 +82,8 @@ public static class ProjectJsonSerializer
             SourceColumn = item.SourceColumn,
             InputRule = item.InputRule,
             Purpose = item.Purpose,
+            CommentForChannel = item.CommentForChannel,
+            CommentForWeight = item.CommentForWeight,
             IsConfidential = item.IsConfidential,
         }).ToArray();
         var weightMaps = source.Evaluation.WeightMaps.Select(item => new WeightMap(
@@ -274,6 +276,8 @@ public static class ProjectJsonSerializer
                 SourceColumn = item.SourceColumn,
                 InputRule = item.InputRule,
                 Purpose = item.Purpose,
+                CommentForChannel = item.CommentForChannel,
+                CommentForWeight = item.CommentForWeight,
                 IsConfidential = item.IsConfidential,
             }).ToList(),
             WeightMaps = source.Evaluation.WeightMaps.Select(item => new WeightMapDocument
@@ -520,6 +524,13 @@ public static class ProjectJsonSerializer
         public string? SourceColumn { get; set; }
         public ChannelInputRule? InputRule { get; set; }
         public string? Purpose { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        [System.Text.Json.Serialization.JsonPropertyName("comment-for-channel")]
+        public string? CommentForChannel { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        [System.Text.Json.Serialization.JsonPropertyName("comment-for-weight")]
+        public string? CommentForWeight { get; set; }
+
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool IsConfidential { get; set; }
     }

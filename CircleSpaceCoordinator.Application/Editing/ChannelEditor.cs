@@ -7,7 +7,7 @@ using CircleSpaceCoordinator.Core.Model;
 
 public static class ChannelEditor
 {
-    public static CircleSpaceProject Upsert(CircleSpaceProject project, string id, string name, string? sourceColumn)
+    public static CircleSpaceProject Upsert(CircleSpaceProject project, string id, string name, string? sourceColumn, string? commentForChannel = null, string? commentForWeight = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -17,7 +17,9 @@ public static class ChannelEditor
         if (sourceColumn is not null && !project.Participants.Any(item => item.SourceValues.ContainsKey(sourceColumn)))
             throw new ArgumentException("対応する列がありません。参加サークル一覧を取り込んでください。");
         var existing = project.Evaluation.Features.FirstOrDefault(item => item.Id == id);
-        var feature = (existing ?? new EvaluationFeature(id, name, 1, 0, 1)) with { Name = name, SourceColumn = sourceColumn };
+        var feature = (existing ?? new EvaluationFeature(id, name, 1, 0, 1)) with { Name = name, SourceColumn = sourceColumn,
+            CommentForChannel = commentForChannel ?? existing?.CommentForChannel,
+            CommentForWeight = commentForWeight ?? existing?.CommentForWeight };
         var features = existing is null ? project.Evaluation.Features.Append(feature).ToArray()
             : project.Evaluation.Features.Select(item => item.Id == id ? feature : item).ToArray();
         var maps = project.Evaluation.WeightMaps.Any(item => item.FeatureId == id)
