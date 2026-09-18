@@ -130,6 +130,7 @@ public sealed record SwapNumberAddresses(string planId, int channel, GridPositio
 public sealed record SetExportPlan(string? planId) : EditorOperation;
 public sealed record UpsertChannel(string id, string name, string? sourceColumn) : EditorOperation
 {
+    public double? OverallWeight { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     [System.Text.Json.Serialization.JsonPropertyName("comment-for-channel")]
     public string? CommentForChannel { get; init; }

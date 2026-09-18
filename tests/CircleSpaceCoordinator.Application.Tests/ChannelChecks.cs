@@ -43,6 +43,14 @@ internal static class ChannelChecks
         var evaluation = workspace.GetSelectedPlanSnapshot().Evaluation;
         Equal(1, evaluation.Features.Single(item => item.FeatureId == "books").WeightedScore);
         Equal(0.75, evaluation.Features.Single(item => item.FeatureId == "other").WeightedScore);
+        Execute(new UpsertChannel("books", "書籍", "書籍の有無") { OverallWeight = 10 });
+        Equal(10.75, workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore);
+        Execute(new UpsertChannel("other", "その他", "その他") { OverallWeight = 0.001 });
+        Equal(10.00075, workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore);
+        workspace.Undo(); Equal(10.75, workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore);
+        workspace.Redo(); Equal(10.00075, workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore);
+        workspace.Undo(); workspace.Undo();
+        Equal(1.75, workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore);
         Equal(1.75, evaluation.TotalScore);
         workspace.Undo(); Equal(1, workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore);
         workspace.Redo(); Equal(1.75, workspace.GetSelectedPlanSnapshot().Evaluation.TotalScore);

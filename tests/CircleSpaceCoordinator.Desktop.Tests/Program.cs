@@ -205,6 +205,16 @@ internal static partial class Program
         AssertEqual(3d, bound.Project.Evaluation.Features.Single().Offset);
         AssertEqual(channelComment, bound.Project.Evaluation.Features.Single().CommentForChannel);
         AssertEqual(weightComment, bound.Project.Evaluation.Features.Single().CommentForWeight);
+        bound.Execute(new CircleSpaceCoordinator.Engine.Model.UpsertChannel("bound", "書籍評価", "Books") { OverallWeight = 0.001 }, selectedPlanEdit: false);
+        AssertEqual(0.001, bound.Project.Evaluation.Features.Single().OverallWeight);
+        AssertEqual(2d, bound.Project.Evaluation.Features.Single().Scale);
+        AssertEqual(3d, bound.Project.Evaluation.Features.Single().Offset);
+        AssertEqual(weightComment, bound.Project.Evaluation.Features.Single().CommentForWeight);
+        AssertEqual(0.001, ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(bound.Project)).Evaluation.Features.Single().OverallWeight);
+        bound.Execute(new CircleSpaceCoordinator.Engine.Model.CaptureChannelKnowledge("bound", "adjusted", "", "", rule, false), selectedPlanEdit: false);
+        var adjusted = connection.ParsePortable(connection.ExportPortable(new(bound.Project, [], new([], []), "Adjusted", "", [], false)
+            { KnowledgeIds = ["adjusted"] }));
+        AssertEqual(0.001, adjusted.Knowledge.Single().OverallWeight);
         AssertEqual(-1d, bound.Project.Evaluation.WeightMaps.Single().GetWeight(new(1, 0)) * bound.Project.Participants[0].Features["bound"]);
         var blank = ready with { Participants = ready.Participants.Select(item => item with { SourceValues = new Dictionary<string, string> { ["Books"] = "" } }).ToArray() };
         var blankBound = CircleSpaceCoordinator.Application.Layouts.ChannelKnowledgeService.Bind(blank, "import-books", "bound", "書籍評価", "Books");

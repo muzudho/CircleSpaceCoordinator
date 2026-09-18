@@ -99,7 +99,7 @@ public sealed partial class VenueEditorGame
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
             textRenderer?.Draw(feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点",
                 new Rectangle((int)row.X + 6, (int)row.Y + 1, (int)row.Width - (missing ? 36 : 12), 27), Color.White, 15, selected);
-            textRenderer?.Draw(feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列" : $"重み（0～1）：{feature.SourceColumn ?? "（対応なし）"}",
+            textRenderer?.Draw(feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列" : $"チャンネル重み ×{feature.OverallWeight:G}：{feature.SourceColumn ?? "（対応なし）"}",
                 new Rectangle((int)row.X + 6, (int)row.Y + 26, (int)row.Width - 12, 20), new Color(184, 204, 214), 11);
         }
         DrawChannelScrollbar();
@@ -187,8 +187,10 @@ public sealed partial class VenueEditorGame
         var name = feature?.Name ?? "";
         var column = feature?.SourceColumn;
         var channelComment = feature?.CommentForChannel ?? "";
-        void ShowDraft() => OpenSelection("チャンネルの名前・列対応", [$"名前：{name}", $"列：{column ?? "（対応なし：0点）"}",
-            $"Comment：{CommentExcerpt(channelComment)}　［{(channelComment.Length == 0 ? "コメント入力" : "編集")}］", "保存"], 0, index =>
+        var overallWeight = feature?.OverallWeight ?? 1;
+        void ShowDraft() => OpenSelection("チャンネルの編集", [$"名前：{name}", $"列：{column ?? "（対応なし：0点）"}",
+            $"Comment：{CommentExcerpt(channelComment)}　［{(channelComment.Length == 0 ? "コメント入力" : "編集")}］",
+            $"チャンネルの重み：{overallWeight:G}", "保存"], 0, index =>
         {
             if (index == 0)
             {
@@ -207,7 +209,18 @@ public sealed partial class VenueEditorGame
                 ShowDraft();
                 return;
             }
-            workspace.Execute(new UpsertChannel(id, name, column) { CommentForChannel = channelComment }, selectedPlanEdit: false);
+            if (index == 3)
+            {
+                OpenUnderlineInput("チャンネルの重み", overallWeight.ToString("G"), input =>
+                {
+                    if (!EditorDialogValidation.TryParseChannelWeight(input, out overallWeight))
+                        throw new InvalidOperationException(EditorDialogValidation.ChannelWeight(input));
+                    ShowDraft();
+                }, "チャンネルの得点に掛ける倍率です（初期値1）。\n重要度を上げる例：10 ／ 部数などの桁を抑える例：0.001\n0は評価への寄与なし、負数は評価の向きを反転します。\nセルごとの重み（-1～1）とは別の値です。", 64,
+                    validate: EditorDialogValidation.ChannelWeight, cancelled: ShowDraft);
+                return;
+            }
+            workspace.Execute(new UpsertChannel(id, name, column) { CommentForChannel = channelComment, OverallWeight = overallWeight }, selectedPlanEdit: false);
             selectedChannelId = id;
             channelScroll = Math.Max(0, workspace.Project.Evaluation.Features.Count + 3 - VisibleChannelRows);
             activeCanvasTool = ToolbarAction.EditSeatName;

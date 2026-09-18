@@ -7,10 +7,12 @@ using CircleSpaceCoordinator.Core.Model;
 
 public static class ChannelEditor
 {
-    public static CircleSpaceProject Upsert(CircleSpaceProject project, string id, string name, string? sourceColumn, string? commentForChannel = null, string? commentForWeight = null)
+    public static CircleSpaceProject Upsert(CircleSpaceProject project, string id, string name, string? sourceColumn, string? commentForChannel = null, string? commentForWeight = null, double? overallWeight = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (overallWeight is { } multiplier && !double.IsFinite(multiplier))
+            throw new ArgumentOutOfRangeException(nameof(overallWeight), "チャンネルの重みは有限の数値を入力してください。");
         name = name.Trim();
         if (name == "番地" || project.Evaluation.Features.Any(item => item.Id != id && item.Name == name))
             throw new ArgumentException("番地以外の、重複しないチャンネル名を入力してください。");
@@ -18,6 +20,7 @@ public static class ChannelEditor
             throw new ArgumentException("対応する列がありません。参加サークル一覧を取り込んでください。");
         var existing = project.Evaluation.Features.FirstOrDefault(item => item.Id == id);
         var feature = (existing ?? new EvaluationFeature(id, name, 1, 0, 1)) with { Name = name, SourceColumn = sourceColumn,
+            OverallWeight = overallWeight ?? existing?.OverallWeight ?? 1,
             CommentForChannel = commentForChannel ?? existing?.CommentForChannel,
             CommentForWeight = commentForWeight ?? existing?.CommentForWeight };
         var features = existing is null ? project.Evaluation.Features.Append(feature).ToArray()

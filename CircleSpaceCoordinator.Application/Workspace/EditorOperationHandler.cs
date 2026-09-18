@@ -76,7 +76,7 @@ public static class EditorOperationHandler
         SetExportPlan op => op.planId is null || project.Plans.Any(plan => plan.Id == op.planId)
             ? project with { ExportPlanId = op.planId }
             : throw new InvalidOperationException("選択した配置案は存在しません。"),
-        UpsertChannel op => ChannelEditor.Upsert(project, op.id, op.name, op.sourceColumn, op.CommentForChannel, op.CommentForWeight),
+        UpsertChannel op => ChannelEditor.Upsert(project, op.id, op.name, op.sourceColumn, op.CommentForChannel, op.CommentForWeight, op.OverallWeight),
         RemoveChannel op => ChannelEditor.Remove(project, op.id),
         SetChannelWeights op => ChannelEditor.SetWeights(project, op.planId, op.channelId, op.cells, op.weight),
         _ => throw new ArgumentException("Unsupported editor operation."),

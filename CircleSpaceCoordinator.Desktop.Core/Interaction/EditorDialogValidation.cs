@@ -23,6 +23,10 @@ public static class EditorDialogValidation
 
     public static string? Weight(string value) => TryParseWeight(value, out _)
         ? null : "-1.000～1.000、小数点以下3桁までの数値を入力してください。空欄は0になります。";
+    public static bool TryParseChannelWeight(string value, out double parsed) =>
+        double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out parsed) && double.IsFinite(parsed);
+    public static string? ChannelWeight(string value) => TryParseChannelWeight(value, out _)
+        ? null : "チャンネルの重みは有限の数値で入力してください（例：1、10、0.001）。空欄にはできません。";
     public static string? CircleIdPattern(string value)
     {
         try { _ = new Regex(value, RegexOptions.None, TimeSpan.FromMilliseconds(100)); return null; }
