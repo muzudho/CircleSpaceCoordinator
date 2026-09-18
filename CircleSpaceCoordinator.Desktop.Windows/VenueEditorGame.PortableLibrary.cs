@@ -89,7 +89,7 @@ public sealed partial class VenueEditorGame
             {
                 if (Selected() is not { Package: { } package } entry) return;
                 using var editor = PortableForm("ファイル全体のメモ・タグを編集");
-                var name = PortableText(editor, "名前", 24, package.Name);
+                var name = PortableText(editor, "データのタイトル", 24, package.Name);
                 var memo = PortableText(editor, "ファイル全体のメモ", 65, package.Description);
                 memo.Multiline = true; memo.Height = 220; memo.ScrollBars = Forms.ScrollBars.Vertical;
                 var tags = PortableText(editor, "タグ（カンマ区切り）", 310, string.Join(", ", package.Tags));

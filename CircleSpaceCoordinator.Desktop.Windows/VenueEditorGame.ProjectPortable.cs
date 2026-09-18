@@ -35,7 +35,7 @@ public sealed partial class VenueEditorGame
             libraryMenu.Items.Add("ファイルライブラリー", null, (_, _) => { form.Close(); ShowPortableLibrary(); });
             library.Click += (_, _) => libraryMenu.Show(library, new System.Drawing.Point(0, library.Height));
             form.Controls.Add(library);
-            var name = PortableText(form, "ファイルの名前", 340, "配置の提案");
+            var name = PortableText(form, "データのタイトル", 340, "配置の提案");
             var description = PortableText(form, "ファイル全体のメモ", 372, "");
             var tags = PortableText(form, "タグ（カンマ区切り）", 404, "");
             var secret = new Forms.CheckBox { Text = "マル秘として書き出す", Left = 16, Top = 442, Width = 300,
