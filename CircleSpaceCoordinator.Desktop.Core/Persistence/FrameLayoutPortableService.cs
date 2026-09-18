@@ -70,6 +70,7 @@ public static class FrameLayoutPortableService
             throw new InvalidDataException("未対応のフレーム配置データ形式です。");
         if (document.Project.ValueKind != JsonValueKind.Object ||
             document.Project.TryGetProperty("plans", out _) || document.Project.TryGetProperty("evaluationResults", out _) ||
+            document.Project.TryGetProperty("channelKnowledge", out _) ||
             !document.Project.TryGetProperty("project", out var metadata) ||
             !metadata.TryGetProperty("isConfidential", out _) ||
             !document.Project.TryGetProperty("deskLayouts", out var layouts) || layouts.ValueKind != JsonValueKind.Array ||
@@ -79,7 +80,7 @@ public static class FrameLayoutPortableService
         if (project.DeskLayouts.Count != 1 || project.CircleLayouts.Count != 0 || project.Plans.Count != 0 ||
             project.Participants.Count != 0 || project.ParticipantTableSource is not null ||
             project.EditorView is not null || project.ExportPlanId is not null || project.GenreStyles.Count != 0 ||
-            project.Evaluation.Features.Count != 0 || project.Evaluation.WeightMaps.Count != 0)
+            project.Evaluation.Features.Count != 0 || project.Evaluation.WeightMaps.Count != 0 || project.ChannelKnowledge.Count != 0)
             throw new InvalidDataException("フレーム配置データには１つのフレーム配置だけを含めてください。");
         var layout = project.DeskLayouts[0];
         if (layout.Definitions is null)

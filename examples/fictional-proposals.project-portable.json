@@ -1,0 +1,301 @@
+{
+  "kind": "circle-space-project-portable",
+  "formatVersion": 1,
+  "name": "Fictional A and C",
+  "description": "Shared physical type; local definitions with the same ID retain distinct descriptions.",
+  "tags": [
+    "fictional",
+    "meeting"
+  ],
+  "isConfidential": false,
+  "items": [
+    {
+      "id": "A",
+      "kind": "frame-layout",
+      "name": "Proposal A",
+      "data": {
+        "kind": "circle-space-frame-layout",
+        "formatVersion": 1,
+        "isConfidential": false,
+        "project": {
+          "schemaVersion": "1.0",
+          "project": {
+            "id": "portable-frame-layout",
+            "name": "Proposal A",
+            "isConfidential": false
+          },
+          "venue": {
+            "id": "sample-hall",
+            "name": "サンプルホール",
+            "width": 6,
+            "height": 4,
+            "blockedCells": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "zones": [
+              {
+                "id": "entrance-side",
+                "name": "入口側",
+                "cells": [
+                  {
+                    "x": 0,
+                    "y": 3
+                  },
+                  {
+                    "x": 1,
+                    "y": 3
+                  },
+                  {
+                    "x": 2,
+                    "y": 3
+                  }
+                ]
+              }
+            ]
+          },
+          "deskTypes": [
+            {
+              "id": "standard-desk",
+              "name": "標準机",
+              "footprint": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                }
+              ]
+            }
+          ],
+          "participants": [],
+          "evaluation": {
+            "features": [],
+            "weightMaps": []
+          },
+          "deskLayouts": [
+            {
+              "deskPlacements": [
+                {
+                  "id": "plan-0-desk-01",
+                  "deskTypeId": "standard-desk",
+                  "anchor": {
+                    "x": 1,
+                    "y": 2
+                  },
+                  "orientation": "north"
+                },
+                {
+                  "id": "plan-0-desk-02",
+                  "deskTypeId": "standard-desk",
+                  "anchor": {
+                    "x": 4,
+                    "y": 2
+                  },
+                  "orientation": "south"
+                }
+              ],
+              "id": "A",
+              "name": "Proposal A",
+              "isConfidential": false,
+              "description": "Fictional aisle proposal A",
+              "definitions": {
+                "types": [
+                  {
+                    "id": "local-frame",
+                    "name": "Definition A",
+                    "kind": "机",
+                    "width": 2,
+                    "height": 1,
+                    "cells": [
+                      {
+                        "x": 0,
+                        "y": 0,
+                        "area": 1
+                      },
+                      {
+                        "x": 1,
+                        "y": 0,
+                        "area": 1
+                      }
+                    ],
+                    "edges": [
+                      "開放",
+                      "開放",
+                      "開放",
+                      "開放"
+                    ]
+                  }
+                ],
+                "requests": [
+                  {
+                    "id": "request-one",
+                    "value": "1",
+                    "description": "Rule A",
+                    "targets": [
+                      {
+                        "typeId": "local-frame",
+                        "area": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "circleLayouts": [],
+          "blockStyles": [],
+          "genreStyles": []
+        }
+      }
+    },
+    {
+      "id": "C",
+      "kind": "frame-layout",
+      "name": "Proposal C",
+      "data": {
+        "kind": "circle-space-frame-layout",
+        "formatVersion": 1,
+        "isConfidential": false,
+        "project": {
+          "schemaVersion": "1.0",
+          "project": {
+            "id": "portable-frame-layout",
+            "name": "Proposal C",
+            "isConfidential": false
+          },
+          "venue": {
+            "id": "sample-hall",
+            "name": "サンプルホール",
+            "width": 6,
+            "height": 4,
+            "blockedCells": [
+              {
+                "x": 0,
+                "y": 0
+              }
+            ],
+            "zones": [
+              {
+                "id": "entrance-side",
+                "name": "入口側",
+                "cells": [
+                  {
+                    "x": 0,
+                    "y": 3
+                  },
+                  {
+                    "x": 1,
+                    "y": 3
+                  },
+                  {
+                    "x": 2,
+                    "y": 3
+                  }
+                ]
+              }
+            ]
+          },
+          "deskTypes": [
+            {
+              "id": "standard-desk",
+              "name": "標準机",
+              "footprint": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 0
+                }
+              ]
+            }
+          ],
+          "participants": [],
+          "evaluation": {
+            "features": [],
+            "weightMaps": []
+          },
+          "deskLayouts": [
+            {
+              "deskPlacements": [
+                {
+                  "id": "plan-0-desk-01",
+                  "deskTypeId": "standard-desk",
+                  "anchor": {
+                    "x": 1,
+                    "y": 2
+                  },
+                  "orientation": "north"
+                },
+                {
+                  "id": "plan-0-desk-02",
+                  "deskTypeId": "standard-desk",
+                  "anchor": {
+                    "x": 4,
+                    "y": 2
+                  },
+                  "orientation": "south"
+                }
+              ],
+              "id": "C",
+              "name": "Proposal C",
+              "isConfidential": false,
+              "description": "Fictional aisle proposal C",
+              "definitions": {
+                "types": [
+                  {
+                    "id": "local-frame",
+                    "name": "Definition C",
+                    "kind": "机",
+                    "width": 2,
+                    "height": 1,
+                    "cells": [
+                      {
+                        "x": 0,
+                        "y": 0,
+                        "area": 1
+                      },
+                      {
+                        "x": 1,
+                        "y": 0,
+                        "area": 1
+                      }
+                    ],
+                    "edges": [
+                      "開放",
+                      "開放",
+                      "開放",
+                      "開放"
+                    ]
+                  }
+                ],
+                "requests": [
+                  {
+                    "id": "request-one",
+                    "value": "1",
+                    "description": "Rule C",
+                    "targets": [
+                      {
+                        "typeId": "local-frame",
+                        "area": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "circleLayouts": [],
+          "blockStyles": [],
+          "genreStyles": []
+        }
+      }
+    }
+  ]
+}

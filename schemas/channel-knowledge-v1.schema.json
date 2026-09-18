@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/channel-knowledge-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "description",
+    "purpose",
+    "inputRule",
+    "scale",
+    "offset",
+    "overallWeight",
+    "isConfidential",
+    "defaultWeight",
+    "cells"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "inputRule": {
+      "$ref": "#/$defs/inputRule"
+    },
+    "scale": {
+      "type": "number"
+    },
+    "offset": {
+      "type": "number"
+    },
+    "overallWeight": {
+      "type": "number"
+    },
+    "isConfidential": {
+      "type": "boolean"
+    },
+    "defaultWeight": {
+      "type": "number"
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "x",
+          "y",
+          "weight"
+        ],
+        "properties": {
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "weight": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "venue": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "width",
+            "height",
+            "blockedCells",
+            "zones"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "blockedCells": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "integer"
+                  },
+                  "y": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "zones": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "cells"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "cells": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "properties": {
+                        "x": {
+                          "type": "integer"
+                        },
+                        "y": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "inputRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recommendedColumn",
+        "meaning",
+        "valueMeanings",
+        "blankIsZero"
+      ],
+      "properties": {
+        "recommendedColumn": {
+          "type": "string",
+          "minLength": 1
+        },
+        "meaning": {
+          "type": "string"
+        },
+        "valueMeanings": {
+          "type": "string"
+        },
+        "blankIsZero": {
+          "type": "boolean"
+        },
+        "allowedValues": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

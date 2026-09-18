@@ -27,6 +27,7 @@ internal static class Program
 
         var tests = new (string Name, Action Run)[]
         {
+            ("Portable fixtures retain local definitions and reject missing knowledge coefficients", PortableFixtures),
             ("Channel column mappings and imported values survive JSON round trip", ChannelRoundTrip),
             ("Channel imports preserve Excel numeric precision and formatted circle IDs", ChannelNumericPrecision),
             ("Anonymous version-1 example loads and evaluates", ExampleLoadsAndEvaluates),
@@ -67,6 +68,27 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void PortableFixtures()
+    {
+        var layouts = ProjectPortableSerializer.Load(File.ReadAllText("examples/fictional-proposals.project-portable.json"));
+        AssertEqual(2, layouts.Projects.Length);
+        AssertEqual(layouts.Projects[0].DeskTypes[0].Id, layouts.Projects[1].DeskTypes[0].Id);
+        AssertEqual("Rule A", layouts.Projects[0].DeskLayouts[0].Definitions!.Requests[0].Description);
+        AssertEqual("Rule C", layouts.Projects[1].DeskLayouts[0].Definitions!.Requests[0].Description);
+        var json = File.ReadAllText("examples/fictional-books.project-portable.json");
+        var knowledge = ProjectPortableSerializer.Load(json).Document.Knowledge!.Single();
+        AssertEqual(true, knowledge.IsConfidential);
+        AssertEqual(1d, knowledge.Cells[0].Weight);
+        foreach (var field in new[] { "scale", "offset", "overallWeight", "isConfidential", "inputRule", "defaultWeight" })
+        {
+            var node = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+            node["knowledge"]![0]!.AsObject().Remove(field);
+            var rejected = false;
+            try { ProjectPortableSerializer.Load(node.ToJsonString()); } catch (JsonException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
     }
 
     private static void ExampleLoadsAndEvaluates()

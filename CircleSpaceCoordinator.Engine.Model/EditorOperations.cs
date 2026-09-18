@@ -6,6 +6,9 @@ using System.Text.Json.Serialization;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "operation")]
 [JsonDerivedType(typeof(ImportFrameLayout), "ImportFrameLayout")]
+[JsonDerivedType(typeof(ImportPortableSelection), "ImportPortableSelection")]
+[JsonDerivedType(typeof(CaptureChannelKnowledge), "CaptureChannelKnowledge")]
+[JsonDerivedType(typeof(BindChannelKnowledge), "BindChannelKnowledge")]
 [JsonDerivedType(typeof(SetFrameLayoutDefinitions), "SetFrameLayoutDefinitions")]
 [JsonDerivedType(typeof(SetFrameLayoutConfidential), "SetFrameLayoutConfidential")]
 [JsonDerivedType(typeof(SetVenueName), "SetVenueName")]
@@ -62,6 +65,10 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(SetIslandStart), "SetIslandStart")]
 [JsonDerivedType(typeof(NumberFramesFromIslands), "NumberFramesFromIslands")]
 public abstract record EditorOperation;
+public sealed record CaptureChannelKnowledge(string featureId, string id, string description, string purpose,
+    CircleSpaceCoordinator.Core.Evaluation.ChannelInputRule rule, bool confidential) : EditorOperation;
+public sealed record BindChannelKnowledge(string id, string featureId, string name, string column) : EditorOperation;
+public sealed record ImportPortableSelection(PortablePackage package, IReadOnlyList<PortableImportItem> selection) : EditorOperation;
 public sealed record ImportFrameLayout(CircleSpaceProject incoming, string id, string name) : EditorOperation;
 public sealed record SetFrameLayoutDefinitions(string layoutId, SpaceDefinitionCatalog definitions) : EditorOperation;
 public sealed record SetFrameLayoutConfidential(string layoutId) : EditorOperation;

@@ -2667,12 +2667,12 @@ public sealed partial class VenueEditorGame : Game
         }
         if (action == ToolbarAction.ExportFrameLayout)
         {
-            ExportFrameLayout();
+            ExportPortable();
             return (true, "frame_layout_export");
         }
         if (action == ToolbarAction.ImportFrameLayout)
         {
-            ImportFrameLayout();
+            ImportPortable();
             return (true, "frame_layout_import");
         }
         if (action == ToolbarAction.SpaceDefinitionsMode)
@@ -3027,8 +3027,8 @@ public sealed partial class VenueEditorGame : Game
                         textRenderer?.Draw(button.Action switch
                         {
                             ToolbarAction.ToggleCircleStoneTransparency => "石を半透明",
-                            ToolbarAction.ExportFrameLayout => "配置データ書出し",
-                            ToolbarAction.ImportFrameLayout => "配置データ読込",
+                            ToolbarAction.ExportFrameLayout => "部分書出し",
+                            ToolbarAction.ImportFrameLayout => "部分読込み",
                             ToolbarAction.ImportParticipants => "Excel / CSV 読込",
                             ToolbarAction.SelectExportTarget => "出力先",
                             ToolbarAction.SelectExportColumns => "出力列",
@@ -3338,8 +3338,8 @@ public sealed partial class VenueEditorGame : Game
     {
         ToolbarAction.ToggleCircleStoneTransparency => "数値チャンネルで石の塗りを半透明にし、下地の重みを見る（再クリックで戻す）",
         ToolbarAction.FillVacantSeats => "未配置・仮置きのサークル石を、合体ルールを守って空いている配置可能セルへ一括配置する",
-        ToolbarAction.ExportFrameLayout => "選択中のフレーム配置を、会場名・定義・島定義と一緒に書き出す",
-        ToolbarAction.ImportFrameLayout => "フレーム配置データを読み込み、現在のイベントに配置案を追加する",
+        ToolbarAction.ExportFrameLayout => "フレーム配置案を選び、会場・定義と一緒に部分書出しする",
+        ToolbarAction.ImportFrameLayout => "ポータブル・旧配置データから案を選んで現在のイベントに追加する",
         ToolbarAction.SpaceDefinitionsMode => "このフレーム配置の型と申込スペースを編集する",
         ToolbarAction.DeskMenu => "フレーム：追加・削除を選択",
         ToolbarAction.PillarMenu => "柱：追加・削除を選択",

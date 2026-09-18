@@ -13,6 +13,7 @@ public sealed record CircleSpaceProject(
     IReadOnlyList<Plan> Plans)
 {
     public string? Description { get; init; }
+    public IReadOnlyList<ChannelKnowledge> ChannelKnowledge { get; init; } = [];
 
     /// <summary>Marks business data that must not be published. This is a visual warning, not access control.</summary>
     public bool IsConfidential { get; init; }

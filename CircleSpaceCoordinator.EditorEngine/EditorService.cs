@@ -242,7 +242,7 @@ public sealed partial class EditorService(Thinking.ThinkingClient thinking, Sess
         catch (KeyNotFoundException) { throw new RpcException(new Status(StatusCode.NotFound, "Workspace or plan does not exist.")); }
         catch (ProjectValidationException exception)
         { throw new RpcException(new Status(StatusCode.InvalidArgument, exception.Message), new Metadata { { "validation-json", WireJson.Write(exception.Issues) } }); }
-        catch (Exception exception) when (exception is ArgumentException or JsonException)
+        catch (Exception exception) when (exception is ArgumentException or JsonException or InvalidDataException)
         { throw new RpcException(new Status(StatusCode.InvalidArgument, exception.Message)); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         { throw new RpcException(new Status(StatusCode.Unavailable, exception.Message)); }

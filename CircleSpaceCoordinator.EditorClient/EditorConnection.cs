@@ -23,6 +23,11 @@ public sealed class EditorConnection : IDisposable
         new DocumentRequest { ProjectJson = json }, Deadline())).ModelJson);
     public string Encode(CircleSpaceProject project) => Invoke(() => Client.ConvertDocument(
         new DocumentRequest { ModelJson = WireJson.Write(project) }, Deadline())).ProjectJson;
+    public string ExportPortable(PortableExportRequest request) => Portable("export", WireJson.Write(request));
+    public PortablePackage ParsePortable(string json) => WireJson.Read<PortablePackage>(Portable("parse", json));
+    public PortablePreview PreviewPortable(PortablePreviewRequest request) => WireJson.Read<PortablePreview>(Portable("preview", WireJson.Write(request)));
+    private string Portable(string action, string json) => Invoke(() => Client.Portable(
+        new PortableRequest { Action = action, Json = json }, Deadline())).Json;
     public static CallOptions Deadline() => new(deadline: DateTime.UtcNow.AddSeconds(15));
     internal static T Invoke<T>(Func<T> action)
     {

@@ -11,6 +11,9 @@ public static class EditorOperationHandler
 {
     public static CircleSpaceProject Apply(CircleSpaceProject project, EditorOperation operation) => operation switch
     {
+        CaptureChannelKnowledge op => ChannelKnowledgeService.Capture(project, op.featureId, op.id, op.description, op.purpose, op.rule, op.confidential),
+        BindChannelKnowledge op => ChannelKnowledgeService.Bind(project, op.id, op.featureId, op.name, op.column),
+        ImportPortableSelection op => PortableSelectionService.Apply(project, op.package, op.selection),
         ImportFrameLayout op => FrameLayoutImportService.Add(project, op.incoming, op.id, op.name),
         SetFrameLayoutDefinitions op => SetDefinitions(project, op),
         SetFrameLayoutConfidential op => project.DeskLayouts.Any(layout => layout.Id == op.layoutId)

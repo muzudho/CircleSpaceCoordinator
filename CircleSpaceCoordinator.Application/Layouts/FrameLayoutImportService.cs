@@ -22,8 +22,7 @@ public static class FrameLayoutImportService
             throw new InvalidOperationException("同名のフレーム配置案があります。別の名前を入力してください。");
 
         // Venue geometry is shared by all layouts. Adopt it only before anything has been placed.
-        var empty = project.DeskLayouts.All(layout => layout.DeskPlacements.Count == 0 && layout.FacingRegions.Count == 0) &&
-            project.CircleLayouts.All(layout => layout.Assignments.Count == 0 && layout.TemporaryPlacements.Count == 0);
+        var empty = CanAdoptVenue(project);
         if (!empty && !SameGeometry(project.Venue, incoming.Venue))
             throw new InvalidOperationException("会場の寸法・障害物・ゾーンが異なるため追加できません。既存の配置を保つため、同じ会場のフレーム配置データを指定してください。");
 
@@ -63,6 +62,13 @@ public static class FrameLayoutImportService
         var issues = ProjectValidator.Validate(result);
         if (issues.Count > 0) throw new ProjectValidationException(issues);
         return result;
+    }
+
+    public static bool CanAdoptVenue(CircleSpaceProject project)
+    {
+        var migrated = LayoutProjection.MigrateLegacyPlans(project);
+        return migrated.DeskLayouts.All(layout => layout.DeskPlacements.Count == 0 && layout.FacingRegions.Count == 0) &&
+            migrated.CircleLayouts.All(layout => layout.Assignments.Count == 0 && layout.TemporaryPlacements.Count == 0);
     }
 
     private static bool SameGeometry(Venue first, Venue second) =>

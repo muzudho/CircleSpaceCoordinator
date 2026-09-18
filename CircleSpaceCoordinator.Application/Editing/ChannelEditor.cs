@@ -72,10 +72,14 @@ public static class ChannelEditor
                 if (!participant.SourceValues.TryGetValue(feature.SourceColumn!, out var text))
                     throw new ArgumentException($"取込みデータに列「{feature.SourceColumn}」がありません。");
                 var value = 0d;
+                if (string.IsNullOrWhiteSpace(text) && feature.InputRule is { BlankIsZero: false })
+                    throw new ArgumentException($"列「{feature.SourceColumn}」は空欄にできません。");
                 if (!string.IsNullOrWhiteSpace(text) &&
                     (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || !double.IsFinite(value)))
                     throw new ArgumentException($"サークルID「{participant.CircleId}」の列「{feature.SourceColumn}」は有限の数値で入力してください。");
                 values[feature.Id] = value;
+                if (feature.InputRule?.AllowedValues is { } allowed && !allowed.Contains(value))
+                    throw new ArgumentException($"列「{feature.SourceColumn}」の値 {value} は入力ルールに含まれません。");
             }
             return participant with { Features = values };
         }).ToArray(),

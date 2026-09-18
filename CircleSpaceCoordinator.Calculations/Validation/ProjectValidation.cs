@@ -9,6 +9,12 @@ public static class ProjectValidator
     {
         ArgumentNullException.ThrowIfNull(project);
         var issues = new List<ValidationIssue>();
+        CheckUnique(project.ChannelKnowledge.Select(item => item.Id), "channelKnowledge");
+        foreach (var knowledge in project.ChannelKnowledge)
+        {
+            try { knowledge.Validate(); }
+            catch (ArgumentException ex) { Add("channelKnowledge.invalid", "channelKnowledge", ex.Message); }
+        }
 
         foreach (var layout in project.DeskLayouts)
             if (layout.Definitions is { } definitions)

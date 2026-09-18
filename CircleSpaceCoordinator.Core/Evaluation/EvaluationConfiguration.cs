@@ -11,6 +11,9 @@ public sealed record EvaluationFeature(
 {
     public string? Description { get; init; }
     public string? SourceColumn { get; init; }
+    public ChannelInputRule? InputRule { get; init; }
+    public string? Purpose { get; init; }
+    public bool IsConfidential { get; init; }
 }
 
 public sealed record WeightMap(

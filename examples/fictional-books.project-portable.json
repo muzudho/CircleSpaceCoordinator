@@ -1,0 +1,54 @@
+{
+  "kind": "circle-space-project-portable",
+  "formatVersion": 1,
+  "name": "Fictional book knowledge",
+  "description": "No participants. Explicit column binding is required.",
+  "tags": [
+    "fictional",
+    "meeting"
+  ],
+  "isConfidential": true,
+  "items": [],
+  "knowledge": [
+    {
+      "id": "books",
+      "name": "Books",
+      "description": "Lighting and books",
+      "purpose": "Place circles with books in bright seats.",
+      "inputRule": {
+        "recommendedColumn": "Books",
+        "meaning": "Whether books are displayed",
+        "valueMeanings": "1: books; 0 or blank: no books",
+        "blankIsZero": true,
+        "allowedValues": [
+          0,
+          1
+        ]
+      },
+      "scale": 1,
+      "offset": 0,
+      "overallWeight": 1,
+      "isConfidential": true,
+      "defaultWeight": 0,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0,
+          "weight": 1
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "weight": -1
+        }
+      ],
+      "venue": {
+        "name": "Fictional hall",
+        "width": 2,
+        "height": 1,
+        "blockedCells": [],
+        "zones": []
+      }
+    }
+  ]
+}

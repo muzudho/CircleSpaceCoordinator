@@ -80,6 +80,9 @@ public static class ProjectJsonSerializer
         {
             Description = item.Description,
             SourceColumn = item.SourceColumn,
+            InputRule = item.InputRule,
+            Purpose = item.Purpose,
+            IsConfidential = item.IsConfidential,
         }).ToArray();
         var weightMaps = source.Evaluation.WeightMaps.Select(item => new WeightMap(
             item.FeatureId,
@@ -171,6 +174,7 @@ public static class ProjectJsonSerializer
             plans)
         {
             Description = source.Project.Description,
+            ChannelKnowledge = source.ChannelKnowledge ?? [],
             ParticipantTableSource = source.ParticipantTableSource,
             ExportPlanId = source.ExportPlanId,
             IsConfidential = source.Project.IsConfidential,
@@ -196,6 +200,7 @@ public static class ProjectJsonSerializer
         return new()
     {
         SchemaVersion = source.SchemaVersion,
+        ChannelKnowledge = source.ChannelKnowledge.Count == 0 ? null : source.ChannelKnowledge.ToArray(),
         ParticipantTableSource = source.ParticipantTableSource,
         ExportPlanId = source.ExportPlanId,
         Project = new ProjectMetadataDocument
@@ -267,6 +272,9 @@ public static class ProjectJsonSerializer
                 Offset = item.Offset,
                 OverallWeight = item.OverallWeight,
                 SourceColumn = item.SourceColumn,
+                InputRule = item.InputRule,
+                Purpose = item.Purpose,
+                IsConfidential = item.IsConfidential,
             }).ToList(),
             WeightMaps = source.Evaluation.WeightMaps.Select(item => new WeightMapDocument
             {
@@ -410,6 +418,7 @@ public static class ProjectJsonSerializer
 
     private sealed class ProjectDocument
     {
+        public ChannelKnowledge[]? ChannelKnowledge { get; set; }
         public string SchemaVersion { get; set; } = "";
         public ProjectMetadataDocument Project { get; set; } = new();
         public EditorViewDocument? EditorView { get; set; }
@@ -509,6 +518,10 @@ public static class ProjectJsonSerializer
         public double Offset { get; set; }
         public double OverallWeight { get; set; }
         public string? SourceColumn { get; set; }
+        public ChannelInputRule? InputRule { get; set; }
+        public string? Purpose { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool IsConfidential { get; set; }
     }
 
     private sealed class WeightMapDocument

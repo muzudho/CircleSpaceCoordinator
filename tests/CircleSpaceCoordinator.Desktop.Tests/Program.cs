@@ -24,6 +24,8 @@ internal static class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Channel knowledge shares rules and weights without participant data and binds explicitly", PortableKnowledgeRoundTrip),
+            ("Portable selection crosses gRPC, filters dependencies, previews and commits atomically", PortableSelectionRoundTrip),
             ("Portable frame layouts retain definitions, topology and confidentiality without circle data", PortableFrameRoundTrip),
             ("Portable imports reject malformed data and never replace existing event files", PortableFrameRejections),
             ("Local frame definitions and venue metadata survive remote history and persistence", PortableFrameEditing),
@@ -130,6 +132,155 @@ internal static class Program
 
         Console.WriteLine($"{tests.Length - failures}/{tests.Length} tests passed.");
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void PortableKnowledgeRoundTrip()
+    {
+        var connection = CircleSpaceCoordinator.EditorClient.EditorConnection.Current;
+        var project = LayoutProjection.MigrateLegacyPlans(CreateProject());
+        project = project with { Evaluation = new([new("book", "書籍の有無", 2, 3, 4)],
+            [new("book", 0.25, new Dictionary<GridPosition, double> { [new(0, 0)] = 1, [new(1, 0)] = -1 })]),
+            Participants = project.Participants.Select(item => item with { Features = new Dictionary<string, double>(),
+                SourceValues = new Dictionary<string, string> { ["Books"] = "1" } }).ToArray() };
+        using var source = connection.Open(ProjectJsonSerializer.Save(project));
+        var rule = new ChannelInputRule("書籍", "書籍の有無", "1=書籍あり、0=なし", true, [0, 1]);
+        source.Execute(new CircleSpaceCoordinator.Engine.Model.CaptureChannelKnowledge("book", "books", "照明の明暗", "書籍を明るい席へ", rule, true), selectedPlanEdit: false);
+        var captured = source.Project.ChannelKnowledge.Single();
+        AssertEqual(true, captured.IsConfidential);
+        AssertEqual(2d, captured.Scale);
+        var json = connection.ExportPortable(new(source.Project, [], new([], []), "知見", "", [], false) { KnowledgeIds = ["books"] });
+        AssertEqual(false, json.Contains("fictional-circle-001"));
+        AssertEqual(false, json.Contains("sourceValues"));
+        AssertEqual(false, json.Contains("participants"));
+        var package = connection.ParsePortable(json);
+        AssertEqual(0, package.Items.Count);
+        AssertEqual(1, package.Knowledge.Count);
+        AssertEqual("1=書籍あり、0=なし", package.Knowledge[0].InputRule.ValueMeanings);
+        var empty = project with { Participants = [], CircleLayouts = [], Plans = [], Evaluation = new([], []) };
+        using var destination = connection.Open(ProjectJsonSerializer.Save(empty));
+        var before = ProjectJsonSerializer.Save(destination.Project);
+        destination.Execute(new CircleSpaceCoordinator.Engine.Model.ImportPortableSelection(package, [new("knowledge:books", "import-books", "書籍の知見")]), selectedPlanEdit: false);
+        AssertEqual(0, destination.Project.Evaluation.Features.Count);
+        AssertEqual(1, destination.Project.ChannelKnowledge.Count);
+        AssertEqual(true, destination.Project.IsConfidential);
+        var persisted = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(destination.Project));
+        AssertEqual(-1d, persisted.ChannelKnowledge[0].Cells.Single(cell => cell.X == 1).Weight);
+        destination.Undo();
+        AssertEqual(before, ProjectJsonSerializer.Save(destination.Project));
+        destination.Redo();
+        AssertEqual(1, destination.Project.ChannelKnowledge.Count);
+        var template = connection.ParsePortable(connection.ExportPortable(new(destination.Project, [], new([], []), "ひな形", "", [], false)
+            { KnowledgeIds = ["import-books"], TemplateOnly = true }));
+        AssertEqual(true, template.IsConfidential);
+        AssertEqual(true, template.Knowledge[0].Venue is null);
+        AssertEqual(0, template.Knowledge[0].Cells.Length);
+        AssertEqual(0.25d, template.Knowledge[0].DefaultWeight);
+        var ready = destination.Project with { Participants = project.Participants };
+        using var bound = connection.Open(ProjectJsonSerializer.Save(ready));
+        bound.Execute(new CircleSpaceCoordinator.Engine.Model.BindChannelKnowledge("import-books", "bound", "書籍評価", "Books"), selectedPlanEdit: false);
+        AssertEqual(1d, bound.Project.Participants[0].Features["bound"]);
+        AssertEqual(3d, bound.Project.Evaluation.Features.Single().Offset);
+        AssertEqual(-1d, bound.Project.Evaluation.WeightMaps.Single().GetWeight(new(1, 0)) * bound.Project.Participants[0].Features["bound"]);
+        var blank = ready with { Participants = ready.Participants.Select(item => item with { SourceValues = new Dictionary<string, string> { ["Books"] = "" } }).ToArray() };
+        var blankBound = CircleSpaceCoordinator.Application.Layouts.ChannelKnowledgeService.Bind(blank, "import-books", "bound", "書籍評価", "Books");
+        AssertEqual(0d, blankBound.Participants[0].Features["bound"]);
+        foreach (var bad in new[] { "invalid", "2" })
+        {
+            var rejected = false;
+            try { CircleSpaceCoordinator.Application.Layouts.ChannelKnowledgeService.Bind(blank with {
+                Participants = blank.Participants.Select(item => item with { SourceValues = new Dictionary<string, string> { ["Books"] = bad } }).ToArray()
+            }, "import-books", "bound", "書籍評価", "Books"); } catch (ArgumentException) { rejected = true; }
+            AssertEqual(true, rejected);
+        }
+        var missing = false;
+        try { CircleSpaceCoordinator.Application.Layouts.ChannelKnowledgeService.Bind(ready, "import-books", "bound", "書籍評価", "missing"); }
+        catch (ArgumentException) { missing = true; }
+        AssertEqual(true, missing);
+        var mismatch = false;
+        try { CircleSpaceCoordinator.Application.Layouts.ChannelKnowledgeService.Bind(ready with { Venue = ready.Venue with { Width = 100 } }, "import-books", "bound", "書籍評価", "Books"); }
+        catch (InvalidOperationException) { mismatch = true; }
+        AssertEqual(true, mismatch);
+    }
+
+    private static void PortableSelectionRoundTrip()
+    {
+        var connection = CircleSpaceCoordinator.EditorClient.EditorConnection.Current;
+        var source = LayoutProjection.MigrateLegacyPlans(CreateProject());
+        var first = source.DeskLayouts[0] with { Id = "A", Name = "A", Definitions = new([], []) };
+        var second = first with { Id = "B", Name = "B", SeatLabels = [new("desk-1", new(0, 0), "B", "1")] };
+        var third = first with { Id = "C", Name = "C", IsConfidential = true };
+        source = source with { DeskLayouts = [first, second, third], CircleLayouts = [], Plans = [],
+            Description = "PRIVATE EVENT NOTES", BlockStyles = [new("B", "#111111", "#222222", "solid")] };
+        var before = ProjectJsonSerializer.Save(source);
+        var json = connection.ExportPortable(new(source, ["A", "C"], new([], []), "共有", "通路の提案", ["会議"], false));
+        AssertEqual(before, ProjectJsonSerializer.Save(source));
+        AssertEqual(false, json.Contains("PRIVATE EVENT NOTES"));
+        AssertEqual(false, json.Contains("fictional-circle-001"));
+        var package = connection.ParsePortable(json);
+        AssertEqual(2, package.Items.Count);
+        AssertEqual(true, package.IsConfidential);
+        AssertEqual("通路の提案", package.Description);
+        AssertEqual("会議", package.Tags.Single());
+        AssertEqual(0, package.Items[0].Project.BlockStyles.Count);
+        AssertEqual(0, package.Items[0].Project.Participants.Count);
+        var legacy = connection.ParsePortable(FrameLayoutPortableService.Export(source, "A", new([], [])));
+        AssertEqual(1, legacy.Items.Count);
+        using var remote = connection.Open(before);
+        var original = ProjectJsonSerializer.Save(remote.Project);
+        var selection = new CircleSpaceCoordinator.Engine.Model.PortableImportItem[] { new("C", "import-C", "採用C") };
+        var preview = connection.PreviewPortable(new(remote.Project, package, selection));
+        AssertEqual(1, preview.LayoutCount);
+        AssertEqual("import-C", preview.Selection.Single().NewId);
+        AssertEqual(package.Items[1].Project.DeskTypes[0].Id, preview.TypeMappings.Single().SourceTypeId);
+        AssertEqual(original, ProjectJsonSerializer.Save(remote.Project));
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.ImportPortableSelection(package, selection), selectedPlanEdit: false);
+        AssertEqual(4, remote.Project.DeskLayouts.Count);
+        AssertEqual("採用C", remote.Project.DeskLayouts.Last().Name);
+        AssertEqual(preview.TypeMappings.Single().TargetTypeId, remote.Project.DeskLayouts.Last().DeskPlacements[0].DeskTypeId);
+        AssertEqual(true, remote.Project.IsConfidential);
+        remote.Undo();
+        AssertEqual(original, ProjectJsonSerializer.Save(remote.Project));
+        selection = [new("A", "import-A", "採用A"), new("C", "import-C", "採用C")];
+        remote.Execute(new CircleSpaceCoordinator.Engine.Model.ImportPortableSelection(package, selection), selectedPlanEdit: false);
+        AssertEqual(5, remote.Project.DeskLayouts.Count);
+        var imported = ProjectJsonSerializer.Save(remote.Project);
+        remote.Undo();
+        AssertEqual(original, ProjectJsonSerializer.Save(remote.Project));
+        remote.Redo();
+        AssertEqual(imported, ProjectJsonSerializer.Save(remote.Project));
+        AssertEqual(5, ProjectJsonSerializer.Load(imported).DeskLayouts.Count);
+        void Reject(Action action)
+        {
+            var failed = false;
+            try { action(); } catch { failed = true; }
+            AssertEqual(true, failed);
+            AssertEqual(imported, ProjectJsonSerializer.Save(remote.Project));
+        }
+        var revision = remote.Revision;
+        Reject(() => remote.Execute(new CircleSpaceCoordinator.Engine.Model.ImportPortableSelection(package,
+            [new("A", "valid", "成功予定"), new("C", "bad", "A")]), selectedPlanEdit: false));
+        AssertEqual(revision, remote.Revision);
+        var staleRejected = false;
+        try
+        {
+            connection.Client.Execute(new CircleSpaceCoordinator.Engine.Contracts.V1.OperationRequest
+            {
+                WorkspaceId = remote.Id, ExpectedRevision = revision - 1, SelectedPlanEdit = false,
+                OperationJson = CircleSpaceCoordinator.Engine.Model.WireJson.Write<CircleSpaceCoordinator.Engine.Model.EditorOperation>(
+                    new CircleSpaceCoordinator.Engine.Model.ImportPortableSelection(package, [new("A", "stale", "古い確認")]))
+            });
+        }
+        catch (Grpc.Core.RpcException ex) when (ex.StatusCode == Grpc.Core.StatusCode.Aborted) { staleRejected = true; }
+        AssertEqual(true, staleRejected);
+        AssertEqual(imported, ProjectJsonSerializer.Save(remote.Project));
+        Reject(() => remote.Execute(new CircleSpaceCoordinator.Engine.Model.ImportPortableSelection(package, []), selectedPlanEdit: false));
+        Reject(() => connection.ParsePortable(json.Replace("\"formatVersion\": 1", "\"formatVersion\": 999")));
+        Reject(() => connection.ParsePortable(json.Replace("\"kind\": \"frame-layout\"", "\"kind\": \"unknown\"")));
+        Reject(() => connection.ParsePortable(json.Replace("\"id\": \"C\"", "\"id\": \"A\"")));
+        Reject(() => connection.ExportPortable(new(source, [], new([], []), "共有", "", [], false)));
+        // A failed batch must not add a history entry.
+        remote.Undo();
+        AssertEqual(original, ProjectJsonSerializer.Save(remote.Project));
     }
 
     private static void PortableFrameRoundTrip()
