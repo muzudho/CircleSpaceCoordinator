@@ -7,10 +7,11 @@ using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
-    private sealed record EvaluationRow(string Name, string Points = "", string Weight = "", string Result = "", double? Contribution = null);
+    private sealed record EvaluationRow(string Name, string Points = "", string Weight = "", string Result = "", double? Contribution = null, bool IsGeneral = false);
     private List<EvaluationRow>? evaluationRows;
     private int evaluationTop;
-    private double evaluationTotal;
+    private double evaluationGeneralTotal;
+    private double evaluationCircleTotal;
     private bool evaluationValid;
     private bool evaluationScrollbarDragging;
     private double evaluationScrollbarGrab;
@@ -24,13 +25,14 @@ public sealed partial class VenueEditorGame
         evaluationTop = 0;
         evaluationScrollbarDragging = false;
         evaluationValid = audience.CombinedSpaceRequirementsSatisfied;
-        evaluationTotal = audience.GeneralAttendeeScore + audience.CircleParticipantScore;
+        evaluationGeneralTotal = audience.GeneralAttendeeScore;
+        evaluationCircleTotal = audience.CircleParticipantScore;
         static string Number(double value) => value.ToString("G8");
         evaluationRows = [];
         if (!evaluationValid)
             evaluationRows.Add(new("合体条件未達：以下は適用前の得点です。実評価は両方とも0点です。"));
         var genreScore = audience.Genres.Sum(item => item.Score);
-        evaluationRows.Add(new("ジャンル", Number(genreScore), "1", Number(genreScore), genreScore));
+        evaluationRows.Add(new("ジャンル", Number(genreScore), "1", Number(genreScore), genreScore, IsGeneral: true));
         evaluationRows.Add(new("一般評価値", Result: Number(audience.GeneralAttendeeScore)));
         evaluationRows.Add(new(""));
         foreach (var result in snapshot.Evaluation.Features)
@@ -44,10 +46,11 @@ public sealed partial class VenueEditorGame
         if (snapshot.Evaluation.Features.Count == 0) evaluationRows.Add(new("（評価チャンネルなし）"));
         evaluationRows.Add(new("サークル評価値", Result: Number(audience.CircleParticipantScore)));
         evaluationRows.Add(new(""));
-        evaluationRows.Add(new("配置案評価値（一般＋サークル）", Result: Number(evaluationTotal)));
+        evaluationRows.Add(new("配置案評価値（一般＋サークル）", Result: Number(evaluationGeneralTotal + evaluationCircleTotal)));
         evaluationRows.Add(new(""));
-        evaluationRows.Add(new("寄与率＝各得点÷配置案合計。合計0・非有限値・条件未達は「—」。"));
-        evaluationRows.Add(new("負の寄与率や100％超もあります。棒の長さは寄与の絶対値の比較です。"));
+        evaluationRows.Add(new("寄与率：一般の項目は一般評価値、サークルの項目はサークル評価値で割ります。"));
+        evaluationRows.Add(new("各評価値が0・非有限値、または条件未達の場合、その寄与率は「—」。"));
+        evaluationRows.Add(new("負数や100％超もあります。棒は一般・サークル別に寄与の絶対値を比較します。"));
         evaluationRows.Add(new("順位・最適化は一般評価を優先し、同点ならサークル評価で比較します。"));
         evaluationRows.Add(new("チャンネル得点は配置済みサークルの列値×評価対象セルの重みの合計です。"));
         evaluationRows.Add(new("仮置き・未配置は集計対象外。表示は丸めており、合計は丸め前で計算します。"));
@@ -118,9 +121,10 @@ public sealed partial class VenueEditorGame
         Cell("得点", .38, .14, headerY, Color.LightGray);
         Cell("× 倍率", .52, .12, headerY, Color.LightGray);
         Cell("＝ 評価値", .64, .16, headerY, Color.LightGray);
-        Cell("全体への寄与率", .8, .2, headerY, Color.LightGray);
-        var maximum = evaluationRows.Where(row => row.Contribution is { } value && double.IsFinite(value))
-            .Select(row => Math.Abs(row.Contribution!.Value)).DefaultIfEmpty(0).Max();
+        Cell("一般・サークル別寄与率", .8, .2, headerY, Color.LightGray);
+        var maxima = evaluationRows.Where(row => row.Contribution is { } value && double.IsFinite(value))
+            .GroupBy(row => row.IsGeneral)
+            .ToDictionary(group => group.Key, group => group.Max(row => Math.Abs(row.Contribution!.Value)));
         var bar = EvaluationScrollbar();
         for (var i = 0; i < EvaluationPageSize && evaluationTop + i < evaluationRows.Count; i++)
         {
@@ -134,8 +138,10 @@ public sealed partial class VenueEditorGame
             Cell(row.Result, .64, .16, y, Color.White, summary);
             if (row.Contribution is { } contribution)
             {
-                var percent = contribution / evaluationTotal * 100;
-                var text = evaluationValid && evaluationTotal != 0 && double.IsFinite(evaluationTotal) && double.IsFinite(percent) ? $"{percent:0.##}%" : "—";
+                var total = row.IsGeneral ? evaluationGeneralTotal : evaluationCircleTotal;
+                var percent = contribution / total * 100;
+                var text = evaluationValid && total != 0 && double.IsFinite(total) && double.IsFinite(percent) ? $"{percent:0.##}%" : "—";
+                var maximum = maxima.GetValueOrDefault(row.IsGeneral);
                 if (maximum > 0 && double.IsFinite(contribution))
                     DrawRectangle(new(area.X + area.Width * .8, y + 25, area.Width * .19 * (Math.Abs(contribution) / maximum), 3),
                         contribution < 0 ? Color.Orange : Color.Turquoise);
