@@ -39,6 +39,7 @@ public sealed partial class VenueEditorGame
         exportPlanChoices = null;
         exportPreviewProject = null;
         viewerLines = null;
+        evaluationRows = null;
         viewerDocument = null;
         previewSheet = null;
         CancelInProgressPointerInteraction();
@@ -66,6 +67,7 @@ public sealed partial class VenueEditorGame
         }
         if (modalDialog is null) return false;
         EnsureModalButtons();
+        if (UpdateEvaluationBreakdown(keyboard, mouse)) return true;
         if (modalDialog.Kind == ModalDialogKind.Text) return UpdateUnderlineInput(keyboard, mouse);
         if (UpdateExportColumns(keyboard, mouse)) return true;
         if (!UpdateExportPlanPins(keyboard, mouse) && UpdateSelection(keyboard, mouse)) return true;
@@ -75,7 +77,7 @@ public sealed partial class VenueEditorGame
         foreach (var (button, _) in modalButtons) button.UpdatePointer(pointer);
         if (IsPressed(keyboard, Keys.Escape))
         {
-            if (selectionDirect) return true;
+            if (selectionDirect || evaluationRows is not null) return true;
             ApplyModalAction(ModalDialogAction.Cancel);
             return true;
         }
@@ -136,7 +138,7 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle ModalBounds()
     {
         var availableHeight = GraphicsDevice.Viewport.Height - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
-        var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null;
+        var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null || evaluationRows is not null;
         var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
         var height = Math.Min(large ? 620d : weightCommentFeatureId is not null ? 460d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
@@ -158,7 +160,7 @@ public sealed partial class VenueEditorGame
         var buttonWidth = Math.Min(130, (bounds.Width - 48) / 2);
         var right = bounds.X + bounds.Width - 20 - buttonWidth;
         var bottom = bounds.Y + bounds.Height - 58;
-        if (selectionDirect)
+        if (selectionDirect || evaluationRows is not null)
         {
             Add("×", ModalDialogAction.Cancel, bounds.X + bounds.Width - 58, bounds.Y + 10, 38);
             modalFocus = 0;
@@ -221,6 +223,7 @@ public sealed partial class VenueEditorGame
         if (weightCommentFeatureId is not null) DrawWeightComment();
         DrawSelection();
         DrawTextViewer();
+        DrawEvaluationBreakdown();
         DrawTablePreview();
         DrawExportColumns();
         for (var index = 0; index < modalButtons.Count; index++)

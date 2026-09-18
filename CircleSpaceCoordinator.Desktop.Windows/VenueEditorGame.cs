@@ -2487,6 +2487,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var circleActions = new[]
         {
+            ToolbarAction.ShowEvaluationBreakdown,
             ToolbarAction.ToggleCircleStoneTransparency,
             ToolbarAction.OptimizeCirclePlacement,
             ToolbarAction.AssignParticipant,
@@ -2495,6 +2496,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var genreActions = new[]
         {
+            ToolbarAction.ShowEvaluationBreakdown,
             ToolbarAction.FillVacantSeats,
             ToolbarAction.EditGenreStyles,
             ToolbarAction.ToggleEvaluationAnalysis,
@@ -2617,6 +2619,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.OptimizeCirclePlacement => workspace?.HasSelectedCircleLayout == true,
                 ToolbarAction.EditGenreStyles => workspace is not null && workspace.Project.Participants.Any(item => !string.IsNullOrWhiteSpace(item.GenreId)),
                 ToolbarAction.ToggleEvaluationAnalysis => workspace is not null,
+                ToolbarAction.ShowEvaluationBreakdown => workspace?.HasSelectedCircleLayout == true,
                 ToolbarAction.SwapAddresses => workspace is not null && ShowsAddressSwapButton,
                 ToolbarAction.AssignParticipant => workspace?.HasSelectedCircleLayout == true && participantController?.SelectedParticipantId is not null,
                 ToolbarAction.MoveDesk or ToolbarAction.AddDesk or ToolbarAction.RemoveDesk or ToolbarAction.EditSeatName or ToolbarAction.EditDeskNumber or ToolbarAction.AddPillar or ToolbarAction.RemovePillar or ToolbarAction.FillDesks or
@@ -2785,6 +2788,11 @@ public sealed partial class VenueEditorGame : Game
         {
             ToggleAddressSwapMode();
             return (true, "address_swap_mode");
+        }
+        if (action == ToolbarAction.ShowEvaluationBreakdown)
+        {
+            OpenEvaluationBreakdown();
+            return (true, "evaluation_breakdown");
         }
         if (action == ToolbarAction.ToggleEvaluationAnalysis)
         {
@@ -3152,6 +3160,11 @@ public sealed partial class VenueEditorGame : Game
                 DrawLine(new ScreenPoint(center.X - 9d, center.Y - 9d), new ScreenPoint(center.X + 9d, center.Y + 9d), 4d, color);
                 DrawLine(new ScreenPoint(center.X + 9d, center.Y - 9d), new ScreenPoint(center.X - 9d, center.Y + 9d), 4d, color);
                 break;
+            case ToolbarAction.ShowEvaluationBreakdown:
+                DrawLine(new ScreenPoint(center.X - 14, center.Y + 13), new ScreenPoint(center.X + 15, center.Y + 13), 2, color);
+                for (var bar = 0; bar < 3; bar++)
+                    DrawRectangle(new ScreenRectangle(center.X - 12 + bar * 10, center.Y + 9 - bar * 8, 6, 4 + bar * 8), color);
+                break;
             case ToolbarAction.ToggleEvaluationAnalysis:
                 DrawCircle(center, 12d, color);
                 DrawLine(new ScreenPoint(center.X - 8d, center.Y), new ScreenPoint(center.X - 2d, center.Y + 6d), 3d, color);
@@ -3399,6 +3412,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.AddFacingRegion => "向かい合わせ領域矩形を追加する（対角を2回選択）",
         ToolbarAction.RemoveTopology => "島接続補助直線または向かい合わせ領域を削除する",
         ToolbarAction.ToggleEvaluationAnalysis => "一般参加者評価の分析表示をオン／オフする",
+        ToolbarAction.ShowEvaluationBreakdown => "配置案の評価内訳：チャンネルの得点・倍率・寄与率を表示する",
         ToolbarAction.PreviousPlan => "前の配置案",
         ToolbarAction.NextPlan => "次の配置案",
         ToolbarAction.Undo => "元に戻す",
@@ -4039,6 +4053,7 @@ internal enum ToolbarAction
     ToggleAutomaticIslandConnection,
     RemoveTopology,
     ToggleEvaluationAnalysis,
+    ShowEvaluationBreakdown,
     DecreaseWidth,
     IncreaseWidth,
     DecreaseHeight,
