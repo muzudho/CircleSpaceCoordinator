@@ -146,7 +146,7 @@ public sealed partial class VenueEditorGame
         EnsureEventButtons();
         void Text(string text, ScreenRectangle bounds, int size = 18, bool bold = false) =>
             textRenderer?.Draw(text, ToRectangle(bounds), Color.White, size, bold);
-        Text("イベントリスト", new(24, 22, GraphicsDevice.Viewport.Width - 48, 42), 28, true);
+        Text("イベントプロジェクト一覧", new(24, 22, GraphicsDevice.Viewport.Width - 48, 42), 28, true);
         Text("イベントを選択して［開く］。新しいイベントもここから作成できます。", new(24, 68, GraphicsDevice.Viewport.Width - 48, 28));
         for (var row = 0; row < EventRows && eventScroll + row < eventProjects.Count; row++)
         {
@@ -229,7 +229,7 @@ public sealed partial class VenueEditorGame
     private void RequestReturnToEvents()
     {
         if (workspace is null || optimizationTask is not null) return;
-        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "イベントリストに戻る",
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "プロジェクトを閉じる（イベント一覧へ）",
             "イベントプロジェクトを保存してから閉じますか？\n保存せずに戻ると、最後の保存以降の変更は失われます。"), action =>
         {
             var decision = action switch
@@ -244,11 +244,13 @@ public sealed partial class VenueEditorGame
                 ShowInAppMessage("保存できませんでした", screenshotStatus ?? "保存に失敗しました。イベントは開いたままです。");
                 return false;
             }, CloseEventProject));
-        }, [("保存して戻る", ModalDialogAction.Accept), ("保存せず戻る", ModalDialogAction.Decrease), ("キャンセル", ModalDialogAction.Cancel)]);
+        }, [("保存して閉じる", ModalDialogAction.Accept), ("保存せず閉じる", ModalDialogAction.Decrease), ("キャンセル", ModalDialogAction.Cancel)]);
     }
 
     private void CloseEventProject()
     {
+        projectMenuOpen = false;
+        projectMenuDrain = true;
         PersistWorkingState();
         workspace?.Dispose();
         workspace = null;

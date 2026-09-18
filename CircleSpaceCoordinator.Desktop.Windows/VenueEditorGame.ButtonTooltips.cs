@@ -9,6 +9,11 @@ public sealed partial class VenueEditorGame
     {
         var mouse = Mouse.GetState();
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
+        if (projectMenuOpen)
+        {
+            var index = projectMenuButtons.FindIndex(button => Contains(button.Bounds, pointer));
+            return index >= 0 ? ProjectMenuDescriptions[index] : "";
+        }
         if (toolRingOpen)
         {
             var index = toolRingButtons.FindIndex(button => Contains(button.Bounds, pointer));

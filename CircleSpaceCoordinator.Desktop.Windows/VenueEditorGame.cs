@@ -199,6 +199,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void UpdateEditor(GameTime gameTime)
     {
+        if (Window.ClientBounds.Width > 0 && Window.ClientBounds.Width != projectToolbarWidth) CreateToolbar();
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
         if (!IsActive)
@@ -217,6 +218,16 @@ public sealed partial class VenueEditorGame : Game
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             screenshotRequested = true;
+        if (projectMenuOpen || projectMenuDrain)
+        {
+            PollOptimization();
+            if (!UpdateModalDialog(keyboard, mouse)) UpdateProjectMenu(keyboard, mouse);
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
         if (mappingDraft is not null)
         {
             if (!UpdateModalDialog(keyboard, mouse)) UpdateStyleMappingEditor(keyboard, mouse);
@@ -717,6 +728,8 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        pressedProjectMenuButton?.CancelPress();
+        pressedProjectMenuButton = null;
         viewerDragging = false;
         selectionPressed = -1;
         pressedMappingButton?.CancelPress();
@@ -848,6 +861,7 @@ public sealed partial class VenueEditorGame : Game
             if (!toolRingOpen) DrawStatusBar();
             DrawToolRing();
             DrawSpaceCatalog();
+            DrawProjectMenu();
             DrawModalDialog();
         }
         spriteBatch.End();
@@ -2460,8 +2474,6 @@ public sealed partial class VenueEditorGame : Game
         var deskActions = new[]
         {
             ToolbarAction.EditDeskLayoutDescription,
-            ToolbarAction.ExportFrameLayout,
-            ToolbarAction.ImportFrameLayout,
             ToolbarAction.MoveDesk,
             ToolbarAction.DeskMenu,
             ToolbarAction.EditSeatName,
@@ -2497,12 +2509,15 @@ public sealed partial class VenueEditorGame : Game
         };
         var commonEnd = new[]
         {
-            ToolbarAction.ReturnToEventList,
-            ToolbarAction.SaveProject,
             ToolbarAction.CaptureScreenshot,
         };
-        const double modeWidth = 158d;
-        var modeX = 12d;
+        var visibleModeCount = modeActions.Length - (frameModesCollapsed ? 2 : 0) - (circleModesCollapsed ? 2 : 0);
+        var toolbarWidth = Window.ClientBounds.Width > 0 ? Window.ClientBounds.Width : graphics.PreferredBackBufferWidth;
+        projectToolbarWidth = toolbarWidth;
+        var modeWidth = Math.Min(158d, Math.Max(44d, (toolbarWidth - 362d) / visibleModeCount));
+        toolbarButtons.Add(new ToolbarButton(ToolbarAction.ProjectMenu,
+            new IconButtonModel(new ScreenRectangle(12, 7, 142, 40), GetAccessibleName(ToolbarAction.ProjectMenu))));
+        var modeX = 164d;
         for (var index = 0; index < modeActions.Length; index++)
         {
             var action = modeActions[index];
@@ -2538,7 +2553,7 @@ public sealed partial class VenueEditorGame : Game
         };
         var actions = (editorMode is EditorMode.ParticipantData or EditorMode.CirclePlacementDecision or EditorMode.SpaceDefinitions ? Array.Empty<ToolbarAction>() : commonStart)
             .Concat(modeSpecificActions)
-            .Concat(editorMode == EditorMode.SpaceDefinitions ? [ToolbarAction.ReturnToEventList, ToolbarAction.CaptureScreenshot] : commonEnd)
+            .Concat(editorMode == EditorMode.SpaceDefinitions ? [ToolbarAction.CaptureScreenshot] : commonEnd)
             .OrderBy(GetToolbarActionGroup)
             .ToArray();
         var actionX = 12d;
@@ -2585,6 +2600,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.ToggleCircleStoneTransparency => ShowCircleHeatmap,
                 ToolbarAction.FillVacantSeats => workspace?.HasSelectedCircleLayout == true && optimizationTask is null && backgroundOperation is null,
                 ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes => true,
+                ToolbarAction.ProjectMenu => workspace is not null && optimizationTask is null,
                 ToolbarAction.SpaceDefinitionsMode => true,
                 ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu => workspace is not null,
                 ToolbarAction.PreviousPlan or ToolbarAction.NextPlan => GetDisplayedPlans().Count > 1,
@@ -2636,6 +2652,11 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
     {
+        if (action == ToolbarAction.ProjectMenu)
+        {
+            OpenProjectMenu();
+            return (true, "project_menu_opened");
+        }
         if (action == ToolbarAction.ToggleCircleStoneTransparency)
         {
             if (!ShowCircleHeatmap) return (false, "no_numeric_channel");
@@ -3027,7 +3048,9 @@ public sealed partial class VenueEditorGame : Game
                 (bounds, color) =>
                 {
                     var foreground = ToButtonColor(color);
-                    if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
+                    if (button.Action == ToolbarAction.ProjectMenu)
+                        textRenderer?.Draw("プロジェクト ▼", ToRectangle(bounds, 5), foreground, 17, true);
+                    else if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action is ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
@@ -3398,8 +3421,9 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.DecreaseHeight => "会場を縦に1セル縮める",
         ToolbarAction.IncreaseHeight => "会場を縦に1セル広げる",
         ToolbarAction.CaptureScreenshot => "スクリーンショットを撮る（Ctrl+P）",
-        ToolbarAction.SaveProject => "JSONプロジェクトを保存する（Ctrl+S）",
-        ToolbarAction.ReturnToEventList => "イベントリストに戻る（Ctrl+O）",
+        ToolbarAction.ProjectMenu => "プロジェクト：開く・保存・一部の書出し／取込み・閉じる",
+        ToolbarAction.SaveProject => "イベントプロジェクトを保存する（Ctrl+S）",
+        ToolbarAction.ReturnToEventList => "プロジェクトを閉じる（イベント一覧へ／Ctrl+O）",
         _ => action.ToString(),
     };
 
@@ -3943,6 +3967,7 @@ public sealed partial class VenueEditorGame : Game
 
 internal enum ToolbarAction
 {
+    ProjectMenu,
     ToggleCircleStoneTransparency,
     FillVacantSeats,
     ToggleFrameModes,
