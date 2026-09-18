@@ -3651,6 +3651,7 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) SaveProject()
     {
+        savedProjectState = null;
         if (workspace is null || projectSavePath is null)
             return (false, "save_path_unavailable");
         try
@@ -3667,6 +3668,7 @@ public sealed partial class VenueEditorGame : Game
             PersistWorkingState();
             screenshotStatus = $"PROJECT SAVED: {Path.GetFileName(projectSavePath)}";
             Log("project_saved", success: true, detail: $"path={projectSavePath}");
+            savedProjectState = (workspace, workspace.Revision, projectSavePath, viewport.Zoom, viewport.Origin.X, viewport.Origin.Y);
             return (true, $"path={projectSavePath}");
         }
         catch (Exception exception)

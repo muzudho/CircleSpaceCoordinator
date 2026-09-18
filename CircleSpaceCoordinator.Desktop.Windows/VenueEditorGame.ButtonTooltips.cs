@@ -12,7 +12,7 @@ public sealed partial class VenueEditorGame
         if (projectMenuOpen)
         {
             var index = projectMenuButtons.FindIndex(button => Contains(button.Bounds, pointer));
-            return index >= 0 ? ProjectMenuDescriptions[index] : "";
+            return index >= 0 ? ProjectMenuDescription(index) : "";
         }
         if (toolRingOpen)
         {

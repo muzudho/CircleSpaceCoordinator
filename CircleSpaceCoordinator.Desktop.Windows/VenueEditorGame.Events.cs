@@ -249,6 +249,7 @@ public sealed partial class VenueEditorGame
 
     private void CloseEventProject()
     {
+        savedProjectState = null;
         projectMenuOpen = false;
         projectMenuDrain = true;
         PersistWorkingState();

@@ -15,6 +15,14 @@ public sealed partial class VenueEditorGame
     private int projectMenuFocus;
     private ScreenRectangle projectMenuBounds;
     private string projectMenuStatus = "";
+    private (object Workspace, long Revision, string Path, double Zoom, double X, double Y)? savedProjectState;
+    private bool IsCurrentProjectSaved => workspace is not null && savedProjectState is { } saved &&
+        ReferenceEquals(saved.Workspace, workspace) && saved.Revision == workspace.Revision && saved.Path == projectSavePath &&
+        saved.Zoom == viewport.Zoom && saved.X == viewport.Origin.X && saved.Y == viewport.Origin.Y;
+    private string ProjectMenuDescription(int index) => index == 1 && IsCurrentProjectSaved
+        ? "現在の変更は保存できています。変更すると再び保存できます。" : ProjectMenuDescriptions[index];
+    private bool IsProjectMenuEntryEnabled(int index) => index == 5 || workspace is not null && optimizationTask is null &&
+        (index != 1 || projectSavePath is not null && !IsCurrentProjectSaved);
     private static readonly string[] ProjectMenuLabels =
         ["開く…（イベント一覧から選択）", "保存", "一部を書き出す…", "一部を取り込む…", "閉じる（イベント一覧へ）", "×"];
     private static readonly string[] ProjectMenuDescriptions =
@@ -68,8 +76,7 @@ public sealed partial class VenueEditorGame
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         for (var i = 0; i < projectMenuButtons.Count; i++)
         {
-            projectMenuButtons[i].IsEnabled = i == 5 || workspace is not null && optimizationTask is null &&
-                (i != 1 || projectSavePath is not null);
+            projectMenuButtons[i].IsEnabled = IsProjectMenuEntryEnabled(i);
             projectMenuButtons[i].UpdatePointer(pointer);
         }
         // Outside clicks, Escape, and focus changes never dismiss this menu.
@@ -96,7 +103,7 @@ public sealed partial class VenueEditorGame
 
     private void ActivateProjectMenu(int index)
     {
-        if (!projectMenuButtons[index].IsEnabled) return;
+        if (!IsProjectMenuEntryEnabled(index)) return;
         pressedProjectMenuButton?.CancelPress();
         pressedProjectMenuButton = null;
         projectMenuDrain = true;
@@ -130,16 +137,18 @@ public sealed partial class VenueEditorGame
         {
             var index = i;
             var button = projectMenuButtons[i];
+            button.IsEnabled = IsProjectMenuEntryEnabled(i);
             OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
-                (area, color) => textRenderer?.Draw(ProjectMenuLabels[index], ToRectangle(area, 8), ToButtonColor(color), 18, true));
+                (area, color) => textRenderer?.Draw(index == 1 && IsCurrentProjectSaved ? "保存できています" : ProjectMenuLabels[index],
+                    ToRectangle(area, 8), ToButtonColor(color), 18, true));
             if (i == projectMenuFocus) DrawOutline(button.Bounds, 2, new Color(110, 180, 230));
             if (i is 1 or 3)
                 DrawRectangle(new ScreenRectangle(button.Bounds.X, button.Bounds.Y + button.Bounds.Height + 2, button.Bounds.Width, 1), new Color(100, 110, 125));
         }
         var hovered = projectMenuButtons.FindIndex(button => button.IsPointerOver);
-        DrawStatusBar(hovered >= 0 ? ProjectMenuDescriptions[hovered] :
+        DrawStatusBar(hovered >= 0 ? ProjectMenuDescription(hovered) :
             projectMenuStatus.Length > 0 ? projectMenuStatus : "右上の［×］でメニューを閉じます。外側クリックやEscでは閉じません。");
     }
 }
