@@ -2,7 +2,9 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.Core.Model;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 using StationeryUI.Canvas;
+using StationeryUI.MonoGame.Controls.ActionBadge;
 
 public sealed partial class VenueEditorGame
 {
@@ -29,9 +31,14 @@ public sealed partial class VenueEditorGame
     private void DrawGenreKnowledgeComment(string? comment, ScreenRectangle bounds)
     {
         var size = Math.Max(10, (int)(14 * MappingEditorScale));
-        const string suffix = "［］";
+        var badge = ActionBadgeComponent.Create("EDIT", new Rectangle(0, 0,
+            (int)(bounds.Width / MappingEditorScale), (int)(bounds.Height / MappingEditorScale)));
+        var mouse = Mouse.GetState();
+        var hovered = mappingPickerColumn == 0 && CanShowEditorHover && Contains(bounds, new(mouse.X, mouse.Y));
+        if (hovered) badge.Show();
         var value = string.IsNullOrEmpty(comment) ? "コメントを入力" : comment;
-        var available = Math.Max(1, bounds.Width - 12);
+        var available = Math.Max(1, badge.Bounds.X * MappingEditorScale - 12);
+        var suffix = (textRenderer?.Measure(value, size).X ?? 0) > available ? "…" : "";
         // Truncate the preview, never the stored text or a Unicode text element.
         var boundaries = System.Globalization.StringInfo.ParseCombiningCharacters(value).Append(value.Length).ToArray();
         var lo = 0;
@@ -45,6 +52,7 @@ public sealed partial class VenueEditorGame
         textRenderer?.Draw(value[..boundaries[lo]] + suffix, ToRectangle(new(bounds.X + 6, bounds.Y + 3, available, bounds.Height - 9)),
             string.IsNullOrEmpty(comment) ? Color.LightGray : Color.White, size);
         DrawLine(new(bounds.X + 6, bounds.Y + bounds.Height - 7), new(bounds.X + bounds.Width - 6, bounds.Y + bounds.Height - 7),
-            1, new Color(99, 223, 185));
+            hovered ? 2 : 1, new Color(99, 223, 185));
+        DrawMappingBadge(badge, bounds);
     }
 }

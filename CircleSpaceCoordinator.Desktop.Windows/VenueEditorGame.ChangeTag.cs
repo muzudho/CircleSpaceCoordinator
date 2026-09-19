@@ -166,9 +166,15 @@ public sealed partial class VenueEditorGame
         // drawing to this app's pixel-coordinate SpriteBatch (no separate canvas/font).
         var badge = ActionBadgeComponent.Create("change", new Rectangle(0, 0, 680, 36));
         badge.Show();
+        DrawMappingBadge(badge, MappingLogBounds);
+    }
+
+    private void DrawMappingBadge(ActionBadgeComponent badge, ScreenRectangle anchor)
+    {
         if (!badge.IsVisible) return;
         var local = badge.Bounds;
-        var bounds = MappingBounds(36 + local.X, 536 + local.Y, local.Width, local.Height);
+        var bounds = new ScreenRectangle(anchor.X + local.X * MappingEditorScale, anchor.Y + local.Y * MappingEditorScale,
+            local.Width * MappingEditorScale, local.Height * MappingEditorScale);
         var rectangle = ToRectangle(bounds);
         var radius = Math.Max(1, Math.Min((int)Math.Round(6 * MappingEditorScale), rectangle.Height / 2));
         // Scanlines provide the same six-pixel rounded silhouette on the host canvas.

@@ -31,7 +31,7 @@ public sealed partial class VenueEditorGame
     private int mappingHeight = -1;
     private const int MappingVisibleRows = 6;
     private static readonly double[] DefaultMappingColumnEdges = [20, 290, 450, 610, 810, 980];
-    private static readonly double[] GenreMappingColumnEdges = [20, 290, 370, 450, 650, 820, 980];
+    private static readonly double[] GenreMappingColumnEdges = [20, 290, 370, 450, 530, 610, 980];
     private double[] MappingColumnEdges => mappingKnowledgeComments ? GenreMappingColumnEdges : DefaultMappingColumnEdges;
     private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight) / 660d));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
@@ -327,7 +327,7 @@ public sealed partial class VenueEditorGame
         Text(mappingKnowledgeComments ? "色・網掛けをクリックして選択。知見コメントはクリックして入力。黒＝主色、白＝副色。"
             : "主色・副色・網掛けのセルをクリックして選択。黒＝主色、白＝副色。", MappingBounds(20, 68, 960, 30));
         var headers = mappingKnowledgeComments
-            ? new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本", "知見コメント" }
+            ? new[] { "ジャンル", "主色", "副色", "網掛け", "見本", "知見" }
             : new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
         for (var column = 0; column < headers.Length; column++)
             Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
