@@ -261,7 +261,9 @@ public sealed partial class VenueEditorGame
 
     private void ScrollMappingRows(int offset)
     {
-        mappingScroll = Math.Clamp(mappingScroll + offset, 0, Math.Max(0, mappingDraft!.Rows.Count - MappingVisibleRows));
+        var lastPage = Math.Max(0, (mappingDraft!.Rows.Count - 1) / MappingVisibleRows);
+        var page = Math.Clamp(mappingScroll / MappingVisibleRows + Math.Sign(offset), 0, lastPage);
+        mappingScroll = page * MappingVisibleRows;
         mappingRow = Math.Clamp(mappingRow, mappingScroll, Math.Max(mappingScroll, Math.Min(mappingDraft.Rows.Count - 1, mappingScroll + MappingVisibleRows - 1)));
         mappingWidth = -1;
     }
@@ -313,7 +315,7 @@ public sealed partial class VenueEditorGame
             if (IsPressed(keyboard, Keys.Up) || IsPressed(keyboard, Keys.Down))
             {
                 if (mappingKnowledgeComments && draft.Rows.Count > 0) selectedGenreKey = draft.Rows[mappingRow].Key;
-                mappingScroll = Math.Clamp(mappingScroll, Math.Max(0, mappingRow - MappingVisibleRows + 1), mappingRow);
+                mappingScroll = mappingRow / MappingVisibleRows * MappingVisibleRows;
                 mappingWidth = -1;
             }
             if (IsPressed(keyboard, Keys.PageUp)) ScrollMappingRows(-MappingVisibleRows);
