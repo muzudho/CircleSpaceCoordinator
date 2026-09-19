@@ -112,8 +112,8 @@ public sealed partial class VenueEditorGame
         }
         if (mappingComposition.Length > 0) return true;
         var shift = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
-        if (IsPressed(keyboard, Keys.Left)) editor.Move(-1, shift);
-        if (IsPressed(keyboard, Keys.Right)) editor.Move(1, shift);
+        if (underlineLeftRepeat.Update(keyboard.IsKeyDown(Keys.Left), IsPressed(keyboard, Keys.Left), statusHintTime, true)) editor.Move(-1, shift);
+        if (underlineRightRepeat.Update(keyboard.IsKeyDown(Keys.Right), IsPressed(keyboard, Keys.Right), statusHintTime, true)) editor.Move(1, shift);
         if (IsPressed(keyboard, Keys.Home)) editor.MoveTo(0, shift);
         if (IsPressed(keyboard, Keys.End)) editor.MoveTo(editor.Text.Length, shift);
         if (underlineBackRepeat.Update(keyboard.IsKeyDown(Keys.Back), IsPressed(keyboard, Keys.Back), statusHintTime, true))

@@ -15,10 +15,14 @@ public sealed partial class VenueEditorGame
     private const int NoModalFocus = -2;
     private readonly EditingKeyRepeat underlineBackRepeat = new();
     private readonly EditingKeyRepeat underlineDeleteRepeat = new();
+    private readonly EditingKeyRepeat underlineLeftRepeat = new();
+    private readonly EditingKeyRepeat underlineRightRepeat = new();
     private void ResetUnderlineKeyRepeat()
     {
         underlineBackRepeat.Reset();
         underlineDeleteRepeat.Reset();
+        underlineLeftRepeat.Reset();
+        underlineRightRepeat.Reset();
     }
     private ITextInputService? textInputService;
     private UnderlineTextEditor? underlineEditor;
@@ -96,6 +100,8 @@ public sealed partial class VenueEditorGame
             !updates.Any(update => update.IsComposition) && !IsPressed(keyboard, Keys.Tab);
         var deleteBack = underlineBackRepeat.Update(keyboard.IsKeyDown(Keys.Back), IsPressed(keyboard, Keys.Back), statusHintTime, repeatEnabled);
         var deleteForward = underlineDeleteRepeat.Update(keyboard.IsKeyDown(Keys.Delete), IsPressed(keyboard, Keys.Delete), statusHintTime, repeatEnabled);
+        var moveLeft = underlineLeftRepeat.Update(keyboard.IsKeyDown(Keys.Left), IsPressed(keyboard, Keys.Left), statusHintTime, repeatEnabled);
+        var moveRight = underlineRightRepeat.Update(keyboard.IsKeyDown(Keys.Right), IsPressed(keyboard, Keys.Right), statusHintTime, repeatEnabled);
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released &&
             !Contains(UnderlineBounds(), pointer) && !modalButtons.Any(item => item.Button.Contains(pointer)))
@@ -134,8 +140,8 @@ public sealed partial class VenueEditorGame
         {
             var control = IsControlDown(keyboard);
             var shift = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
-            if (IsPressed(keyboard, Keys.Left)) editor.Move(-1, shift);
-            if (IsPressed(keyboard, Keys.Right)) editor.Move(1, shift);
+            if (moveLeft) editor.Move(-1, shift);
+            if (moveRight) editor.Move(1, shift);
             if (IsPressed(keyboard, Keys.Home)) editor.MoveTo(0, shift);
             if (IsPressed(keyboard, Keys.End)) editor.MoveTo(editor.Text.Length, shift);
             if (deleteBack)
