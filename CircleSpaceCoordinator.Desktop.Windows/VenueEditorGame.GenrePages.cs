@@ -23,7 +23,7 @@ public sealed partial class VenueEditorGame
     private int genreOrderDragIndex = -1;
     private int genreOrderPage;
     private const int GenreOrderPageSize = 16;
-    private ScreenRectangle GenreOrderCommentBounds => new(80, 86, 700, 34);
+    private ScreenRectangle GenreOrderCommentBounds => new(80, 101, 700, 34);
     private UnderlineTextEditor? genreOrderCommentEditor;
     private bool genreOrderCommentEditing;
     private string genreOrderCommentComposition = "";
@@ -54,7 +54,7 @@ public sealed partial class VenueEditorGame
     {
         var column = index / 8;
         var row = index % 8;
-        return new(80 + column * 440, 150 + row * 52, 410, 46);
+        return new(80 + column * 440, 160 + row * 52, 410, 46);
     }
 
     private void UpdateGenreOrderDialog(KeyboardState keyboard, MouseState mouse)
@@ -64,9 +64,9 @@ public sealed partial class VenueEditorGame
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
-            if (Contains(new ScreenRectangle(860, 590, 120, 38), pointer)) { genreOrderDialogOpen = false; return; }
-            if (Contains(new ScreenRectangle(580, 590, 120, 38), pointer) && genreOrderPage > 0) { genreOrderPage--; genreOrderDragIndex = -1; return; }
-            if (Contains(new ScreenRectangle(710, 590, 120, 38), pointer) && genreOrderPage < Math.Max(0, (draft.Rows.Count - 1) / GenreOrderPageSize))
+            if (Contains(new ScreenRectangle(860, 595, 120, 38), pointer)) { genreOrderDialogOpen = false; return; }
+            if (Contains(new ScreenRectangle(580, 595, 120, 38), pointer) && genreOrderPage > 0) { genreOrderPage--; genreOrderDragIndex = -1; return; }
+            if (Contains(new ScreenRectangle(710, 595, 120, 38), pointer) && genreOrderPage < Math.Max(0, (draft.Rows.Count - 1) / GenreOrderPageSize))
             {
                 genreOrderPage = Math.Min(Math.Max(0, (draft.Rows.Count - 1) / GenreOrderPageSize), genreOrderPage + 1);
                 genreOrderDragIndex = -1;
@@ -92,6 +92,8 @@ public sealed partial class VenueEditorGame
                     genreOrderDragIndex = index;
                     mappingGenreCodeOrder = draft.Rows.Select(row => row.Key).ToArray();
                     genreCodeOrder = mappingGenreCodeOrder.ToArray();
+                    genreCodeSort = true;
+                    genreSpaceSort = false;
                     mappingOrderChanged = true;
                     break;
                 }
@@ -191,12 +193,12 @@ public sealed partial class VenueEditorGame
                     ToRectangle(new(card.X + 8, card.Y + 24, card.Width - 16, 18), 0), new Color(190, 205, 210), 12, true);
         }
         var lastPage = Math.Max(0, (draft.Rows.Count - 1) / GenreOrderPageSize);
-        DrawRectangle(new ScreenRectangle(580, 590, 120, 38), genreOrderPage > 0 ? new Color(48, 70, 78) : new Color(40, 45, 50));
-        textRenderer?.Draw("前へ", ToRectangle(new ScreenRectangle(580, 590, 120, 38), 5), genreOrderPage > 0 ? Color.White : new Color(110, 120, 125), 15, true);
-        DrawRectangle(new ScreenRectangle(710, 590, 120, 38), genreOrderPage < lastPage ? new Color(48, 70, 78) : new Color(40, 45, 50));
-        textRenderer?.Draw("次へ", ToRectangle(new ScreenRectangle(710, 590, 120, 38), 5), genreOrderPage < lastPage ? Color.White : new Color(110, 120, 125), 15, true);
-        DrawRectangle(new ScreenRectangle(860, 590, 120, 38), new Color(48, 70, 78));
-        textRenderer?.Draw("閉じる", ToRectangle(new ScreenRectangle(860, 590, 120, 38), 5), Color.White, 17, true);
+        DrawRectangle(new ScreenRectangle(580, 595, 120, 38), genreOrderPage > 0 ? new Color(48, 70, 78) : new Color(40, 45, 50));
+        textRenderer?.Draw("前へ", ToRectangle(new ScreenRectangle(580, 595, 120, 38), 5), genreOrderPage > 0 ? Color.White : new Color(110, 120, 125), 15, true);
+        DrawRectangle(new ScreenRectangle(710, 595, 120, 38), genreOrderPage < lastPage ? new Color(48, 70, 78) : new Color(40, 45, 50));
+        textRenderer?.Draw("次へ", ToRectangle(new ScreenRectangle(710, 595, 120, 38), 5), genreOrderPage < lastPage ? Color.White : new Color(110, 120, 125), 15, true);
+        DrawRectangle(new ScreenRectangle(860, 595, 120, 38), new Color(48, 70, 78));
+        textRenderer?.Draw("閉じる", ToRectangle(new ScreenRectangle(860, 595, 120, 38), 5), Color.White, 17, true);
         DrawStatusBar("ジャンル名のカードをドラッグして並び替えます。閉じると色網掛けの並び順へ反映します。", "ジャンルコード順");
     }
     private static readonly string[] GenrePageTabs = ["色網掛け", "色見本カタログ", "スペース数比率", "円グラフ"];
