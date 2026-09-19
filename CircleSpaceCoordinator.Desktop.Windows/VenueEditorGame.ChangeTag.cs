@@ -152,7 +152,7 @@ public sealed partial class VenueEditorGame
             value => textRenderer?.Measure(value, size).X ?? 0,
             (value, area, fontSize, ink) => Text(value, area, fontSize, MappingInk(ink)),
             (area, ink) => DrawRectangle(area, MappingInk(ink)),
-            _ => DrawMappingActionBadge());
+            _ => DrawMappingActionBadge(), previousLog: mappingPreviousCredits?.ChangeLog);
         mappingTextRange = mappingTagView.VisibleRange;
         if (mappingTextFocused) textInputService?.SetInputArea(mappingTagView.CaretBounds);
     }
@@ -192,7 +192,7 @@ public sealed partial class VenueEditorGame
         ChangeTagInk.Error => new Color(155, 48, 35),
         ChangeTagInk.Composition => new Color(167, 105, 15),
         ChangeTagInk.Paper => new Color(235, 224, 200),
-        ChangeTagInk.Shadow => new Color(0, 0, 0, 100),
+        ChangeTagInk.Shadow => new Color(255, 250, 240, 100),
         _ => new Color(49, 43, 33),
     };
 }

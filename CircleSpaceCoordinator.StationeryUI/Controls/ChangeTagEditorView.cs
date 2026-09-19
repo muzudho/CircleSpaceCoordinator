@@ -23,7 +23,7 @@ public sealed class ChangeTagEditorView
         Func<string, double> measure,
         Action<string, ScreenRectangle, int, ChangeTagInk> text,
         Action<ScreenRectangle, ChangeTagInk> fill,
-        Action<ScreenRectangle>? badge = null)
+        Action<ScreenRectangle>? badge = null, string? previousLog = null)
     {
         ScreenRectangle Area(double x, double y, double width, double height) =>
             new(bounds.X + x * scale, bounds.Y + y * scale, width * scale, height * scale);
@@ -35,7 +35,12 @@ public sealed class ChangeTagEditorView
         InputBounds = Area(16, 34, inputWidth, 36);
         BadgeBounds = Area(16 + inputWidth - 108, 42, 100, 26);
         text(attribution, Area(16, 8, width - 32, 22), 14, ChangeTagInk.Text);
-        if (!model.HasChanges) return;
+        if (!model.HasChanges)
+        {
+            if (!string.IsNullOrWhiteSpace(previousLog))
+                text(previousLog, InputBounds, InputFontSize, ChangeTagInk.Text);
+            return;
+        }
         var editor = model.Editor;
         var insertion = composition.Length > 0 ? editor.SelectionStart : editor.Caret;
         var display = composition.Length > 0
