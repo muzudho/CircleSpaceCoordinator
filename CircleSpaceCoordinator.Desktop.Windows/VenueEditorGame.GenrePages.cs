@@ -173,7 +173,7 @@ public sealed partial class VenueEditorGame
             new(commentBounds.X + commentBounds.Width, commentBounds.Y + commentBounds.Height - 3), genreOrderCommentEditing ? 3 : 2, new Color(99, 223, 185));
         var editBadge = ActionBadgeComponent.Create("EDIT", new Rectangle(0, 0, 100, 26));
         editBadge.Show();
-        DrawMappingBadge(editBadge, commentBounds);
+        DrawMappingBadge(editBadge, new ScreenRectangle(commentBounds.X + commentBounds.Width - 100, commentBounds.Y, 100, commentBounds.Height));
         if (genreOrderCommentEditing && genreOrderCommentEditor is { } activeEditor)
         {
             var caretX = commentBounds.X + (textRenderer?.Measure(activeEditor.Text[..activeEditor.Caret], 16).X ?? 0);
