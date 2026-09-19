@@ -39,7 +39,7 @@ public sealed partial class VenueEditorGame
 
     private void AddGenreTabs()
     {
-        if (genrePageTab is 1 or 2)
+        if (mappingKnowledgeComments)
         {
             foreach (var (label, spaceSort, codeSort) in new[] { ("サークルデータ", false, false), ("スペース数", true, false), ("ジャンルコード", false, true) })
             {
@@ -55,6 +55,7 @@ public sealed partial class VenueEditorGame
                         {
                             genreCodeOrder = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToArray();
                             mappingGenreCodeOrder = genreCodeOrder;
+                            mappingDraft?.ReorderRows(genreCodeOrder);
                             genreCodeSort = true;
                             genreSpaceSort = false;
                             genrePreviewScroll = 0;
@@ -64,6 +65,12 @@ public sealed partial class VenueEditorGame
                     }
                     genreCodeSort = code;
                     genreSpaceSort = sort;
+                    if (mappingKnowledgeComments)
+                        mappingDraft?.ReorderRows(BuildGenrePreviewGroups(chartOrder: sort).Select(group => group.GenreId));
+                    if (code && genreCodeOrder.Length > 0)
+                        mappingDraft?.ReorderRows(genreCodeOrder);
+                    if (selectedGenreKey is { } selected)
+                        SelectGenreTarget(selected);
                     genrePreviewScroll = 0;
                     mappingFocus = -1;
                     mappingWidth = -1;

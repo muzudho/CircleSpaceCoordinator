@@ -32,7 +32,17 @@ public sealed class StyleMappingDraft
     private readonly StyleMappingEntry[] initialRows;
     private readonly string? initialOverallComment;
     public string? OverallComment { get; private set; }
-    public bool HasChanges => !rows.SequenceEqual(initialRows) || OverallComment != initialOverallComment;
+    public bool HasChanges => !rows.OrderBy(item => item.Key, StringComparer.Ordinal).SequenceEqual(initialRows.OrderBy(item => item.Key, StringComparer.Ordinal)) || OverallComment != initialOverallComment;
+    public void ReorderRows(IEnumerable<string> keys)
+    {
+        var rank = keys.Select((key, index) => (key, index)).ToDictionary(item => item.key, item => item.index, StringComparer.Ordinal);
+        rows.Sort((left, right) =>
+        {
+            var leftRank = rank.GetValueOrDefault(left.Key, int.MaxValue);
+            var rightRank = rank.GetValueOrDefault(right.Key, int.MaxValue);
+            return leftRank != rightRank ? leftRank.CompareTo(rightRank) : StringComparer.Ordinal.Compare(left.Key, right.Key);
+        });
+    }
     public void SetOverallComment(string? value) => OverallComment = GenreStyleDefinition.NormalizeKnowledgeComment(value);
     /// <summary>Restore the immutable copy captured when the page was opened.</summary>
     public void RestoreOpeningSnapshot()
