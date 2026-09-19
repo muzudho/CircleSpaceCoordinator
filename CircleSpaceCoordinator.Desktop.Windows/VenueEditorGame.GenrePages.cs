@@ -15,6 +15,7 @@ public sealed partial class VenueEditorGame
     private bool genreCodeSort;
     private string[] genreCodeOrder = [];
     private string[] mappingGenreCodeOrder = [];
+    private string? mappingGenreCodeOrderComment;
 
     private void SelectGenreTarget(string key, bool navigate = false)
     {
@@ -27,6 +28,30 @@ public sealed partial class VenueEditorGame
         mappingFocus = -1;
         if (navigate) genrePageTab = 0;
         mappingWidth = -1;
+    }
+
+    private void OpenGenreCodeOrderEditor()
+    {
+        var initial = string.Join(",", mappingGenreCodeOrder.Length > 0
+            ? mappingGenreCodeOrder
+            : mappingDraft?.Rows.Select(row => row.Key) ?? []);
+        OpenUnderlineInput("ジャンルコードの並び順", initial, value =>
+        {
+            var order = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Distinct(StringComparer.Ordinal).ToArray();
+            mappingGenreCodeOrder = order;
+            genreCodeOrder = order.ToArray();
+            mappingDraft?.ReorderRows(order);
+            mappingOrderChanged = !order.SequenceEqual(mappingAppliedGenreOrder, StringComparer.Ordinal);
+            mappingWidth = -1;
+            OpenUnderlineInput("ジャンルコード順のコメント", mappingGenreCodeOrderComment ?? "", comment =>
+            {
+                mappingGenreCodeOrderComment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+                mappingOrderChanged = true;
+                mappingWidth = -1;
+            }, "この並び順の意図や運用メモを入力できます。", 1000, allowEmpty: true,
+                validate: value => value.Contains('\n') ? "１行で入力してください。" : null);
+        }, "ジャンルコードを表示したい順にカンマ区切りで入力してください。", int.MaxValue);
     }
     private static readonly string[] GenrePageTabs = ["色網掛け", "色見本カタログ", "スペース数比率", "円グラフ"];
     private const int GenrePreviewPageSize = 6;

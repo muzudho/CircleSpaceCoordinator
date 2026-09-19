@@ -187,6 +187,7 @@ public static class ProjectJsonSerializer
             GenreStyleCredits = source.GenreStyleCredits,
             GenreStyleComment = source.GenreStyleComment,
             GenreCodeOrder = source.GenreCodeOrder ?? [],
+            GenreCodeOrderComment = source.GenreCodeOrderComment,
             BlockStyleCredits = source.BlockStyleCredits,
             BlockStyles = source.BlockStyles.OrderBy(item => item.BlockNumber, StringComparer.Ordinal).ToArray(),
             GenreStyles = source.GenreStyles.Select(item => new GenreStyleDefinition(
@@ -231,6 +232,7 @@ public static class ProjectJsonSerializer
         GenreStyleCredits = source.GenreStyleCredits,
         GenreStyleComment = source.GenreStyleComment,
         GenreCodeOrder = source.GenreCodeOrder.Count == 0 ? null : source.GenreCodeOrder.ToList(),
+        GenreCodeOrderComment = source.GenreCodeOrderComment,
         BlockStyleCredits = source.BlockStyleCredits,
         GenreStyles = source.GenreStyles.Select(item => new GenreStyleDocument
         {
@@ -448,6 +450,7 @@ public static class ProjectJsonSerializer
         public PersonCredits? GenreStyleCredits { get; set; }
         public string? GenreStyleComment { get; set; }
         public List<string>? GenreCodeOrder { get; set; }
+        public string? GenreCodeOrderComment { get; set; }
         public PersonCredits? BlockStyleCredits { get; set; }
         public List<GenreStyleDocument> GenreStyles { get; set; } = [];
         public List<BlockStyleDefinition> BlockStyles { get; set; } = [];
