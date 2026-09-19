@@ -34,14 +34,14 @@ public sealed partial class VenueEditorGame
     private static readonly double[] DefaultMappingColumnEdges = [20, 290, 450, 610, 810, 980];
     private static readonly double[] GenreMappingColumnEdges = [20, 290, 370, 450, 530, 610, 980];
     private double[] MappingColumnEdges => mappingKnowledgeComments ? GenreMappingColumnEdges : DefaultMappingColumnEdges;
-    private double MappingCanvasHeight => mappingKnowledgeComments ? 704d : 660d;
+    private double MappingCanvasHeight => 660d;
     private bool GenreChartVisible => mappingKnowledgeComments && genrePageTab > 0;
     private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight) / MappingCanvasHeight));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
     {
         var scale = MappingEditorScale;
         return new((GraphicsDevice.Viewport.Width - 1000 * scale) / 2 + x * scale,
-            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight - MappingCanvasHeight * scale) / 2 + (y + (mappingKnowledgeComments ? 44 : 0)) * scale, width * scale, height * scale);
+            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight - MappingCanvasHeight * scale) / 2 + y * scale, width * scale, height * scale);
     }
     private ScreenRectangle MappingCell(int visibleRow, int column) =>
         MappingBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46);
@@ -54,6 +54,7 @@ public sealed partial class VenueEditorGame
         mappingDraft = draft;
         mappingKnowledgeComments = knowledgeComments;
         genrePageTab = genrePreviewScroll = 0;
+        genrePieExpanded = false;
         mappingKeyLabel = keyLabel;
         mappingEmptyMessage = emptyMessage;
         applyStyleMapping = apply;
@@ -73,6 +74,7 @@ public sealed partial class VenueEditorGame
     private void CloseStyleMappingEditor()
     {
         CancelInProgressPointerInteraction();
+        genrePieExpanded = false;
         mappingDraft = null;
         SetMappingTextFocus(false);
         mappingChangeTag = null;
@@ -236,10 +238,13 @@ public sealed partial class VenueEditorGame
         else
         {
             if (mappingKnowledgeComments) AddGenreTabs();
-            Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
-                tooltip: "前のページの行を表示します。PageUpでも移動できます。");
-            Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollGenreOrMapping(MappingVisibleRows), GenreChartVisible ? genrePreviewScroll + GenrePreviewPageSize < BuildGenrePreviewGroups().Count : mappingScroll + MappingVisibleRows < draft.Rows.Count,
-                tooltip: "次のページの行を表示します。PageDownでも移動できます。");
+            if (!mappingKnowledgeComments || genrePageTab != 1)
+            {
+                Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
+                    tooltip: "前のページの行を表示します。PageUpでも移動できます。");
+                Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollGenreOrMapping(MappingVisibleRows), GenreChartVisible ? genrePreviewScroll + GenrePreviewPageSize < BuildGenrePreviewGroups().Count : mappingScroll + MappingVisibleRows < draft.Rows.Count,
+                    tooltip: "次のページの行を表示します。PageDownでも移動できます。");
+            }
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
                 tooltip: draft.HasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
             if (draft.HasChanges)
@@ -259,6 +264,7 @@ public sealed partial class VenueEditorGame
     private void UpdateStyleMappingEditor(KeyboardState keyboard, MouseState mouse)
     {
         if (mappingDraft is not { } draft) return;
+        if (genrePieExpanded) { UpdateExpandedGenrePie(keyboard, mouse); return; }
         BuildMappingEditorButtons();
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
             previousMouse.LeftButton == ButtonState.Released && Contains(MappingOverallCommentBounds, new(mouse.X, mouse.Y)))
@@ -341,10 +347,12 @@ public sealed partial class VenueEditorGame
     private void DrawStyleMappingEditor()
     {
         if (mappingDraft is not { } draft) return;
+        if (genrePieExpanded) { DrawExpandedGenrePie(); return; }
         BuildMappingEditorButtons();
         void Text(string text, ScreenRectangle bounds, int size = 17, Color? color = null) =>
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
-        Text($"{mappingKeyLabel}と色・網掛けパターンの紐づけ", MappingBounds(20, 18, 960, 38), 26);
+        Text(mappingKnowledgeComments ? "ジャンル" : $"{mappingKeyLabel}と色・網掛けパターンの紐づけ",
+            MappingBounds(20, 18, mappingKnowledgeComments ? 150 : 960, 38), 26);
         if (mappingKnowledgeComments) DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
         if (GenreChartVisible) DrawGenrePreview();
         else

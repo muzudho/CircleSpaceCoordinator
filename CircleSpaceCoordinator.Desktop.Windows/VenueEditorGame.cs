@@ -732,6 +732,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void CancelInProgressPointerInteraction()
     {
+        genrePieRestoreButton?.CancelPress();
         pressedProjectMenuButton?.CancelPress();
         pressedProjectMenuButton = null;
         viewerDragging = false;
@@ -3072,7 +3073,7 @@ public sealed partial class VenueEditorGame : Game
                     if (button.Action == ToolbarAction.ProjectMenu)
                         textRenderer?.Draw("プロジェクト ▼", ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action == ToolbarAction.GenreMenu)
-                        textRenderer?.Draw("ジャンル ▼", ToRectangle(bounds, 5), foreground, 17, true);
+                        textRenderer?.Draw("ジャンル", ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action is ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
