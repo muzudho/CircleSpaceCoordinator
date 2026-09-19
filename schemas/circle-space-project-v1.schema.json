@@ -16,6 +16,7 @@
   "properties": {
     "genreStyleCredits": { "$ref": "#/$defs/personCredits" },
     "genreStyleComment": { "type": ["string", "null"], "maxLength": 1000 },
+    "genreCodeTableName": { "type": ["string", "null"], "minLength": 1, "maxLength": 1000 },
     "blockStyleCredits": { "$ref": "#/$defs/personCredits" },
     "channelKnowledge": { "type": "array", "items": { "$ref": "channel-knowledge-v1.schema.json" } },
     "blockStyles": {

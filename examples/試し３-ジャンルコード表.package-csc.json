@@ -1,0 +1,113 @@
+{
+  "kind": "circle-space-project-portable",
+  "formatVersion": 2,
+  "name": "\u914D\u7F6E\u306E\u63D0\u6848",
+  "description": "",
+  "tags": [],
+  "isConfidential": false,
+  "items": [],
+  "materials": [
+    {
+      "id": "genre-styles:project",
+      "kind": "genre-styles",
+      "name": "\u65B0\u3057\u3044\u30A4\u30D9\u30F3\u30C81_\u30B8\u30E3\u30F3\u30EB\u30B3\u30FC\u30C9\u8868",
+      "isConfidential": false,
+      "credits": {
+        "author": null,
+        "modifier": "\u3080\u305A\u3067\u3087",
+        "firstProvider": "\u3080\u305A\u3067\u3087",
+        "latestProvider": "\u3080\u305A\u3067\u3087",
+        "modifiedOn": "2026-09-19",
+        "changeLog": "\u3042\u3044\u3046\u3048\u304A\u9806"
+      },
+      "overallComment": "\u5BFE\u6226\u683C\u95D8\u3092\u65B0\u8A2D\u3002",
+      "definitions": null,
+      "venue": null,
+      "genreStyles": [
+        {
+          "genreId": "RPG",
+          "primaryColor": "white",
+          "secondaryColor": "red",
+          "pattern": "uniform-diagonal-grid",
+          "knowledgeComment": "\u30A2\u30AF\u30B7\u30E7\u30F3RPG\u542B\u3080"
+        },
+        {
+          "genreId": "\u30A2\u30AF\u30B7\u30E7\u30F3",
+          "primaryColor": "yellow",
+          "secondaryColor": "white",
+          "pattern": "solid",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u30A2\u30C9\u30D9\u30F3\u30C1\u30E3\u30FC",
+          "primaryColor": "yellow-green",
+          "secondaryColor": "blue-violet",
+          "pattern": "uniform-horizontal",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B0",
+          "primaryColor": "green",
+          "secondaryColor": "yellow",
+          "pattern": "dots",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u30B9\u30C8\u30E9\u30C6\u30B8\u30FC",
+          "primaryColor": "cyan",
+          "secondaryColor": "white",
+          "pattern": "diagonal-down",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u30C6\u30FC\u30D6\u30EB",
+          "primaryColor": "blue-green",
+          "secondaryColor": "pink",
+          "pattern": "thick-grid",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u30CE\u30D9\u30EB",
+          "primaryColor": "white",
+          "secondaryColor": "blue",
+          "pattern": "vertical",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u30D1\u30BA\u30EB",
+          "primaryColor": "cyan",
+          "secondaryColor": "black",
+          "pattern": "checkerboard",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u5BFE\u6226\u683C\u95D8",
+          "primaryColor": "blue-violet",
+          "secondaryColor": "white",
+          "pattern": "diamond",
+          "knowledgeComment": null
+        },
+        {
+          "genreId": "\u97F3\u30B2\u30FC",
+          "primaryColor": "red-violet",
+          "secondaryColor": "white",
+          "pattern": "solid",
+          "knowledgeComment": null
+        }
+      ],
+      "genreCodeOrder": [
+        "RPG",
+        "\u30A2\u30AF\u30B7\u30E7\u30F3",
+        "\u30A2\u30C9\u30D9\u30F3\u30C1\u30E3\u30FC",
+        "\u97F3\u30B2\u30FC",
+        "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B0",
+        "\u30B9\u30C8\u30E9\u30C6\u30B8\u30FC",
+        "\u5BFE\u6226\u683C\u95D8",
+        "\u30C6\u30FC\u30D6\u30EB",
+        "\u30CE\u30D9\u30EB",
+        "\u30D1\u30BA\u30EB"
+      ],
+      "genreCodeOrderComment": "\u3042\u3044\u3046\u3048\u304A\u9806"
+    }
+  ]
+}

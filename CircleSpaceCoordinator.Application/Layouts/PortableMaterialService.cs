@@ -10,7 +10,7 @@ public static class PortableMaterialService
     public static PortableMaterial Extract(CircleSpaceProject project, SpaceDefinitionCatalog common, PortableMaterialSelection selected)
     {
         if (selected.Kind == "genre-styles")
-            return new("genre-styles:" + selected.SourceId, selected.Kind, "ジャンルコードの網掛け", project.IsConfidential)
+            return new("genre-styles:" + selected.SourceId, selected.Kind, project.GetGenreCodeTableName(), project.IsConfidential)
             { Credits = project.GenreStyleCredits, GenreStyles = project.GenreStyles.ToArray(), OverallComment = project.GenreStyleComment,
                 GenreCodeOrder = project.GenreCodeOrder.ToArray(), GenreCodeOrderComment = project.GenreCodeOrderComment };
         if (selected.Kind == "block-styles")
@@ -103,6 +103,7 @@ public static class PortableMaterialService
         material.Validate();
         if (material.Kind == "genre-styles")
             project = project with { GenreStyles = material.GenreStyles!, GenreStyleCredits = material.Credits, GenreStyleComment = material.OverallComment,
+                GenreCodeTableName = GenreStyleDefinition.NormalizeTableName(selected.Name),
                 GenreCodeOrder = material.GenreCodeOrder ?? project.GenreCodeOrder,
                 GenreCodeOrderComment = material.GenreCodeOrderComment };
         else if (material.Kind == "block-styles")

@@ -40,6 +40,7 @@ public sealed record PortableMaterial(
             throw new InvalidDataException("素材のIDと名前が必要です。");
         if (Kind is "genre-styles" or "block-styles")
         {
+            if (Kind == "genre-styles") GenreStyleDefinition.NormalizeTableName(Name);
             if (Venue is not null || Definitions is not null ||
                 Kind == "genre-styles" && (GenreStyles is null || BlockStyles is not null) ||
                 Kind == "block-styles" && (BlockStyles is null || GenreStyles is not null))

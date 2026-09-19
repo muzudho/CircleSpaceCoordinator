@@ -76,6 +76,11 @@ public static class ProjectValidator
 
         try { GenreStyleDefinition.NormalizeKnowledgeComment(project.GenreStyleComment); }
         catch (ArgumentException ex) { Add("genreStyle.comment.invalid", "genreStyleComment", ex.Message); }
+        if (project.GenreCodeTableName is not null)
+        {
+            try { GenreStyleDefinition.NormalizeTableName(project.GenreCodeTableName); }
+            catch (ArgumentException ex) { Add("genreStyle.name.invalid", "genreCodeTableName", ex.Message); }
+        }
         foreach (var style in project.GenreStyles)
         {
             try { GenreStyleDefinition.NormalizeKnowledgeComment(style.KnowledgeComment); }

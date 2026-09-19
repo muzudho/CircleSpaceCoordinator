@@ -38,6 +38,7 @@ public static class ModificationCreditsService
         return after with
         {
             GenreStyleCredits = Changed(before.GenreStyles, after.GenreStyles) || before.GenreStyleComment != after.GenreStyleComment
+                || before.GetGenreCodeTableName() != after.GetGenreCodeTableName()
                 || Changed(before.GenreCodeOrder, after.GenreCodeOrder) || before.GenreCodeOrderComment != after.GenreCodeOrderComment
                 ? Edited(before.GenreStyleCredits) : before.GenreStyleCredits,
             BlockStyleCredits = Changed(before.BlockStyles, after.BlockStyles) ? Edited(before.BlockStyleCredits) : before.BlockStyleCredits,

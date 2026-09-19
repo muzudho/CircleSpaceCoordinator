@@ -10,6 +10,7 @@ public sealed partial class VenueEditorGame
     {
         if (workspace is not { } targetWorkspace) return;
         var draft = new GenreStyleDraft(targetWorkspace.Project);
+        mappingGenreCodeTableName = targetWorkspace.Project.GetGenreCodeTableName();
         mappingGenreCodeOrder = targetWorkspace.Project.GenreCodeOrder.ToArray();
         genreCodeOrder = mappingGenreCodeOrder.ToArray();
         mappingGenreCodeOrderComment = targetWorkspace.Project.GenreCodeOrderComment;
@@ -21,6 +22,7 @@ public sealed partial class VenueEditorGame
                 new GenreStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)
                     { KnowledgeComment = style.KnowledgeComment }).ToArray())
                 { ChangeLog = log, ActorHandle = handle, WorkDate = date,
+                    GenreCodeTableName = mappingGenreCodeTableName,
                     UpdateOverallComment = true, OverallComment = draft.Mapping.OverallComment,
                     GenreCodeOrder = mappingGenreCodeOrder,
                     GenreCodeOrderComment = mappingGenreCodeOrderComment,

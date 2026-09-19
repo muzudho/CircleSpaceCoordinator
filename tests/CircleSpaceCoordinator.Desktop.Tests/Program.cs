@@ -24,6 +24,7 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Named genre tables survive project/package round trips without layouts or current participants", NamedGenreCodeTablesRoundTrip),
             ("User settings use OS directories, migrate once, discover first-run projects and survive bin deletion", UserSettingsSurviveBuildOutputRemoval),
             ("Diagonal patterns preserve orientation, widths, diamonds and persisted identifiers", DiagonalPatterns),
             ("Genre knowledge comments preserve Unicode, enforce limits and restore opening drafts", GenreKnowledgeComments),

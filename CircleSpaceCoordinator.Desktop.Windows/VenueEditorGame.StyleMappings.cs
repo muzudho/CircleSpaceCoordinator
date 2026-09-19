@@ -21,6 +21,9 @@ public sealed partial class VenueEditorGame
     private PersonCredits? mappingPreviousCredits;
     private StyleMappingEntry[] mappingAppliedStyles = [];
     private string? mappingAppliedOverallComment;
+    private string mappingGenreCodeTableName = "";
+    private string mappingAppliedGenreCodeTableName = "";
+    private bool MappingTableNameChanged => mappingKnowledgeComments && mappingGenreCodeTableName != mappingAppliedGenreCodeTableName;
     private string[] mappingAppliedGenreOrder = [];
     private string? mappingAppliedGenreOrderComment;
     private bool mappingOrderChanged;
@@ -68,6 +71,7 @@ public sealed partial class VenueEditorGame
         mappingTextRange = (0, 0);
         mappingAppliedStyles = draft.Build();
         mappingAppliedOverallComment = draft.OverallComment;
+        mappingAppliedGenreCodeTableName = mappingGenreCodeTableName;
         mappingAppliedGenreOrder = mappingGenreCodeOrder.ToArray();
         mappingAppliedGenreOrderComment = mappingGenreCodeOrderComment;
         mappingOrderChanged = false;
@@ -100,6 +104,7 @@ public sealed partial class VenueEditorGame
     private void DiscardStyleMapping()
     {
         mappingDraft?.RestoreOpeningSnapshot();
+        mappingGenreCodeTableName = mappingAppliedGenreCodeTableName;
         mappingGenreCodeOrder = mappingAppliedGenreOrder.ToArray();
         mappingGenreCodeOrderComment = mappingAppliedGenreOrderComment;
         genreCodeOrder = mappingGenreCodeOrder.ToArray();
@@ -110,7 +115,7 @@ public sealed partial class VenueEditorGame
     {
         if (mappingExitConfirmationOpen) return false;
         SyncMappingChangeTag();
-        if (mappingDraft?.HasChanges != true && !mappingOrderChanged ||
+        if (mappingDraft?.HasChanges != true && !mappingOrderChanged && !MappingTableNameChanged ||
             mappingChangeTag?.CanClose == true && mappingComposition.Length == 0)
             return TryFinishStyleMapping();
 
@@ -136,7 +141,7 @@ public sealed partial class VenueEditorGame
         if (mappingComposition.Length > 0) return false;
         SyncMappingChangeTag();
         if (mappingChangeTag is null) return false;
-        if ((mappingDraft.HasChanges || mappingOrderChanged) && !EnsureHandle()) return false;
+        if ((mappingDraft.HasChanges || mappingOrderChanged || MappingTableNameChanged) && !EnsureHandle()) return false;
         if (!mappingChangeTag.TryBeginSave(out var changeLog))
         {
             SetMappingTextFocus(true);
@@ -146,14 +151,18 @@ public sealed partial class VenueEditorGame
         var applied = false;
         var previousStyles = mappingAppliedStyles;
         var previousOverallComment = mappingAppliedOverallComment;
+        var previousTableName = mappingAppliedGenreCodeTableName;
+        var previousOrder = mappingAppliedGenreOrder;
+        var previousOrderComment = mappingAppliedGenreOrderComment;
         try
         {
             var styles = mappingDraft.Build();
-            if (!styles.SequenceEqual(mappingAppliedStyles) || mappingDraft.OverallComment != mappingAppliedOverallComment || mappingOrderChanged)
+            if (!styles.SequenceEqual(mappingAppliedStyles) || mappingDraft.OverallComment != mappingAppliedOverallComment || mappingOrderChanged || MappingTableNameChanged)
             {
                 applyStyleMapping(styles, changeLog!, Handle, WorkDate);
                 mappingAppliedStyles = styles;
                 mappingAppliedOverallComment = mappingDraft.OverallComment;
+                mappingAppliedGenreCodeTableName = mappingGenreCodeTableName;
                 mappingAppliedGenreOrder = mappingGenreCodeOrder.ToArray();
                 mappingAppliedGenreOrderComment = mappingGenreCodeOrderComment;
                 mappingOrderChanged = false;
@@ -161,7 +170,14 @@ public sealed partial class VenueEditorGame
             }
             if (!FlushAutoSave())
             {
-                if (applied) { workspace!.Undo(); mappingAppliedStyles = previousStyles; mappingAppliedOverallComment = previousOverallComment; }
+                if (applied)
+                {
+                    workspace!.Undo(); mappingAppliedStyles = previousStyles; mappingAppliedOverallComment = previousOverallComment;
+                    mappingAppliedGenreCodeTableName = previousTableName;
+                    mappingAppliedGenreOrder = previousOrder;
+                    mappingAppliedGenreOrderComment = previousOrderComment;
+                    mappingOrderChanged = !mappingGenreCodeOrder.SequenceEqual(previousOrder) || mappingGenreCodeOrderComment != previousOrderComment;
+                }
                 mappingChangeTag.SaveFailed("保存できませんでした。入力を保持しています。閉じるで再試行してください。");
                 return false;
             }
@@ -212,7 +228,7 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not { } draft) return;
         SyncMappingChangeTag();
-        var hasChanges = draft.HasChanges || mappingOrderChanged;
+        var hasChanges = draft.HasChanges || mappingOrderChanged || MappingTableNameChanged;
         if (mappingPickerColumn == 0 && mappingEditorButtons.FirstOrDefault(item => item.Button.AccessibleName == "閉じる") is { } close)
             close.Button.IsEnabled = mappingChangeTag?.CanClose == true && mappingComposition.Length == 0;
         if (mappingWidth == GraphicsDevice.Viewport.Width && mappingHeight == GraphicsDevice.Viewport.Height &&
@@ -265,6 +281,21 @@ public sealed partial class VenueEditorGame
         else
         {
             if (mappingKnowledgeComments) AddGenreTabs();
+            if (mappingKnowledgeComments)
+            {
+                Add("表を書き出し", MappingBounds(20, 606, 200, 34), () =>
+                {
+                    if (!TryFinishStyleMapping()) return;
+                    ExportPortable(genreTableOnly: true);
+                    OpenGenreStyleEditor();
+                }, tooltip: "ジャンルコード表だけをパッケージ直下へ書き出します。未使用ジャンルも含みます。");
+                Add("表を読み込み", MappingBounds(232, 606, 200, 34), () =>
+                {
+                    if (!TryFinishStyleMapping()) return;
+                    ImportPortable(genreTableOnly: true);
+                    OpenGenreStyleEditor();
+                }, tooltip: "名前付きジャンルコード表をイベントプロジェクト直下へ読み込みます。");
+            }
             if (!mappingKnowledgeComments || genrePageTab != 1)
             {
                 Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
@@ -296,6 +327,18 @@ public sealed partial class VenueEditorGame
         if (genreOrderDialogOpen) { UpdateGenreOrderDialog(keyboard, mouse); return; }
         if (genrePieExpanded) { UpdateExpandedGenrePie(keyboard, mouse); return; }
         BuildMappingEditorButtons();
+        if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
+            previousMouse.LeftButton == ButtonState.Released && Contains(MappingTableNameBounds, new(mouse.X, mouse.Y)))
+        {
+            SetMappingTextFocus(false);
+            OpenUnderlineInput("ジャンルコード表名", mappingGenreCodeTableName, value =>
+            {
+                mappingGenreCodeTableName = GenreStyleDefinition.NormalizeTableName(value);
+                mappingWidth = -1;
+            }, "イベントに保存する表の名前です。パッケージへ単独で書き出すときもこの名前を使います。", int.MaxValue,
+                validate: value => { try { GenreStyleDefinition.NormalizeTableName(value); return null; } catch (ArgumentException ex) { return ex.Message; } });
+            return;
+        }
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
             previousMouse.LeftButton == ButtonState.Released && Contains(MappingOverallCommentBounds, new(mouse.X, mouse.Y)))
         {
@@ -411,7 +454,11 @@ public sealed partial class VenueEditorGame
             MappingBounds(20, 18, mappingKnowledgeComments ? 78 : 960, 38), mappingKnowledgeComments ? 22 : 26);
         if (mappingKnowledgeComments && genrePageTab == 3)
             Text("スペース数順", MappingBounds(700, 18, 280, 36), 18, new Color(180, 220, 230));
-        if (mappingKnowledgeComments) DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
+        if (mappingKnowledgeComments)
+        {
+            DrawGenreKnowledgeComment("ジャンルコード表名：" + mappingGenreCodeTableName, MappingTableNameBounds);
+            DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
+        }
         if (GenreChartVisible) DrawGenrePreview();
         else
         {

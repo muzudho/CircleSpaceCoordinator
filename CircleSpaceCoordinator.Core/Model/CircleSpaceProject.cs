@@ -15,6 +15,9 @@ public sealed record CircleSpaceProject(
     public string? Description { get; init; }
     public PersonCredits? GenreStyleCredits { get; init; }
     public string? GenreStyleComment { get; init; }
+    public string? GenreCodeTableName { get; init; }
+    public string GetGenreCodeTableName() => string.IsNullOrWhiteSpace(GenreCodeTableName)
+        ? $"{Name}_ジャンルコード表" : GenreCodeTableName;
     public IReadOnlyList<string> GenreCodeOrder { get; init; } = [];
     public string? GenreCodeOrderComment { get; init; }
     public PersonCredits? BlockStyleCredits { get; init; }

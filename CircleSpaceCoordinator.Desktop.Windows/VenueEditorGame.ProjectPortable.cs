@@ -6,40 +6,40 @@ using Forms = System.Windows.Forms;
 
 public sealed partial class VenueEditorGame
 {
-    private void ExportPortable()
+    private void ExportPortable(bool genreTableOnly = false)
     {
         if (workspace is null || !EnsureHandle()) return;
         try
         {
             var snapshot = workspace.Project;
-            using var form = PortableForm("部分書出し — 配置案・知見・素材を選択");
+            using var form = PortableForm(genreTableOnly ? "ジャンルコード表をパッケージ直下へ書き出し" : "部分書出し — 配置案・知見・素材を選択");
             form.ClientSize = new System.Drawing.Size(740, 640);
             var rows = PortableGrid(form);
-            foreach (var layout in snapshot.DeskLayouts)
-                rows.Rows.Add(layout.Id == workspace.SelectedDeskLayoutId, layout.Name, layout.Description ?? "", layout.Id, "フレーム配置案");
-            foreach (var item in snapshot.ChannelKnowledge)
+            foreach (var layout in snapshot.DeskLayouts.Where(_ => !genreTableOnly))
+                rows.Rows.Add(false, layout.Name, layout.Description ?? "", layout.Id, "フレーム配置案");
+            foreach (var item in snapshot.ChannelKnowledge.Where(_ => !genreTableOnly))
                 rows.Rows[rows.Rows.Add(false, item.Name, item.Purpose, item.Id, "チャンネルの知見")].Tag = "knowledge";
-            rows.Rows[rows.Rows.Add(false, snapshot.Venue.Name, "会場の寸法・障害物・ゾーン", snapshot.Venue.Id, "会場")].Tag =
+            if (!genreTableOnly) rows.Rows[rows.Rows.Add(false, snapshot.Venue.Name, "会場の寸法・障害物・ゾーン", snapshot.Venue.Id, "会場")].Tag =
                 new PortableMaterialSelection("venue", snapshot.Venue.Id);
-            var sourceLayout = snapshot.DeskLayouts.Single(layout => layout.Id == workspace.SelectedDeskLayoutId);
-            rows.Rows[rows.Rows.Add(false, "ジャンルコードの網掛け", "対応表全体と変更タグ", "project", "ジャンル網掛け対応表")].Tag =
+            var sourceLayout = snapshot.DeskLayouts.FirstOrDefault(layout => layout.Id == workspace.SelectedDeskLayoutId);
+            rows.Rows[rows.Rows.Add(genreTableOnly, snapshot.GetGenreCodeTableName(), "パッケージ直下。未使用ジャンル・コメント・並び順・変更タグを含む表全体", "project", "ジャンルコード表")].Tag =
                 new PortableMaterialSelection("genre-styles", "project");
-            rows.Rows[rows.Rows.Add(false, "ブロック色の対応表", "対応表全体と変更タグ", "project", "ブロック色対応表")].Tag =
+            if (!genreTableOnly) rows.Rows[rows.Rows.Add(false, "ブロック色の対応表", "対応表全体と変更タグ", "project", "ブロック色対応表")].Tag =
                 new PortableMaterialSelection("block-styles", "project");
-            var sourceDefinitions = sourceLayout.Definitions ?? SpaceDefinitions.Current;
+            var sourceDefinitions = genreTableOnly ? new CircleSpaceCoordinator.Core.Model.SpaceDefinitionCatalog([], []) : sourceLayout?.Definitions ?? SpaceDefinitions.Current;
             foreach (var type in sourceDefinitions.Types)
-                rows.Rows[rows.Rows.Add(false, type.Name, $"元：{sourceLayout.Name}／{type.Width}×{type.Height}", type.Id, "フレーム定義")].Tag =
-                    new PortableMaterialSelection("frame-definition", type.Id, sourceLayout.Id);
+                rows.Rows[rows.Rows.Add(false, type.Name, $"元：{sourceLayout?.Name ?? "共通カタログ"}／{type.Width}×{type.Height}", type.Id, "フレーム定義")].Tag =
+                    new PortableMaterialSelection("frame-definition", type.Id, sourceLayout?.Id);
             foreach (var request in sourceDefinitions.Requests)
-                rows.Rows[rows.Rows.Add(false, request.Value, $"元：{sourceLayout.Name}／{request.Description}（参照先フレーム定義を同梱）", request.Id, "申込定義")].Tag =
-                    new PortableMaterialSelection("request-definition", request.Id, sourceLayout.Id);
+                rows.Rows[rows.Rows.Add(false, request.Value, $"元：{sourceLayout?.Name ?? "共通カタログ"}／{request.Description}（参照先フレーム定義を同梱）", request.Id, "申込定義")].Tag =
+                    new PortableMaterialSelection("request-definition", request.Id, sourceLayout?.Id);
             var library = new Forms.Button { Text = "知見・ライブラリー ▼", Left = 525, Top = 10, Width = 190 };
             using var libraryMenu = new Forms.ContextMenuStrip();
             libraryMenu.Items.Add("知見の保存・列対応", null, (_, _) => { form.Close(); ManageChannelKnowledge(); });
             libraryMenu.Items.Add("ファイルライブラリー", null, (_, _) => { form.Close(); ShowPortableLibrary(); });
             library.Click += (_, _) => libraryMenu.Show(library, new System.Drawing.Point(0, library.Height));
             form.Controls.Add(library);
-            var name = PortableText(form, "パッケージのタイトル", 340, "配置の提案");
+            var name = PortableText(form, "パッケージのタイトル", 340, genreTableOnly ? snapshot.GetGenreCodeTableName() : "配置の提案");
             var description = PortableText(form, "ファイル全体のメモ", 372, "");
             var tags = PortableText(form, "タグ（カンマ区切り）", 404, "");
             var secret = new Forms.CheckBox { Text = "マル秘として書き出す", Left = 16, Top = 442, Width = 300,
@@ -47,8 +47,10 @@ public sealed partial class VenueEditorGame
             form.Controls.Add(secret);
             var template = new Forms.CheckBox { Text = "知見はひな形のみ（座標を除く）", Left = 350, Top = 442, Width = 360 };
             form.Controls.Add(template);
+            template.Visible = !genreTableOnly;
+            library.Visible = !genreTableOnly;
             var frameIds = selectedFrameIds.ToArray();
-            if (frameIds.Length == 0 && selectedCellRange is { } range)
+            if (!genreTableOnly && sourceLayout is not null && frameIds.Length == 0 && selectedCellRange is { } range)
             {
                 var types = snapshot.DeskTypes.ToDictionary(type => type.Id);
                 frameIds = sourceLayout.DeskPlacements.Where(desk => desk.GetOccupiedCells(types[desk.DeskTypeId]).All(range.Contains)).Select(desk => desk.Id).ToArray();
@@ -56,6 +58,7 @@ public sealed partial class VenueEditorGame
             var fragment = new Forms.CheckBox { Text = $"現在の案は選択範囲のフレームだけを書き出す（{frameIds.Length} 件）",
                 Left = 16, Top = 480, Width = 700, Enabled = frameIds.Length > 0 };
             form.Controls.Add(fragment);
+            fragment.Visible = !genreTableOnly;
             var status = PortableStatus(form);
             var accept = PortableButtons(form, rows, "内容を確認");
             accept.Click += (_, _) =>
@@ -66,10 +69,10 @@ public sealed partial class VenueEditorGame
                     var selected = rows.Rows.Cast<Forms.DataGridViewRow>().Where(row => Equals(row.Cells[0].Value, true)).ToArray();
                     var layoutIds = selected.Where(row => row.Tag is null).Select(row => (string)row.Cells[3].Value!).ToArray();
                     var definitions = snapshot.DeskLayouts.Any(layout => layoutIds.Contains(layout.Id) && layout.Definitions is null) ||
-                        selected.Any(row => row.Tag is PortableMaterialSelection) && sourceLayout.Definitions is null
+                        selected.Any(row => row.Tag is PortableMaterialSelection { Kind: "frame-definition" or "request-definition" }) && sourceLayout?.Definitions is null
                         ? SpaceDefinitions.Current : new CircleSpaceCoordinator.Core.Model.SpaceDefinitionCatalog([], []);
                     var fragments = new Dictionary<string, IReadOnlyList<string>>();
-                    if (fragment.Checked && layoutIds.Contains(sourceLayout.Id)) fragments.Add(sourceLayout.Id, frameIds);
+                    if (fragment.Checked && sourceLayout is not null && layoutIds.Contains(sourceLayout.Id)) fragments.Add(sourceLayout.Id, frameIds);
                     var json = EditorConnection.Current.ExportPortable(new(snapshot, layoutIds, definitions,
                         name.Text.Trim(), description.Text, tags.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), secret.Checked)
                     { Handle = Handle, KnowledgeIds = selected.Where(row => Equals(row.Tag, "knowledge")).Select(row => (string)row.Cells[3].Value!).ToArray(), TemplateOnly = template.Checked,
@@ -100,7 +103,7 @@ public sealed partial class VenueEditorGame
         finally { modalInputDrain = true; }
     }
 
-    private void ImportPortable(string? libraryJson = null)
+    private void ImportPortable(string? libraryJson = null, bool genreTableOnly = false)
     {
         if (workspace is null) return;
         var owner = workspace;
@@ -117,17 +120,21 @@ public sealed partial class VenueEditorGame
             }
             // Capture once. Confirmation and application use this exact payload and revision.
             var package = EditorConnection.Current.ParsePortable(libraryJson);
+            genreTableOnly |= package.Items.Count == 0 && package.Knowledge.Count == 0 &&
+                package.Materials.Count > 0 && package.Materials.All(item => item.Kind == "genre-styles");
+            if (genreTableOnly && !package.Materials.Any(item => item.Kind == "genre-styles"))
+                throw new InvalidDataException("このパッケージには独立したジャンルコード表がありません。");
             var revision = owner.Revision;
-            using var form = PortableForm("部分読込み — 配置案・知見・素材を選択・改名");
+            using var form = PortableForm(genreTableOnly ? "ジャンルコード表をイベントプロジェクト直下へ読み込み" : "部分読込み — 配置案・知見・素材を選択・改名");
             form.ClientSize = new System.Drawing.Size(740, 730);
             var rows = PortableGrid(form);
             rows.Columns[1].ReadOnly = false;
-            foreach (var item in package.Items)
+            foreach (var item in package.Items.Where(_ => !genreTableOnly))
                 rows.Rows.Add(false, item.Name, item.Project.DeskLayouts[0].Description ?? "", item.Id, item.Kind == "frame-fragment" ? "部分配置" : "フレーム配置案");
-            foreach (var item in package.Knowledge)
+            foreach (var item in package.Knowledge.Where(_ => !genreTableOnly))
                 rows.Rows.Add(false, item.Name, $"知見・未対応付け：{item.Purpose}／{item.InputRule.ValueMeanings}", "knowledge:" + item.Id, "チャンネルの知見");
-            foreach (var material in package.Materials)
-                rows.Rows.Add(false, material.Name, material.Kind is "genre-styles" or "block-styles" ? "既存の対応表全体を置換（変更タグを含む）。" : material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
+            foreach (var material in package.Materials.Where(item => !genreTableOnly || item.Kind == "genre-styles"))
+                rows.Rows.Add(genreTableOnly && package.Materials.Count(item => item.Kind == "genre-styles") == 1, material.Name, material.Kind is "genre-styles" or "block-styles" ? "イベント直下の表全体を置換。配置案の選択は不要。未使用ジャンルも保持。" : material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
                     material.Id, MaterialKindName(material.Kind));
             var details = new Forms.TextBox { Left = 16, Top = 340, Width = 700, Height = 84,
                 Multiline = true, ReadOnly = true, ScrollBars = Forms.ScrollBars.Vertical,
@@ -147,7 +154,30 @@ public sealed partial class VenueEditorGame
                 new Forms.Label { Text = "取込み方法", Left = 16, Top = 473, Width = 155 },
                 new Forms.Label { Text = "配置の移動量 X", Left = 16, Top = 509, Width = 155 },
                 new Forms.Label { Text = "Y", Left = 320, Top = 509, Width = 30 },
-                new Forms.Label { Text = "申込定義の読込み値を変える場合は、一覧の名前を編集してください。", Left = 16, Top = 545, Width = 700 }]);
+                new Forms.Label { Text = "ジャンルコード表名・申込定義の読込み値は、一覧の名前を編集できます。", Left = 16, Top = 545, Width = 700 }]);
+            void UpdateImportTargets()
+            {
+                var ids = rows.Rows.Cast<Forms.DataGridViewRow>().Where(row => Equals(row.Cells[0].Value, true))
+                    .Select(row => (string)row.Cells[3].Value!).ToHashSet();
+                var layouts = package.Items.Any(item => ids.Contains(item.Id));
+                var definitions = package.Materials.Any(item => ids.Contains(item.Id) && item.Kind is "frame-definition" or "request-definition");
+                mode.Enabled = layouts || definitions;
+                if (!mode.Enabled) mode.SelectedIndex = 0;
+                target.Enabled = definitions && mode.SelectedIndex != 3 || layouts && mode.SelectedIndex is 1 or 2;
+                offsetX.Enabled = offsetY.Enabled = layouts && mode.SelectedIndex is 1 or 2;
+                if (!target.Enabled) target.SelectedIndex = -1;
+                else if (target.SelectedIndex < 0) target.SelectedIndex = Array.FindIndex(targets, layout => layout.Id == owner.SelectedDeskLayoutId);
+            }
+            rows.CellValueChanged += (_, _) => UpdateImportTargets();
+            mode.SelectedIndexChanged += (_, _) => UpdateImportTargets();
+            UpdateImportTargets();
+            if (genreTableOnly)
+            {
+                foreach (Forms.Control control in form.Controls)
+                    if (control.Top >= 434 && control.Top < 545) control.Visible = false;
+                form.Controls.Add(new Forms.Label { Text = $"保存先：イベントプロジェクト「{owner.Project.Name}」直下\n既存のジャンルコード表全体を置き換えます。配置案は変更しません。",
+                    Left = 16, Top = 434, Width = 700, Height = 64 });
+            }
             rows.SelectionChanged += (_, _) =>
             {
                 if (rows.CurrentRow?.Cells[3].Value is not string id) return;
@@ -175,13 +205,15 @@ public sealed partial class VenueEditorGame
                             var id = (string)row.Cells[3].Value!;
                             var name = Convert.ToString(row.Cells[1].Value)?.Trim() ?? "";
                             var isLayout = package.Items.Any(item => item.Id == id);
+                            var needsTarget = isLayout && mode.SelectedIndex is 1 or 2 ||
+                                package.Materials.Any(item => item.Id == id && item.Kind is "frame-definition" or "request-definition");
                             return new PortableImportItem(id, "portable-" + Guid.NewGuid().ToString("N"), name)
                             {
-                                TargetLayoutId = target.SelectedIndex < 0 ? null : targets[target.SelectedIndex].Id,
+                                TargetLayoutId = !needsTarget || target.SelectedIndex < 0 ? null : targets[target.SelectedIndex].Id,
                                 Mode = isLayout && mode.SelectedIndex is 1 or 2 ? mode.SelectedIndex == 1 ? "insert" : "replace" : "add",
                                 OffsetX = isLayout ? (int)offsetX.Value : 0, OffsetY = isLayout ? (int)offsetY.Value : 0,
                                 RequestValue = package.Materials.Any(item => item.Id == id && item.Kind == "request-definition") ? name : null,
-                                FallbackDefinitions = target.SelectedIndex >= 0 && targets[target.SelectedIndex].Definitions is null ? SpaceDefinitions.Current : null,
+                                FallbackDefinitions = needsTarget && target.SelectedIndex >= 0 && targets[target.SelectedIndex].Definitions is null ? SpaceDefinitions.Current : null,
                             };
                         }).ToArray();
                     if (owner.Revision != revision) throw new InvalidOperationException("イベントが変更されました。閉じて、もう一度読み込んでください。");
@@ -298,7 +330,7 @@ public sealed partial class VenueEditorGame
     private static string MaterialKindName(string kind) => kind switch
     {
         "venue" => "会場", "frame-definition" => "フレーム定義", "request-definition" => "申込定義",
-        "genre-styles" => "ジャンル網掛け対応表", "block-styles" => "ブロック色対応表",
+        "genre-styles" => "ジャンルコード表", "block-styles" => "ブロック色対応表",
         _ => kind,
     };
 }

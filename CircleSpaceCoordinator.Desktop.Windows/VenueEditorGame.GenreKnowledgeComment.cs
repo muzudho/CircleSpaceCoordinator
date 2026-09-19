@@ -8,7 +8,8 @@ using StationeryUI.MonoGame.Controls.ActionBadge;
 
 public sealed partial class VenueEditorGame
 {
-    private ScreenRectangle MappingOverallCommentBounds => MappingBounds(20, 62, 960, 36);
+    private ScreenRectangle MappingTableNameBounds => MappingBounds(20, 62, 460, 36);
+    private ScreenRectangle MappingOverallCommentBounds => MappingBounds(492, 62, 488, 36);
 
     private void OpenMappingOverallComment()
     {

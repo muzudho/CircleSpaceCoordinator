@@ -186,6 +186,7 @@ public static class ProjectJsonSerializer
             IsConfidential = source.Project.IsConfidential,
             GenreStyleCredits = source.GenreStyleCredits,
             GenreStyleComment = source.GenreStyleComment,
+            GenreCodeTableName = source.GenreCodeTableName,
             GenreCodeOrder = source.GenreCodeOrder ?? [],
             GenreCodeOrderComment = source.GenreCodeOrderComment,
             BlockStyleCredits = source.BlockStyleCredits,
@@ -231,6 +232,7 @@ public static class ProjectJsonSerializer
             },
         GenreStyleCredits = source.GenreStyleCredits,
         GenreStyleComment = source.GenreStyleComment,
+        GenreCodeTableName = source.GetGenreCodeTableName(),
         GenreCodeOrder = source.GenreCodeOrder.Count == 0 ? null : source.GenreCodeOrder.ToList(),
         GenreCodeOrderComment = source.GenreCodeOrderComment,
         BlockStyleCredits = source.BlockStyleCredits,
@@ -449,6 +451,7 @@ public static class ProjectJsonSerializer
         public string? ExportPlanId { get; set; }
         public PersonCredits? GenreStyleCredits { get; set; }
         public string? GenreStyleComment { get; set; }
+        public string? GenreCodeTableName { get; set; }
         public List<string>? GenreCodeOrder { get; set; }
         public string? GenreCodeOrderComment { get; set; }
         public PersonCredits? BlockStyleCredits { get; set; }

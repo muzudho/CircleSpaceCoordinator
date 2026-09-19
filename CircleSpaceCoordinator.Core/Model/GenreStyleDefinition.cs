@@ -9,6 +9,13 @@ public sealed record GenreStyleDefinition(
 {
     public string? KnowledgeComment { get; init; }
 
+    public static string NormalizeTableName(string value)
+    {
+        try { return PersonCredits.NormalizeChangeLog(value); }
+        catch (ArgumentException)
+        { throw new ArgumentException("ジャンルコード表名は改行を含まない1〜1000文字で入力してください。"); }
+    }
+
     public static string? NormalizeKnowledgeComment(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
