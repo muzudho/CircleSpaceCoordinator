@@ -292,6 +292,7 @@ public sealed partial class VenueEditorGame
     private void UpdateStyleMappingEditor(KeyboardState keyboard, MouseState mouse)
     {
         if (mappingDraft is not { } draft) return;
+        if (genreOrderDialogOpen) { UpdateGenreOrderDialog(mouse); return; }
         if (genrePieExpanded) { UpdateExpandedGenrePie(keyboard, mouse); return; }
         BuildMappingEditorButtons();
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
@@ -400,6 +401,7 @@ public sealed partial class VenueEditorGame
     private void DrawStyleMappingEditor()
     {
         if (mappingDraft is not { } draft) return;
+        if (genreOrderDialogOpen) { DrawGenreOrderDialog(); return; }
         if (genrePieExpanded) { DrawExpandedGenrePie(); return; }
         BuildMappingEditorButtons();
         void Text(string text, ScreenRectangle bounds, int size = 17, Color? color = null) =>

@@ -16,6 +16,8 @@ public sealed partial class VenueEditorGame
     private string[] genreCodeOrder = [];
     private string[] mappingGenreCodeOrder = [];
     private string? mappingGenreCodeOrderComment;
+    private bool genreOrderDialogOpen;
+    private int genreOrderDragIndex = -1;
 
     private void SelectGenreTarget(string key, bool navigate = false)
     {
@@ -32,26 +34,66 @@ public sealed partial class VenueEditorGame
 
     private void OpenGenreCodeOrderEditor()
     {
-        var initial = string.Join(",", mappingGenreCodeOrder.Length > 0
-            ? mappingGenreCodeOrder
-            : mappingDraft?.Rows.Select(row => row.Key) ?? []);
-        OpenUnderlineInput("ジャンルコードの並び順", initial, value =>
+        genreOrderDialogOpen = true;
+        genreOrderDragIndex = -1;
+        SetMappingTextFocus(false);
+        modalInputDrain = true;
+    }
+
+    private ScreenRectangle GenreOrderCard(int index)
+    {
+        var column = index / 10;
+        var row = index % 10;
+        return new(80 + column * 440, 130 + row * 52, 410, 46);
+    }
+
+    private void UpdateGenreOrderDialog(MouseState mouse)
+    {
+        if (mappingDraft is not { } draft) return;
+        var pointer = new ScreenPoint(mouse.X, mouse.Y);
+        if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
-            var order = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .Distinct(StringComparer.Ordinal).ToArray();
-            mappingGenreCodeOrder = order;
-            genreCodeOrder = order.ToArray();
-            mappingDraft?.ReorderRows(order);
-            mappingOrderChanged = !order.SequenceEqual(mappingAppliedGenreOrder, StringComparer.Ordinal);
-            mappingWidth = -1;
-            OpenUnderlineInput("ジャンルコード順のコメント", mappingGenreCodeOrderComment ?? "", comment =>
-            {
-                mappingGenreCodeOrderComment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
-                mappingOrderChanged = true;
-                mappingWidth = -1;
-            }, "この並び順の意図や運用メモを入力できます。", 1000, allowEmpty: true,
-                validate: value => value.Contains('\n') ? "１行で入力してください。" : null);
-        }, "ジャンルコードを表示したい順にカンマ区切りで入力してください。", int.MaxValue);
+            if (Contains(new ScreenRectangle(860, 570, 120, 38), pointer)) { genreOrderDialogOpen = false; return; }
+            for (var index = 0; index < draft.Rows.Count; index++)
+                if (Contains(GenreOrderCard(index), pointer)) { genreOrderDragIndex = index; break; }
+        }
+        if (genreOrderDragIndex >= 0 && mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Pressed)
+            for (var index = 0; index < draft.Rows.Count; index++)
+                if (index != genreOrderDragIndex && Contains(GenreOrderCard(index), pointer))
+                {
+                    draft.MoveRow(genreOrderDragIndex, index - genreOrderDragIndex);
+                    genreOrderDragIndex = index;
+                    mappingGenreCodeOrder = draft.Rows.Select(row => row.Key).ToArray();
+                    genreCodeOrder = mappingGenreCodeOrder.ToArray();
+                    mappingOrderChanged = true;
+                    break;
+                }
+        if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed) genreOrderDragIndex = -1;
+        if (IsPressed(previousKeyboard, Keys.Escape)) { genreOrderDialogOpen = false; genreOrderDragIndex = -1; }
+    }
+
+    private void DrawGenreOrderDialog()
+    {
+        if (mappingDraft is not { } draft) return;
+        DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 200));
+        var panel = new ScreenRectangle(40, 50, Math.Min(1000, GraphicsDevice.Viewport.Width - 80), Math.Min(610, GraphicsDevice.Viewport.Height - 100));
+        DrawRectangle(panel, new Color(24, 29, 36));
+        DrawOutline(panel, 2, Color.LightSlateGray);
+        textRenderer?.Draw("ジャンルコードの並び順", ToRectangle(new(panel.X + 24, panel.Y + 18, panel.Width - 48, 34), 0), Color.White, 23, true);
+        textRenderer?.Draw("カードをドラッグして２列の間を移動できます。知見は色網掛けページで確認できます。", ToRectangle(new(panel.X + 24, panel.Y + 52, panel.Width - 48, 26), 0), new Color(190, 210, 218), 15);
+        for (var index = 0; index < draft.Rows.Count; index++)
+        {
+            var card = GenreOrderCard(index);
+            DrawRectangle(card, index == genreOrderDragIndex ? new Color(45, 115, 112) : new Color(35, 43, 54));
+            textRenderer?.Draw($"{index + 1,2}  {draft.Rows[index].Key}", ToRectangle(new(card.X + 8, card.Y + 3, card.Width - 16, 20), 0), Color.White, 17, true);
+            var knowledge = draft.Rows[index].KnowledgeComment;
+            if (!string.IsNullOrWhiteSpace(knowledge))
+                textRenderer?.Draw(knowledge.Length > 42 ? knowledge[..42] + "…" : knowledge,
+                    ToRectangle(new(card.X + 8, card.Y + 24, card.Width - 16, 18), 0), new Color(190, 205, 210), 12, true);
+        }
+        DrawRectangle(new ScreenRectangle(860, 570, 120, 38), new Color(48, 70, 78));
+        textRenderer?.Draw("閉じる", ToRectangle(new ScreenRectangle(860, 570, 120, 38), 5), Color.White, 17, true);
+        DrawStatusBar("ジャンル名のカードをドラッグして並び替えます。閉じると色網掛けの並び順へ反映します。", "ジャンルコード順");
     }
     private static readonly string[] GenrePageTabs = ["色網掛け", "色見本カタログ", "スペース数比率", "円グラフ"];
     private const int GenrePreviewPageSize = 6;

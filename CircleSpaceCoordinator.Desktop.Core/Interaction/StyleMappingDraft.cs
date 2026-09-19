@@ -43,6 +43,12 @@ public sealed class StyleMappingDraft
             return leftRank != rightRank ? leftRank.CompareTo(rightRank) : StringComparer.Ordinal.Compare(left.Key, right.Key);
         });
     }
+    public void MoveRow(int index, int offset)
+    {
+        var destination = Math.Clamp(index + offset, 0, rows.Count - 1);
+        if (index < 0 || index >= rows.Count || destination == index) return;
+        (rows[index], rows[destination]) = (rows[destination], rows[index]);
+    }
     public void SetOverallComment(string? value) => OverallComment = GenreStyleDefinition.NormalizeKnowledgeComment(value);
     /// <summary>Restore the immutable copy captured when the page was opened.</summary>
     public void RestoreOpeningSnapshot()
