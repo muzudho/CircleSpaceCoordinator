@@ -384,8 +384,8 @@ public sealed partial class VenueEditorGame
         else
         {
             var headers = mappingKnowledgeComments
-                ? new[] { "ジャンル", "主色", "副色", "網掛け", "見本", "コメント" }
-                : new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
+                ? new[] { "ジャンル", "太線色", "細線色", "網掛け", "見本", "コメント" }
+                : new[] { mappingKeyLabel, "太線色", "細線色", "網掛け（白黒見本）", "配色の見本" };
             DrawRectangle(MappingBounds(20, 102, 960, 34), new Color(48, 65, 77));
             for (var column = 0; column < headers.Length; column++)
                 Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
@@ -415,7 +415,7 @@ public sealed partial class VenueEditorGame
                         var swatch = new ScreenRectangle(bounds.X + 4, bounds.Y + 3, bounds.Width - 8,
                             column == 3 && !mappingKnowledgeComments ? bounds.Height * 0.54 : bounds.Height - 6);
                         DrawRectangle(swatch, column == 3 ? Color.Black : GenreColorFromId(style.PrimaryColor, Color.Gray));
-                        DrawGenrePattern(swatch, GenrePatternFromId(style.Pattern), column == 3 ? Color.White : GenreColorFromId(style.SecondaryColor, Color.White), column == 3 ? (byte)255 : (byte)180);
+                        DrawGenrePattern(swatch, GenrePatternFromId(style.Pattern), column == 3 ? Color.White : GenreColorFromId(style.SecondaryColor, Color.White), 255);
                         if (column == 3 && !mappingKnowledgeComments) Text(StyleMappingDraft.Patterns.FirstOrDefault(choice => choice.Id == style.Pattern).Label ?? style.Pattern,
                             new(bounds.X, bounds.Y + bounds.Height * 0.58, bounds.Width, bounds.Height * 0.4), 12);
                     }
@@ -439,7 +439,7 @@ public sealed partial class VenueEditorGame
             var panel = MappingBounds(60, 90, 880, 470);
             DrawRectangle(panel, new Color(24, 29, 36));
             DrawOutline(panel, 2, Color.LightSlateGray);
-            Text(mappingPickerColumn == 3 ? "網掛けを選択 — 黒が主色、白が副色" : mappingPickerColumn == 1 ? "主色を選択" : "副色を選択", MappingBounds(80, 108, 840, 38), 23);
+            Text(mappingPickerColumn == 3 ? "網掛けを選択 — 黒が太線色、白が細線色" : mappingPickerColumn == 1 ? "太線色を選択" : "細線色を選択", MappingBounds(80, 108, 840, 38), 23);
         }
         for (var index = 0; index < mappingEditorButtons.Count; index++)
         {
@@ -459,10 +459,10 @@ public sealed partial class VenueEditorGame
             }
             if (item.PatternId is { } pattern)
             {
-                var inside = new ScreenRectangle(bounds.X + 8, bounds.Y + 8, bounds.Width - 16, bounds.Height * 0.65);
+                var inside = new ScreenRectangle(bounds.X + 8, bounds.Y + 8, bounds.Width - 16, Math.Max(1, bounds.Height - 36 * MappingEditorScale));
                 DrawRectangle(inside, Color.Black);
                 DrawGenrePattern(inside, GenrePatternFromId(pattern), Color.White, 255);
-                Text(button.AccessibleName, new(bounds.X + 4, bounds.Y + bounds.Height * 0.73, bounds.Width - 8, bounds.Height * 0.23), 15);
+                Text(button.AccessibleName, new(bounds.X + 4, bounds.Y + bounds.Height - 27 * MappingEditorScale, bounds.Width - 8, 26 * MappingEditorScale), 17);
             }
             if (mappingFocus == index && button.IsEnabled) DrawOutline(bounds, 2, OperationTargetColor);
         }
@@ -491,8 +491,8 @@ public sealed partial class VenueEditorGame
                             tooltip = column switch
                             {
                                 5 => "コメントをクリックして全文を編集します。1000文字以内、空欄で削除できます。",
-                                3 or 4 => "黒＝主色、白＝副色。網掛けのセルをクリックしてパターンを選択します。",
-                                _ => "色のセルをクリックして主色・副色を選択します。単色の副色は未使用です。",
+                                3 or 4 => "黒＝太線色、白＝細線色。網掛けのセルをクリックしてパターンを選択します。",
+                                _ => "色のセルをクリックして太線色・細線色を選択します。単色の細線色は未使用です。",
                             };
             tooltip ??= focused?.Tooltip;
             tooltip ??= mappingKnowledgeComments

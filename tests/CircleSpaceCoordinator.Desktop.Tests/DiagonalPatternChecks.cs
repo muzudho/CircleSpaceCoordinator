@@ -37,11 +37,13 @@ internal static partial class Program
         for (var y = 0; y < 16; y++)
         for (var x = 0; x < 16; x++)
         {
-            AssertEqual(DiagonalPattern.UsesSecondary(100, x, y) || DiagonalPattern.UsesSecondary(102, x, y), DiagonalPattern.UsesSecondary(104, x, y));
-            AssertEqual(DiagonalPattern.UsesSecondary(101, x, y) || DiagonalPattern.UsesSecondary(103, x, y), DiagonalPattern.UsesSecondary(105, x, y));
-            AssertEqual(DiagonalPattern.UsesSecondary(101, x, y) == DiagonalPattern.UsesSecondary(103, x, y), DiagonalPattern.UsesSecondary(106, x, y));
+            AssertEqual(!(DiagonalPattern.UsesSecondary(100, x, y) || DiagonalPattern.UsesSecondary(102, x, y)), DiagonalPattern.UsesSecondary(104, x, y));
+            AssertEqual(!(DiagonalPattern.UsesSecondary(101, x, y) || DiagonalPattern.UsesSecondary(103, x, y)), DiagonalPattern.UsesSecondary(105, x, y));
+            AssertEqual(DiagonalPattern.UsesSecondary(101, x, y) != DiagonalPattern.UsesSecondary(103, x, y), DiagonalPattern.UsesSecondary(106, x, y));
         }
         AssertEqual(128, Enumerable.Range(0, 256).Count(i => DiagonalPattern.UsesSecondary(106, i % 16, i / 16)));
+        AssertEqual(false, DiagonalPattern.UsesSecondary(106, 0, 0));
+        AssertEqual(true, DiagonalPattern.UsesSecondary(106, 4, 4));
         var project = CreateProject() with { GenreStyles = ids.Select(id => new GenreStyleDefinition(id, "black", "white", id)).ToArray() };
         var draft = new GenreStyleDraft(project);
         foreach (var row in draft.Rows.Select((style, index) => (style, index))) draft.SetPattern(row.index, row.style.Pattern);

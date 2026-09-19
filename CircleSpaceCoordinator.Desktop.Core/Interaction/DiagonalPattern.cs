@@ -30,9 +30,9 @@ public static class DiagonalPattern
             101 => up < 8,
             102 => down < 3,
             103 => down < 8,
-            104 => up < 3 || down < 3,
-            105 => up < 8 || down < 8,
-            106 => (up < 8) == (down < 8),
+            104 => up >= 3 && down >= 3,
+            105 => up >= 8 && down >= 8,
+            106 => (up < 8) != (down < 8),
             _ => false,
         };
     }

@@ -1378,7 +1378,7 @@ public sealed partial class VenueEditorGame : Game
             var style = styles[slice.GenreId];
             if (!GenrePatternUsesSecondary(style.Pattern, offsetX + (int)radius, offsetY + (int)radius))
                 continue;
-            var secondary = new Color(style.Secondary.R, style.Secondary.G, style.Secondary.B, (byte)190);
+            var secondary = new Color(style.Secondary.R, style.Secondary.G, style.Secondary.B, (byte)255);
             DrawRectangle(new ScreenRectangle(center.X + offsetX, center.Y + offsetY, sampleSize, sampleSize), secondary);
         }
     }
@@ -2094,7 +2094,7 @@ public sealed partial class VenueEditorGame : Game
             DrawOutline(bounds, borderWidth, border);
     }
 
-    private void DrawGenrePattern(ScreenRectangle bounds, int pattern, Color secondary, byte opacity = 180, bool round = false)
+    private void DrawGenrePattern(ScreenRectangle bounds, int pattern, Color secondary, byte opacity = 255, bool round = false)
     {
         if (pattern <= 0)
             return;
