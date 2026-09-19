@@ -20,7 +20,8 @@ public sealed partial class VenueEditorGame
                 { ChangeLog = log, ActorHandle = handle, WorkDate = date,
                     UpdateOverallComment = true, OverallComment = draft.Mapping.OverallComment,
                     GenreCodeOrder = mappingGenreCodeOrder,
-                    GenreCodeOrderComment = mappingGenreCodeOrderComment },
+                    GenreCodeOrderComment = mappingGenreCodeOrderComment,
+                    UpdateGenreCodeOrder = true },
                 selectedPlanEdit: false), targetWorkspace.Project.GenreStyleCredits, knowledgeComments: true);
     }
 }

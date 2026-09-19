@@ -77,7 +77,7 @@ public static class EditorOperationHandler
         PlanCatalogServiceCopyDeskLayout op => PlanCatalogService.CopyDeskLayout(project, op.sourcePlanId, op.destinationPlanId),
         SetGenreStyles op => project with { GenreStyles = op.styles,
             GenreCodeOrder = op.GenreCodeOrder ?? project.GenreCodeOrder,
-            GenreCodeOrderComment = op.GenreCodeOrderComment ?? project.GenreCodeOrderComment,
+            GenreCodeOrderComment = op.UpdateGenreCodeOrder ? GenreStyleDefinition.NormalizeKnowledgeComment(op.GenreCodeOrderComment) : project.GenreCodeOrderComment,
             GenreStyleComment = op.UpdateOverallComment ? GenreStyleDefinition.NormalizeKnowledgeComment(op.OverallComment) : project.GenreStyleComment },
         SetBlockStyles op => project with { BlockStyles = op.styles },
         SwapNumberAddresses op => AddressSwapEditor.Swap(project, op.planId, op.channel, op.source, op.destination, op.width, op.height, op.sourceFrameIds),

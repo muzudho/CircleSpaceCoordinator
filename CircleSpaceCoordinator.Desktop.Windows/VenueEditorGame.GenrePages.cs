@@ -18,6 +18,7 @@ public sealed partial class VenueEditorGame
     private string? mappingGenreCodeOrderComment;
     private bool genreOrderDialogOpen;
     private int genreOrderDragIndex = -1;
+    private ScreenRectangle GenreOrderCommentBounds => new(80, 84, 700, 34);
 
     private void SelectGenreTarget(string key, bool navigate = false)
     {
@@ -54,6 +55,17 @@ public sealed partial class VenueEditorGame
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
             if (Contains(new ScreenRectangle(860, 570, 120, 38), pointer)) { genreOrderDialogOpen = false; return; }
+            if (Contains(GenreOrderCommentBounds, pointer))
+            {
+                OpenUnderlineInput("並び順のコメント", mappingGenreCodeOrderComment ?? "", value =>
+                {
+                    var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+                    if (normalized == mappingGenreCodeOrderComment) return;
+                    mappingGenreCodeOrderComment = normalized;
+                    mappingOrderChanged = true;
+                }, "並び順についてのコメントを入力してください。", maxLength: 1000, allowEmpty: true, trim: false);
+                return;
+            }
             for (var index = 0; index < draft.Rows.Count; index++)
                 if (Contains(GenreOrderCard(index), pointer)) { genreOrderDragIndex = index; break; }
         }
@@ -81,6 +93,12 @@ public sealed partial class VenueEditorGame
         DrawOutline(panel, 2, Color.LightSlateGray);
         textRenderer?.Draw("ジャンルコードの並び順", ToRectangle(new(panel.X + 24, panel.Y + 18, panel.Width - 48, 34), 0), Color.White, 23, true);
         textRenderer?.Draw("カードをドラッグして２列の間を移動できます。知見は色網掛けページで確認できます。", ToRectangle(new(panel.X + 24, panel.Y + 52, panel.Width - 48, 26), 0), new Color(190, 210, 218), 15);
+        var commentBounds = GenreOrderCommentBounds;
+        var comment = mappingGenreCodeOrderComment;
+        textRenderer?.Draw(string.IsNullOrWhiteSpace(comment) ? "並び順のコメント" : comment,
+            ToRectangle(commentBounds, 0), string.IsNullOrWhiteSpace(comment) ? new Color(150, 165, 170) : Color.White, 16, true);
+        DrawLine(new(commentBounds.X, commentBounds.Y + commentBounds.Height - 3),
+            new(commentBounds.X + commentBounds.Width, commentBounds.Y + commentBounds.Height - 3), 2, new Color(99, 223, 185));
         for (var index = 0; index < draft.Rows.Count; index++)
         {
             var card = GenreOrderCard(index);
@@ -123,6 +141,7 @@ public sealed partial class VenueEditorGame
                             genreCodeOrder = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToArray();
                             mappingGenreCodeOrder = genreCodeOrder;
                             mappingDraft?.ReorderRows(genreCodeOrder);
+                            mappingOrderChanged = true;
                             genreCodeSort = true;
                             genreSpaceSort = false;
                             genrePreviewScroll = 0;

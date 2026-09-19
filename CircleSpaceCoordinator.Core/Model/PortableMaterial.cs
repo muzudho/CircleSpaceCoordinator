@@ -17,6 +17,10 @@ public sealed record PortableMaterial(
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GenreStyleDefinition[]? GenreStyles { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? GenreCodeOrder { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GenreCodeOrderComment { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public BlockStyleDefinition[]? BlockStyles { get; init; }
 
     public void Validate()
@@ -27,6 +31,11 @@ public sealed record PortableMaterial(
             if (Kind != "genre-styles") throw new InvalidDataException("全体コメントはジャンル対応表の項目です。");
             GenreStyleDefinition.NormalizeKnowledgeComment(OverallComment);
         }
+        if (GenreCodeOrderComment is not null)
+        {
+            if (Kind != "genre-styles") throw new InvalidDataException("並び順コメントはジャンル対応表の項目です。");
+            GenreStyleDefinition.NormalizeKnowledgeComment(GenreCodeOrderComment);
+        }
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name))
             throw new InvalidDataException("素材のIDと名前が必要です。");
         if (Kind is "genre-styles" or "block-styles")
@@ -35,6 +44,10 @@ public sealed record PortableMaterial(
                 Kind == "genre-styles" && (GenreStyles is null || BlockStyles is not null) ||
                 Kind == "block-styles" && (BlockStyles is null || GenreStyles is not null))
                 throw new InvalidDataException("対応表素材の内容が不正です。");
+            if (Kind != "genre-styles" && (GenreCodeOrder is not null || GenreCodeOrderComment is not null))
+                throw new InvalidDataException("ジャンルコード順はジャンル対応表だけに含められます。");
+            if (GenreCodeOrder is not null && GenreCodeOrder.Distinct(StringComparer.Ordinal).Count() != GenreCodeOrder.Count)
+                throw new InvalidDataException("ジャンルコード順に重複があります。");
             var rows = Kind == "genre-styles"
                 ? GenreStyles!.Select(s => s is null ? default : (s.GenreId, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray()
                 : BlockStyles!.Select(s => s is null ? default : (s.BlockNumber, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray();

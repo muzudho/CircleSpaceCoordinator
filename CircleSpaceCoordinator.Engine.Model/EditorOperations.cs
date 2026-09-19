@@ -141,6 +141,7 @@ public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) 
 {
     public IReadOnlyList<string>? GenreCodeOrder { get; init; }
     public string? GenreCodeOrderComment { get; init; }
+    public bool UpdateGenreCodeOrder { get; init; }
     public bool UpdateOverallComment { get; init; }
     public string? OverallComment { get; init; }
 }

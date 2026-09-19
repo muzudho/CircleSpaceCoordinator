@@ -212,11 +212,12 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not { } draft) return;
         SyncMappingChangeTag();
+        var hasChanges = draft.HasChanges || mappingOrderChanged;
         if (mappingPickerColumn == 0 && mappingEditorButtons.FirstOrDefault(item => item.Button.AccessibleName == "閉じる") is { } close)
             close.Button.IsEnabled = mappingChangeTag?.CanClose == true && mappingComposition.Length == 0;
         if (mappingWidth == GraphicsDevice.Viewport.Width && mappingHeight == GraphicsDevice.Viewport.Height &&
-            (mappingPickerColumn > 0 || mappingButtonsHaveChanges == draft.HasChanges)) return;
-        mappingButtonsHaveChanges = draft.HasChanges;
+            (mappingPickerColumn > 0 || mappingButtonsHaveChanges == hasChanges)) return;
+        mappingButtonsHaveChanges = hasChanges;
         mappingWidth = GraphicsDevice.Viewport.Width;
         mappingHeight = GraphicsDevice.Viewport.Height;
         mappingEditorButtons.Clear();
@@ -272,8 +273,8 @@ public sealed partial class VenueEditorGame
                     tooltip: "次のページの行を表示します。PageDownでも移動できます。");
             }
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
-                tooltip: draft.HasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
-            if (draft.HasChanges)
+                tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
+            if (hasChanges)
                 Add("破棄", MappingDiscardBounds, DiscardStyleMapping,
                     tooltip: "変更を元に戻して、前のページに戻ります。");
         }
