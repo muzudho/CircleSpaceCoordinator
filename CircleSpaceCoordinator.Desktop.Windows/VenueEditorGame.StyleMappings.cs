@@ -54,6 +54,7 @@ public sealed partial class VenueEditorGame
         mappingDraft = draft;
         mappingKnowledgeComments = knowledgeComments;
         genrePageTab = genrePreviewScroll = 0;
+        selectedGenreKey = null;
         genrePieExpanded = false;
         mappingKeyLabel = keyLabel;
         mappingEmptyMessage = emptyMessage;
@@ -159,6 +160,8 @@ public sealed partial class VenueEditorGame
 
     private void OpenMappingPicker(int row, int column)
     {
+        if (mappingKnowledgeComments && mappingDraft is { } targetDraft && row >= 0 && row < targetDraft.Rows.Count)
+            SelectGenreTarget(targetDraft.Rows[row].Key);
         if (mappingKnowledgeComments && column == 5)
         {
             OpenGenreKnowledgeComment(row);
@@ -307,6 +310,7 @@ public sealed partial class VenueEditorGame
             if (IsPressed(keyboard, Keys.Down)) mappingRow = Math.Min(Math.Max(0, draft.Rows.Count - 1), mappingRow + 1);
             if (IsPressed(keyboard, Keys.Up) || IsPressed(keyboard, Keys.Down))
             {
+                if (mappingKnowledgeComments && draft.Rows.Count > 0) selectedGenreKey = draft.Rows[mappingRow].Key;
                 mappingScroll = Math.Clamp(mappingScroll, Math.Max(0, mappingRow - MappingVisibleRows + 1), mappingRow);
                 mappingWidth = -1;
             }
@@ -328,6 +332,26 @@ public sealed partial class VenueEditorGame
         foreach (var item in mappingEditorButtons) item.Button.UpdatePointer(pointer);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
+            if (mappingKnowledgeComments && mappingPickerColumn == 0)
+            {
+                if (genrePageTab == 1)
+                {
+                    var groups = BuildGenrePreviewGroups();
+                    for (var index = 0; index < groups.Count; index++)
+                        if (Contains(GenreCatalogTile(index, groups.Count), pointer))
+                        {
+                            SelectGenreTarget(groups[index].GenreId, navigate: true);
+                            return;
+                        }
+                }
+                else if (genrePageTab == 0)
+                    for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
+                        if (Contains(MappingCell(row, 0), pointer))
+                        {
+                            SelectGenreTarget(draft.Rows[mappingScroll + row].Key);
+                            return;
+                        }
+            }
             pressedMappingButton = mappingEditorButtons.Select(item => item.Button).FirstOrDefault(button => button.Press(pointer));
             if (pressedMappingButton is not null) mappingFocus = mappingEditorButtons.FindIndex(item => item.Button == pressedMappingButton);
             else if (mappingPickerColumn == 0 && !GenreChartVisible)
@@ -401,6 +425,8 @@ public sealed partial class VenueEditorGame
                         else DrawOutline(bounds, 2, OperationTargetColor);
                     }
                 }
+                if (mappingKnowledgeComments && style.Key == selectedGenreKey)
+                    DrawOutline(MappingBounds(20, 142 + row * 52, 960, 46), 2 * MappingEditorScale, OperationTargetColor);
             }
             if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
         }

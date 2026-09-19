@@ -10,6 +10,20 @@ public sealed partial class VenueEditorGame
 {
     private int genrePageTab;
     private int genrePreviewScroll;
+    private string? selectedGenreKey;
+
+    private void SelectGenreTarget(string key, bool navigate = false)
+    {
+        if (mappingDraft is not { } draft) return;
+        selectedGenreKey = key;
+        var row = draft.Rows.ToList().FindIndex(style => style.Key == key);
+        if (row < 0) return; // Unassigned participants have no editable genre code.
+        mappingRow = row;
+        mappingScroll = Math.Clamp(mappingScroll, Math.Max(0, row - MappingVisibleRows + 1), row);
+        mappingFocus = -1;
+        if (navigate) genrePageTab = 0;
+        mappingWidth = -1;
+    }
     private static readonly string[] GenrePageTabs = ["色網掛け", "色見本カタログ", "スペース数比率", "円グラフ"];
     private const int GenrePreviewPageSize = 6;
 
@@ -39,6 +53,7 @@ public sealed partial class VenueEditorGame
                 if (mappingComposition.Length > 0) return;
                 SetMappingTextFocus(false);
                 genrePageTab = tab;
+                if (tab == 0 && selectedGenreKey is { } key) SelectGenreTarget(key);
                 genrePreviewScroll = 0;
                 mappingFocus = -1;
                 mappingWidth = -1;
@@ -74,7 +89,11 @@ public sealed partial class VenueEditorGame
         if (genrePageTab == 1)
         {
             for (var index = 0; index < groups.Count; index++)
+            {
                 DrawGenreTile(GenreCatalogTile(index, groups.Count), groups[index].GenreId == "（未設定）" ? null : groups[index].GenreId, Color.Transparent, 0);
+                if (groups[index].GenreId == selectedGenreKey)
+                    DrawOutline(GenreCatalogTile(index, groups.Count), 3 * MappingEditorScale, OperationTargetColor);
+            }
             return;
         }
         GenrePreviewText($"合計 {total} sp / {groups.Sum(group => group.CircleCount)} サークル", 20, 102, 700, 20);
@@ -124,7 +143,9 @@ public sealed partial class VenueEditorGame
         {
             for (var index = 0; index < groups.Count; index++)
                 if (Contains(GenreCatalogTile(index, groups.Count), pointer))
-                    return $"{groups[index].GenreId}：{groups[index].SpaceCount} sp / {groups[index].CircleCount} サークル";
+                    return $"{groups[index].GenreId}：{groups[index].SpaceCount} sp / {groups[index].CircleCount} サークル　" +
+                        (mappingDraft?.Rows.Any(style => style.Key == groups[index].GenreId) == true
+                            ? "クリックで色網掛けの該当行へ移動します。" : "ジャンル未設定のため、対応する編集行はありません。");
             return groups.Count == 0 ? "ジャンルデータがありません。" : "全ジャンルの色見本です。マウスを合わせるとジャンル名を確認できます。";
         }
         double? fraction = null;

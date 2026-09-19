@@ -1814,7 +1814,14 @@ internal static partial class Program
             GenreStyles = [new("G01", "red", "white", "checker"), new("unused", "blue", "white", "solid")],
         };
         var draft = new GenreStyleDraft(project);
-        AssertEqual(1, draft.Rows.Count);
+        AssertEqual(2, draft.Rows.Count);
+        AssertEqual("unused", draft.Rows[1].GenreId);
+        AssertEqual(false, draft.Mapping.HasChanges);
+        draft.SetColor(1, true, "green");
+        AssertEqual(true, draft.Mapping.HasChanges);
+        draft.Mapping.RestoreOpeningSnapshot();
+        AssertEqual(false, draft.Mapping.HasChanges);
+        AssertEqual(project.GenreStyles[1], draft.Rows[1]);
         AssertEqual("thick-grid", draft.Rows[0].Pattern);
         draft.SetColor(0, true, "#12abef");
         AssertEqual("#12ABEF", draft.Rows[0].PrimaryColor);
