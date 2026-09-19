@@ -182,7 +182,7 @@ internal static partial class Program
     {
         var rejected = false;
         try { action(); }
-        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IOException or CircleSpaceCoordinator.Core.Validation.ProjectValidationException)
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IOException or InvalidDataException or CircleSpaceCoordinator.Core.Validation.ProjectValidationException)
         { rejected = true; }
         AssertEqual(true, rejected);
     }

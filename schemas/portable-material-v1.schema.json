@@ -18,7 +18,9 @@
       "enum": [
         "venue",
         "frame-definition",
-        "request-definition"
+        "request-definition",
+        "genre-styles",
+        "block-styles"
       ]
     },
     "name": {
@@ -43,6 +45,26 @@
     },
     "credits": {
       "$ref": "circle-space-project-v1.schema.json#/$defs/personCredits"
+    },
+    "genreStyles": {
+      "anyOf": [
+        {
+          "$ref": "circle-space-project-v1.schema.json#/properties/genreStyles"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "blockStyles": {
+      "anyOf": [
+        {
+          "$ref": "circle-space-project-v1.schema.json#/properties/blockStyles"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "oneOf": [
@@ -55,6 +77,12 @@
           "type": "object"
         },
         "definitions": {
+          "type": "null"
+        },
+        "genreStyles": {
+          "type": "null"
+        },
+        "blockStyles": {
           "type": "null"
         }
       },
@@ -82,6 +110,12 @@
               "maxItems": 1
             }
           }
+        },
+        "genreStyles": {
+          "type": "null"
+        },
+        "blockStyles": {
+          "type": "null"
         }
       },
       "required": [
@@ -104,10 +138,60 @@
               "maxItems": 1
             }
           }
+        },
+        "genreStyles": {
+          "type": "null"
+        },
+        "blockStyles": {
+          "type": "null"
         }
       },
       "required": [
         "definitions"
+      ]
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "genre-styles"
+        },
+        "genreStyles": {
+          "type": "array"
+        },
+        "venue": {
+          "type": "null"
+        },
+        "definitions": {
+          "type": "null"
+        },
+        "blockStyles": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "genreStyles"
+      ]
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "block-styles"
+        },
+        "blockStyles": {
+          "type": "array"
+        },
+        "venue": {
+          "type": "null"
+        },
+        "definitions": {
+          "type": "null"
+        },
+        "genreStyles": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "blockStyles"
       ]
     }
   ],

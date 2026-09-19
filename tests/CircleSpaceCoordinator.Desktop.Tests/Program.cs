@@ -24,6 +24,8 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Change tag input validates Unicode, prevents empty exits, scrolls and retains failed saves", ChangeTagEditing),
+            ("Change tags and appearance packages survive gRPC, JSON, providers, imports and undo", ChangeTagPackageRoundTrip),
             ("Worker settings and knowledge/provider credits survive package and project round trips", PersonCreditsRoundTrip),
             ("Autosave backs up daily, encrypts and rotates unprotected generations, rejects stale files and failed backups", AutoSaveAndSavePoints),
             ("Portable materials preserve dependencies, names, confidentiality and atomic history", PortableMaterials),

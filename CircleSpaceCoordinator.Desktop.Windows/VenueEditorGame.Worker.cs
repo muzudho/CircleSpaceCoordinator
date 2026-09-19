@@ -68,7 +68,7 @@ public sealed partial class VenueEditorGame
                 if (mouse.X < Window.ClientBounds.Width - 160)
                 {
                     if (workspace is not null && frameDraft is null && mappingDraft is null && mouse.X >= Window.ClientBounds.Width - 310) ManageChannelKnowledge();
-                    else EditHandle();
+                    else { if (mappingDraft is not null) SetMappingTextFocus(false); EditHandle(); }
                 }
             }
         }

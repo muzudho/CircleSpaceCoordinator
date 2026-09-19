@@ -11,8 +11,9 @@ public sealed partial class VenueEditorGame
         if (workspace is not { } targetWorkspace) return;
         var draft = new GenreStyleDraft(targetWorkspace.Project);
         OpenStyleMappingEditor(draft.Mapping, "ジャンルコード", "ジャンルが設定されたサークルはありません。",
-            styles => targetWorkspace.Execute(new SetGenreStyles(styles.Select(style =>
-                new GenreStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)).ToArray()),
+            (styles, log, handle, date) => targetWorkspace.Execute(new SetGenreStyles(styles.Select(style =>
+                new GenreStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)).ToArray())
+                { ChangeLog = log, ActorHandle = handle, WorkDate = date },
                 selectedPlanEdit: false), targetWorkspace.Project.GenreStyleCredits);
     }
 }

@@ -107,7 +107,7 @@
     { "required": ["deskLayouts", "circleLayouts"] }
   ],
   "$defs": {
-    "personCredits": {"anyOf": [{"type": "null"}, {"type": "object", "additionalProperties": false, "properties": {"author": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "modifier": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "firstProvider": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "latestProvider": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "modifiedOn": {"type": ["string", "null"], "format": "date"}}}]},
+    "personCredits": {"anyOf": [{"type": "null"}, {"type": "object", "additionalProperties": false, "properties": {"author": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "modifier": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "firstProvider": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "latestProvider": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "modifiedOn": {"type": ["string", "null"], "format": "date"}, "changeLog": {"type": ["string", "null"], "minLength": 1, "maxLength": 1000, "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"}}}]},
     "identifier": {
       "type": "string",
       "minLength": 1,

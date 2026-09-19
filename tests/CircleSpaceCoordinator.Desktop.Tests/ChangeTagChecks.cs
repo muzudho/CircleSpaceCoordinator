@@ -1,0 +1,140 @@
+namespace CircleSpaceCoordinator.Desktop.Tests;
+
+using CircleSpaceCoordinator.Application.Layouts;
+using CircleSpaceCoordinator.Core.Model;
+using CircleSpaceCoordinator.EditorClient;
+using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.Infrastructure.Json;
+using StationeryUI.Controls;
+
+internal static partial class Program
+{
+    private static void ChangeTagEditing()
+    {
+        string? Validate(string value)
+        {
+            try { PersonCredits.NormalizeChangeLog(value); return null; }
+            catch (ArgumentException ex) { return ex.Message; }
+        }
+        var input = new ChangeTagEditor(Validate);
+        AssertEqual(true, input.CanClose);
+        input.HasChanges = true;
+        AssertEqual(false, input.CanClose);
+        input.Insert("   ");
+        AssertEqual(false, input.CanClose);
+        input.Editor.SelectAll();
+        input.Insert(string.Concat(Enumerable.Repeat("😀", 1000)));
+        AssertEqual(1000, input.CharacterCount);
+        AssertEqual(true, input.CanClose);
+        AssertEqual(2000, input.Editor.Text.Length);
+        var range = input.VisibleRange(10, text => text.EnumerateRunes().Count());
+        AssertEqual((1980, 2000), range);
+        input.Editor.MoveTo(0);
+        AssertEqual((0, 20), input.VisibleRange(10, text => text.EnumerateRunes().Count()));
+        input.Editor.MoveTo(input.Editor.Text.Length);
+        input.Insert("a");
+        AssertEqual(false, input.CanClose);
+        input.Editor.Undo(); input.Edited();
+        AssertEqual(true, input.CanClose);
+        AssertEqual(false, input.Insert("\ninvalid"));
+        AssertEqual(1000, input.CharacterCount);
+        AssertEqual(false, input.CanClose);
+        input.HasChanges = false;
+        AssertEqual(true, input.CanClose);
+        input.HasChanges = true;
+        input.Editor.SelectAll(); input.Insert("  色を青に変更  ");
+        var view = new ChangeTagEditorView();
+        var drawn = new List<(string Text, StationeryUI.Canvas.ScreenRectangle Bounds)>();
+        view.Draw(input, new(20, 502, 790, 151), 1, true, false, "by test since 2001-02-03", "previous", "",
+            text => text.Length * 10, (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { });
+        AssertEqual(true, drawn.Any(item => item.Text == "(change)"));
+        AssertEqual(true, view.CaretBounds.X < view.BadgeBounds.X);
+        AssertEqual(true, drawn.Any(item => item.Text.Contains("/ 1000", StringComparison.Ordinal)));
+        // A preedit replaces the selected span visually, at the insertion point;
+        // it must not change the committed log or appear in the help row.
+        var ime = new ChangeTagEditor(Validate) { HasChanges = true };
+        ime.Insert("前の色です");
+        ime.Editor.MoveTo(1); ime.Editor.MoveTo(3, extend: true);
+        drawn.Clear();
+        view.Draw(ime, new(20, 502, 824, 152), 1, true, false, "author", "previous", "新しい色",
+            text => text.EnumerateRunes().Count() * 14, (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { });
+        AssertEqual("前の色です", ime.Editor.Text);
+        AssertEqual(true, drawn.Any(item => item.Text == "前新しい色です" && item.Bounds.Y == view.InputBounds.Y));
+        AssertEqual(view.InputBounds.X + 14, view.CaretBounds.X);
+        AssertEqual(view.CaretBounds.X, view.CompositionBounds.X);
+        AssertEqual(56d, view.CompositionBounds.Width);
+        AssertEqual(false, drawn.Any(item => item.Text == "新しい色"));
+        // Preedit scrolling stays within the field and preserves supplementary characters.
+        ime.Editor.SelectAll(); ime.Insert(new string('a', 1000));
+        drawn.Clear();
+        view.Draw(ime, new(20, 502, 824, 152), 1, true, false, "author", "previous", "😀漢字",
+            text => text.EnumerateRunes().Count() * 14, (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { });
+        AssertEqual(1000, ime.Editor.Text.Length);
+        AssertEqual(true, drawn.Any(item => item.Text.EndsWith("😀漢字", StringComparison.Ordinal) && item.Bounds.Y == view.InputBounds.Y));
+        AssertEqual(true, view.CompositionBounds.X + view.CompositionBounds.Width < view.BadgeBounds.X);
+        AssertEqual(true, input.TryBeginSave(out var log));
+        AssertEqual("色を青に変更", log!);
+        AssertEqual(false, input.TryBeginSave(out _));
+        input.SaveFailed("disk full");
+        AssertEqual("色を青に変更", input.Text);
+        AssertEqual(true, input.CanClose);
+        AssertEqual(true, input.TryBeginSave(out _));
+        foreach (var invalid in new[] { "", "  ", "log\n", "\tlog", "log\u2028tail", "\ud800", new string('a', 1001) })
+            RejectPortable(() => PersonCredits.NormalizeChangeLog(invalid));
+    }
+
+    private static void ChangeTagPackageRoundTrip()
+    {
+        using var workspace = EditorConnection.Current.Open(ProjectJsonSerializer.Save(PortableExample()));
+        var date = new DateOnly(2001, 2, 3);
+        var styles = new[] { new GenreStyleDefinition("G", "blue", "white", "solid") };
+        var oldCredits = workspace.Project.GenreStyleCredits;
+        workspace.Execute(new SetGenreStyles(styles) { ActorHandle = "editor", WorkDate = date, ChangeLog = "色を青に変更" }, selectedPlanEdit: false);
+        var credits = workspace.Project.GenreStyleCredits!;
+        AssertEqual("色を青に変更", credits.ChangeLog!);
+        AssertEqual("editor", credits.Modifier!);
+        AssertEqual(date, credits.ModifiedOn!.Value);
+        AssertEqual(credits, ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project)).GenreStyleCredits);
+        workspace.Undo();
+        AssertEqual(oldCredits, workspace.Project.GenreStyleCredits);
+        workspace.Redo();
+        AssertEqual(credits, workspace.Project.GenreStyleCredits);
+        workspace.Execute(new SetGenreStyles(styles.ToArray()) { ActorHandle = "other", WorkDate = date.AddDays(1), ChangeLog = "no change" }, selectedPlanEdit: false);
+        AssertEqual(credits, workspace.Project.GenreStyleCredits);
+        RejectPortable(() => workspace.Execute(new SetGenreStyles([styles[0] with { PrimaryColor = "red" }])
+            { ActorHandle = "other", WorkDate = date, ChangeLog = "\n" }, selectedPlanEdit: false));
+        AssertEqual(credits, workspace.Project.GenreStyleCredits);
+
+        PortableMaterialSelection[] selections = [new("genre-styles", "project"), new("block-styles", "project")];
+        var definitions = new SpaceDefinitionCatalog([], []);
+        var json = EditorConnection.Current.ExportPortable(new(workspace.Project, [], definitions, "styles", "", [], false)
+            { Materials = selections, Handle = "provider" });
+        var package = EditorConnection.Current.ParsePortable(json);
+        AssertEqual(2, package.Materials.Count);
+        var material = package.Materials.Single(item => item.Kind == "genre-styles");
+        AssertEqual("provider", material.Credits!.FirstProvider!);
+        AssertEqual("editor", material.Credits.Modifier!);
+        AssertEqual(credits.ChangeLog!, material.Credits.ChangeLog!);
+        AssertEqual(date, material.Credits.ModifiedOn!.Value);
+        var recorded = PortableCreditsService.Record(workspace.Project, package, selections, definitions);
+        AssertEqual(material.Credits, recorded.GenreStyleCredits);
+        using var receiver = EditorConnection.Current.Open(ProjectJsonSerializer.Save(PortableExample()));
+        receiver.HandleProvider = () => "receiver";
+        var before = receiver.Project.GenreStyleCredits;
+        receiver.Execute(new ImportPortableSelection(package, package.Materials.Select(m => new PortableImportItem(m.Id, Guid.NewGuid().ToString(), m.Name)).ToArray()), selectedPlanEdit: false);
+        AssertEqual(material.Credits, receiver.Project.GenreStyleCredits);
+        AssertEqual("blue", receiver.Project.GenreStyles.Single().PrimaryColor);
+        receiver.Undo(); AssertEqual(before, receiver.Project.GenreStyleCredits);
+        receiver.Redo(); AssertEqual(material.Credits, receiver.Project.GenreStyleCredits);
+        receiver.Execute(new SetGenreStyles([styles[0] with { PrimaryColor = "red" }])
+            { ActorHandle = "receiver", WorkDate = date.AddDays(1), ChangeLog = "色を赤に変更" }, selectedPlanEdit: false);
+        AssertEqual("receiver", receiver.Project.GenreStyleCredits!.Modifier!);
+        AssertEqual("色を赤に変更", receiver.Project.GenreStyleCredits.ChangeLog!);
+        AssertEqual("provider", receiver.Project.GenreStyleCredits.FirstProvider!);
+        // Metadata-free legacy files remain readable; no previous log is invented.
+        AssertEqual<string?>(null, new PersonCredits().ChangeLog);
+        RejectPortable(() => new PersonCredits { ChangeLog = "missing author and date" }.Validate());
+        RejectPortable(() => (material with { BlockStyles = [] }).Validate());
+        RejectPortable(() => (material with { GenreStyles = [styles[0], styles[0]] }).Validate());
+    }
+}

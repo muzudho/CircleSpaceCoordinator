@@ -12,12 +12,32 @@ public sealed record PortableMaterial(
     public PersonCredits? Credits { get; init; }
     public SpaceDefinitionCatalog? Definitions { get; init; }
     public KnowledgeVenue? Venue { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GenreStyleDefinition[]? GenreStyles { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public BlockStyleDefinition[]? BlockStyles { get; init; }
 
     public void Validate()
     {
         Credits?.Validate();
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name))
             throw new InvalidDataException("素材のIDと名前が必要です。");
+        if (Kind is "genre-styles" or "block-styles")
+        {
+            if (Venue is not null || Definitions is not null ||
+                Kind == "genre-styles" && (GenreStyles is null || BlockStyles is not null) ||
+                Kind == "block-styles" && (BlockStyles is null || GenreStyles is not null))
+                throw new InvalidDataException("対応表素材の内容が不正です。");
+            var rows = Kind == "genre-styles"
+                ? GenreStyles!.Select(s => s is null ? default : (s.GenreId, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray()
+                : BlockStyles!.Select(s => s is null ? default : (s.BlockNumber, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray();
+            if (rows.Select(s => s.Item1).Distinct(StringComparer.Ordinal).Count() != rows.Length ||
+                rows.Any(s => string.IsNullOrWhiteSpace(s.Item1) || string.IsNullOrWhiteSpace(s.Item2) ||
+                    string.IsNullOrWhiteSpace(s.Item3) || string.IsNullOrWhiteSpace(s.Item4)))
+                throw new InvalidDataException("対応表のキー重複または空欄があります。");
+            return;
+        }
+        if (GenreStyles is not null || BlockStyles is not null) throw new InvalidDataException("対応表を別の素材へ混在できません。");
         if (Kind == "venue")
         {
             if (Venue is null || Definitions is not null) throw new InvalidDataException("会場素材の内容が不正です。");

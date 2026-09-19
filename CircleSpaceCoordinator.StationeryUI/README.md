@@ -1,6 +1,12 @@
 2026-09-08: Reusable controls, viewport and text editing now come from the StationeryUI 0.1.0 package: https://github.com/muzudho/StationeryUI. This project is a compatibility reference point and contains no copied control implementation. Windows input and rasterization use StationeryUI.Windows 0.1.0. The initial packages are in LocalPackages/StationeryUI; NuGet.Config enables clean restoration without a sibling repository.
 # StationeryUI library
 
+## 変更タグコンポーネント（2026-09-19）
+
+`Controls/ChangeTagEditor.cs` と `Controls/ChangeTagEditorView.cs` は、このプロジェクトに追加した再利用可能な入力状態・下線／バッジ表示部品です。`StationeryUI.Controls` 名前空間で公開し、OS・MonoGame・会場モデルには依存しません。既存パッケージの `UnderlineTextEditor` を使用し、検証・描画・文字幅計測・保存は利用側から接続します。
+
+ジャンル網掛け・ブロック色の編集が最初の利用先です。独立リポジトリーへの移設・NuGet 公開は未実施です。[変更タグエディターの設計と実装状況](../Docs/Dev/開発/文房具UI/変更タグエディター.md) を参照してください。
+
 ## リングメニューの共通ライブラリー利用
 
 2026-09-13: リング配置計算は StationeryUI リポジトリーの `src/StationeryUI/Controls/RingMenuLayout.cs` に集約しました。現在は同梱パッケージ `StationeryUI` 0.1.1 の `StationeryUI.Controls.RingMenuLayout.Create(anchor, width, height, count)` を使用します。円形の等間隔配置・正方形の寸法・画面端への補正を担当し、MonoGame・Windows・会場モデルには依存しません。返された `Center`・`Radius`・`Buttons` は囲碁などの別アプリからも利用できます。ローカルの重複実装は削除しました。

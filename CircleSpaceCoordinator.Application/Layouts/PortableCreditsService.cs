@@ -31,10 +31,12 @@ public static class PortableCreditsService
         }
         foreach (var selection in selections)
         {
-            var id = selection.Kind == "venue" ? "venue:" + selection.SourceId
+            var id = selection.Kind is "venue" or "genre-styles" or "block-styles" ? selection.Kind + ":" + selection.SourceId
                 : selection.Kind + ":" + (selection.LayoutId ?? "common") + ":" + selection.SourceId;
             var source = package.Materials.Single(item => item.Id == id);
-            if (source.Kind == "venue") project = project with { Venue = project.Venue with { Credits = source.Credits } };
+            if (source.Kind == "genre-styles") project = project with { GenreStyleCredits = source.Credits };
+            else if (source.Kind == "block-styles") project = project with { BlockStyleCredits = source.Credits };
+            else if (source.Kind == "venue") project = project with { Venue = project.Venue with { Credits = source.Credits } };
             else project = project with { DeskLayouts = project.DeskLayouts.Select(layout => layout.Id == selection.LayoutId
                 ? layout with { Definitions = layout.Definitions is null ? source.Definitions : MergeCredits(layout.Definitions, source.Definitions!) }
                 : layout).ToArray() };

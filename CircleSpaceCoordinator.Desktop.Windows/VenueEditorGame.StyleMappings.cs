@@ -13,7 +13,8 @@ public sealed partial class VenueEditorGame
     private StyleMappingDraft? mappingDraft;
     private string mappingKeyLabel = "";
     private string mappingEmptyMessage = "";
-    private Action<StyleMappingEntry[]>? applyStyleMapping;
+    private Action<StyleMappingEntry[], string, string, DateOnly>? applyStyleMapping;
+    private ChangeTagEditor? mappingChangeTag;
     private PersonCredits? mappingPreviousCredits;
     private StyleMappingEntry[] mappingAppliedStyles = [];
     private readonly List<MappingEditorButton> mappingEditorButtons = [];
@@ -25,7 +26,7 @@ public sealed partial class VenueEditorGame
     private int mappingPickerColumn;
     private int mappingWidth = -1;
     private int mappingHeight = -1;
-    private const int MappingVisibleRows = 8;
+    private const int MappingVisibleRows = 6;
     private static readonly double[] MappingColumnEdges = [20, 290, 450, 610, 810, 980];
     private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight) / 660d));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
@@ -39,7 +40,7 @@ public sealed partial class VenueEditorGame
 
     /// <summary>Opens the shared editor; the caller owns persistence and undo.</summary>
     private void OpenStyleMappingEditor(StyleMappingDraft draft, string keyLabel, string emptyMessage,
-        Action<StyleMappingEntry[]> apply, PersonCredits? previousCredits = null)
+        Action<StyleMappingEntry[], string, string, DateOnly> apply, PersonCredits? previousCredits = null)
     {
         CancelInProgressPointerInteraction();
         mappingDraft = draft;
@@ -47,6 +48,9 @@ public sealed partial class VenueEditorGame
         mappingEmptyMessage = emptyMessage;
         applyStyleMapping = apply;
         mappingPreviousCredits = previousCredits;
+        mappingChangeTag = new ChangeTagEditor(ValidateMappingChangeLog);
+        mappingTextSuppressExit = false;
+        mappingTextRange = (0, 0);
         mappingAppliedStyles = draft.Build();
         mappingRow = mappingScroll = mappingPickerColumn = 0;
         mappingColumn = 1;
@@ -59,6 +63,8 @@ public sealed partial class VenueEditorGame
     {
         CancelInProgressPointerInteraction();
         mappingDraft = null;
+        SetMappingTextFocus(false);
+        mappingChangeTag = null;
         applyStyleMapping = null;
         mappingEditorButtons.Clear();
         mappingPickerColumn = 0;
@@ -73,20 +79,37 @@ public sealed partial class VenueEditorGame
     private bool TryFinishStyleMapping()
     {
         if (mappingDraft is null || applyStyleMapping is null) return true;
+        if (mappingComposition.Length > 0) return false;
+        SyncMappingChangeTag();
+        if (mappingChangeTag is null) return false;
+        if (mappingDraft.HasChanges && !EnsureHandle()) return false;
+        if (!mappingChangeTag.TryBeginSave(out var changeLog))
+        {
+            SetMappingTextFocus(true);
+            return false;
+        }
+        SetMappingTextFocus(false);
+        var applied = false;
+        var previousStyles = mappingAppliedStyles;
         try
         {
             var styles = mappingDraft.Build();
             if (!styles.SequenceEqual(mappingAppliedStyles))
             {
-                if (!EnsureHandle()) return false;
-                applyStyleMapping(styles);
+                applyStyleMapping(styles, changeLog!, Handle, WorkDate);
                 mappingAppliedStyles = styles;
+                applied = true;
             }
-            if (!FlushAutoSave()) return false;
+            if (!FlushAutoSave())
+            {
+                if (applied) { workspace!.Undo(); mappingAppliedStyles = previousStyles; }
+                mappingChangeTag.SaveFailed("保存できませんでした。入力を保持しています。閉じるで再試行してください。");
+                return false;
+            }
             CloseStyleMappingEditor();
             return true;
         }
-        catch (Exception ex) { ShowInAppMessage($"{mappingKeyLabel}設定を反映できません", ex.Message); return false; }
+        catch (Exception ex) { mappingChangeTag?.SaveFailed(ex.Message); return false; }
     }
 
     private void OpenMappingPicker(int row, int column)
@@ -96,6 +119,7 @@ public sealed partial class VenueEditorGame
         mappingRow = row;
         mappingColumn = column;
         mappingPickerColumn = column;
+        SetMappingTextFocus(false);
         var style = mappingDraft.Rows[row];
         var current = column == 3 ? style.Pattern : column == 1 ? style.PrimaryColor : style.SecondaryColor;
         var choices = column == 3 ? StyleMappingDraft.Patterns : StyleMappingDraft.Colors;
@@ -118,6 +142,9 @@ public sealed partial class VenueEditorGame
     private void BuildMappingEditorButtons()
     {
         if (mappingDraft is not { } draft) return;
+        SyncMappingChangeTag();
+        if (mappingPickerColumn == 0 && mappingEditorButtons.LastOrDefault() is { } close)
+            close.Button.IsEnabled = mappingChangeTag?.CanClose == true && mappingComposition.Length == 0;
         if (mappingWidth == GraphicsDevice.Viewport.Width && mappingHeight == GraphicsDevice.Viewport.Height) return;
         mappingWidth = GraphicsDevice.Viewport.Width;
         mappingHeight = GraphicsDevice.Viewport.Height;
@@ -158,9 +185,9 @@ public sealed partial class VenueEditorGame
         }
         else
         {
-            Add("前のページ", MappingBounds(20, 576, 160, 36), () => ScrollMappingRows(-MappingVisibleRows), mappingScroll > 0);
-            Add("次のページ", MappingBounds(192, 576, 160, 36), () => ScrollMappingRows(MappingVisibleRows), mappingScroll + MappingVisibleRows < draft.Rows.Count);
-            Add("閉じる", MappingBounds(820, 606, 160, 38), SaveStyleMapping);
+            Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollMappingRows(-MappingVisibleRows), mappingScroll > 0);
+            Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollMappingRows(MappingVisibleRows), mappingScroll + MappingVisibleRows < draft.Rows.Count);
+            Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true);
         }
         if (mappingFocus >= mappingEditorButtons.Count) mappingFocus = -1;
     }
@@ -176,6 +203,7 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not { } draft) return;
         BuildMappingEditorButtons();
+        if (mappingPickerColumn == 0 && UpdateMappingChangeTag(keyboard, mouse)) return;
         if (IsPressed(keyboard, Keys.Escape))
         {
             if (mappingPickerColumn > 0) CloseMappingPicker(); else SaveStyleMapping();
@@ -285,9 +313,8 @@ public sealed partial class VenueEditorGame
             }
         }
         if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
-        Text($"{draft.Rows.Count} 件　矢印：セル移動　Enter：選択　Tab：操作ボタンへ", MappingBounds(370, 576, 610, 30), 14);
-        Text(draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate), MappingBounds(20, 606, 790, 38), 14);
-        Text("閉じる・Esc：変更を反映して自動保存", MappingBounds(20, 643, 790, 17), 11);
+        Text($"{draft.Rows.Count} 件　矢印：セル移動　Enter：選択　Tab：操作ボタンへ", MappingBounds(370, 460, 610, 30), 14);
+        DrawMappingChangeTag();
         if (mappingPickerColumn > 0)
         {
             DrawRectangle(new(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 190));

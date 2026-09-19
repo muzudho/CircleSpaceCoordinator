@@ -197,6 +197,15 @@ public sealed partial class VenueEditorGame
         if (package is null) return;
         if (package.Items.Count > 0) { DrawLayoutPreview(graphics, bounds, package.Items[Math.Min(index, package.Items.Count - 1)].Project, 0); return; }
         var material = package.Materials.FirstOrDefault();
+        if (material?.Kind is "genre-styles" or "block-styles")
+        {
+            var rows = material.GenreStyles?.Select(s => $"{s.GenreId}: {s.PrimaryColor} / {s.SecondaryColor} / {s.Pattern}")
+                ?? material.BlockStyles!.Select(s => $"{s.BlockNumber}: {s.PrimaryColor} / {s.SecondaryColor} / {s.Pattern}");
+            using var font = new Drawing.Font("Meiryo", 10);
+            graphics.DrawString($"{material.Name}\n{material.Credits?.AttributionText ?? "変更者・日付不明"}\n{material.Credits?.ChangeLog ?? "チェンジログ未記録"}\n\n{string.Join("\n", rows.Take(8))}",
+                font, Drawing.Brushes.Black, new Drawing.RectangleF(12, 12, Math.Max(1, bounds.Width - 24), Math.Max(1, bounds.Height - 24)));
+            return;
+        }
         var definition = material?.Definitions?.Types.FirstOrDefault();
         if (definition is not null)
         {

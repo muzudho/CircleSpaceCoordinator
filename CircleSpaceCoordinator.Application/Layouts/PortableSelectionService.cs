@@ -48,6 +48,9 @@ public static class PortableSelectionService
             throw new InvalidOperationException("取込み対象を重複なく選択してください。");
         if (package.Materials.Count(material => material.Kind == "venue" && selection.Any(item => item.ItemId == material.Id)) > 1)
             throw new InvalidOperationException("採用する会場は１件だけ選択してください。");
+        if (package.Materials.Where(material => material.Kind is "genre-styles" or "block-styles" &&
+                selection.Any(item => item.ItemId == material.Id)).GroupBy(material => material.Kind).Any(group => group.Count() > 1))
+            throw new InvalidOperationException("対応表は種類ごとに１件だけ選択してください。既存の対応表全体を置き換えます。");
         var targetEdits = selection.Where(selected => selected.TargetLayoutId is not null &&
             (selected.Mode is "insert" or "replace" || package.Materials.Any(material =>
                 material.Id == selected.ItemId && material.Kind is "frame-definition" or "request-definition")));
@@ -56,7 +59,9 @@ public static class PortableSelectionService
             throw new InvalidOperationException("置換先の配置案への取込みは１件ずつ確定してください。同じ案への追加と置換は同時に実行できません。");
         // Build a detached candidate. The workspace commits only after every item succeeds.
         project = LayoutProjection.MigrateLegacyPlans(project);
-        foreach (var selected in selection)
+        // Explicit whole-table selections win over styles incidentally bundled with a layout.
+        foreach (var selected in selection.OrderBy(selected => package.Materials.Any(material =>
+            material.Id == selected.ItemId && material.Kind is "genre-styles" or "block-styles") ? 1 : 0))
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(selected.NewId);
             ArgumentException.ThrowIfNullOrWhiteSpace(selected.Name);

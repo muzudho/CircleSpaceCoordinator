@@ -9,6 +9,12 @@ public static class PortableMaterialService
 {
     public static PortableMaterial Extract(CircleSpaceProject project, SpaceDefinitionCatalog common, PortableMaterialSelection selected)
     {
+        if (selected.Kind == "genre-styles")
+            return new("genre-styles:" + selected.SourceId, selected.Kind, "ジャンルコードの網掛け", project.IsConfidential)
+            { Credits = project.GenreStyleCredits, GenreStyles = project.GenreStyles.ToArray() };
+        if (selected.Kind == "block-styles")
+            return new("block-styles:" + selected.SourceId, selected.Kind, "ブロック色の対応表", project.IsConfidential)
+            { Credits = project.BlockStyleCredits, BlockStyles = project.BlockStyles.ToArray() };
         if (selected.Kind == "venue")
         {
             var venue = project.Venue;
@@ -94,7 +100,11 @@ public static class PortableMaterialService
     public static CircleSpaceProject Apply(CircleSpaceProject project, PortableMaterial material, PortableImportItem selected, bool confidential)
     {
         material.Validate();
-        if (material.Kind == "venue")
+        if (material.Kind == "genre-styles")
+            project = project with { GenreStyles = material.GenreStyles!, GenreStyleCredits = material.Credits };
+        else if (material.Kind == "block-styles")
+            project = project with { BlockStyles = material.BlockStyles!, BlockStyleCredits = material.Credits };
+        else if (material.Kind == "venue")
         {
             var source = material.Venue!;
             var venue = new Venue(selected.NewId, selected.Name, source.Width, source.Height, source.BlockedCells.ToHashSet())

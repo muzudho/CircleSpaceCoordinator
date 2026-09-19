@@ -77,6 +77,8 @@ public sealed partial class EditorService
                     },
                     Changes = preview.Selection.Select(selected => selected.Mode switch
                     {
+                        _ when preview.Package.Materials.Any(material => material.Id == selected.ItemId &&
+                            material.Kind is "genre-styles" or "block-styles") => $"対応表全体を置換：{selected.Name}（変更タグを引継ぎ）",
                         "replace" => $"配置案「{preview.Project.DeskLayouts.Single(layout => layout.Id == selected.TargetLayoutId).Name}」を「{selected.Name}」へ置換（参照サークル配置なし）",
                         "insert" => $"配置案「{preview.Project.DeskLayouts.Single(layout => layout.Id == selected.TargetLayoutId).Name}」へフレームを追加、移動量 ({selected.OffsetX}, {selected.OffsetY})。番号を保持し境界で自動接続する場合があります",
                         _ => $"追加／採用：{selected.Name}" + (selected.TargetLayoutId is not null && preview.Package.Materials.Any(material =>

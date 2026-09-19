@@ -11,15 +11,16 @@ public static class ModificationCreditsService
     {
         if (string.IsNullOrWhiteSpace(operation.ActorHandle) || operation is ImportPortableSelection or ImportFrameLayout or RecordPortableProviders)
             return after;
-        return Apply(before, after, operation.ActorHandle, operation.WorkDate);
+        return Apply(before, after, operation.ActorHandle, operation.WorkDate, operation.ChangeLog);
     }
 
-    public static CircleSpaceProject Apply(CircleSpaceProject before, CircleSpaceProject after, string? actorHandle, DateOnly? workDate = null)
+    public static CircleSpaceProject Apply(CircleSpaceProject before, CircleSpaceProject after, string? actorHandle, DateOnly? workDate = null,
+        string? changeLog = null)
     {
         if (string.IsNullOrWhiteSpace(actorHandle)) return after;
         var handle = PersonCredits.NormalizeHandle(actorHandle);
         var date = workDate ?? DateOnly.FromDateTime(DateTime.Now);
-        PersonCredits Edited(PersonCredits? previous) => (previous ?? new()).WrittenBy(handle, date);
+        PersonCredits Edited(PersonCredits? previous) => (previous ?? new()).WrittenBy(handle, date, changeLog);
         var changedCircleIds = after.Plans.Where(plan =>
         {
             var previous = before.Plans.FirstOrDefault(item => item.Id == plan.Id);

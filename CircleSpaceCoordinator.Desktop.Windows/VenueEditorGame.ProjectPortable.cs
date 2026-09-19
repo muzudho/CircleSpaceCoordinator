@@ -22,6 +22,10 @@ public sealed partial class VenueEditorGame
             rows.Rows[rows.Rows.Add(false, snapshot.Venue.Name, "会場の寸法・障害物・ゾーン", snapshot.Venue.Id, "会場")].Tag =
                 new PortableMaterialSelection("venue", snapshot.Venue.Id);
             var sourceLayout = snapshot.DeskLayouts.Single(layout => layout.Id == workspace.SelectedDeskLayoutId);
+            rows.Rows[rows.Rows.Add(false, "ジャンルコードの網掛け", "対応表全体と変更タグ", "project", "ジャンル網掛け対応表")].Tag =
+                new PortableMaterialSelection("genre-styles", "project");
+            rows.Rows[rows.Rows.Add(false, "ブロック色の対応表", "対応表全体と変更タグ", "project", "ブロック色対応表")].Tag =
+                new PortableMaterialSelection("block-styles", "project");
             var sourceDefinitions = sourceLayout.Definitions ?? SpaceDefinitions.Current;
             foreach (var type in sourceDefinitions.Types)
                 rows.Rows[rows.Rows.Add(false, type.Name, $"元：{sourceLayout.Name}／{type.Width}×{type.Height}", type.Id, "フレーム定義")].Tag =
@@ -123,7 +127,7 @@ public sealed partial class VenueEditorGame
             foreach (var item in package.Knowledge)
                 rows.Rows.Add(false, item.Name, $"知見・未対応付け：{item.Purpose}／{item.InputRule.ValueMeanings}", "knowledge:" + item.Id, "チャンネルの知見");
             foreach (var material in package.Materials)
-                rows.Rows.Add(false, material.Name, material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
+                rows.Rows.Add(false, material.Name, material.Kind is "genre-styles" or "block-styles" ? "既存の対応表全体を置換（変更タグを含む）。" : material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
                     material.Id, MaterialKindName(material.Kind));
             var details = new Forms.TextBox { Left = 16, Top = 340, Width = 700, Height = 84,
                 Multiline = true, ReadOnly = true, ScrollBars = Forms.ScrollBars.Vertical,
@@ -147,6 +151,12 @@ public sealed partial class VenueEditorGame
             rows.SelectionChanged += (_, _) =>
             {
                 if (rows.CurrentRow?.Cells[3].Value is not string id) return;
+                var material = package.Materials.FirstOrDefault(value => value.Id == id);
+                if (material is not null)
+                {
+                    details.Text = $"{material.Name}\r\n{material.Credits?.AttributionText ?? "変更者・日付不明"}\r\n{material.Credits?.ChangeLog ?? "チェンジログ未記録"}";
+                    return;
+                }
                 var item = package.Knowledge.FirstOrDefault(knowledge => "knowledge:" + knowledge.Id == id);
                 if (item is null) return;
                 details.Text = $"{(package.IsConfidential ? "【マル秘】" : "")}知見：{item.Name}（未対応付けで保存）\r\n{item.Description}\r\n狙い：{item.Purpose}\r\n推奨列：{item.InputRule.RecommendedColumn}／{item.InputRule.Meaning}\r\n{item.InputRule.ValueMeanings}／空欄：{(item.InputRule.BlankIsZero ? "0" : "エラー")}\r\n係数：{item.Scale}, {item.Offset}, {item.OverallWeight}／既定重み：{item.DefaultWeight}\r\n{(item.Venue is null ? "ひな形（座標なし）" : $"会場：{item.Venue.Name}／重み {item.Cells.Length} セル。列対応時に会場を検証します。")}";
@@ -287,6 +297,8 @@ public sealed partial class VenueEditorGame
 
     private static string MaterialKindName(string kind) => kind switch
     {
-        "venue" => "会場", "frame-definition" => "フレーム定義", "request-definition" => "申込定義", _ => kind,
+        "venue" => "会場", "frame-definition" => "フレーム定義", "request-definition" => "申込定義",
+        "genre-styles" => "ジャンル網掛け対応表", "block-styles" => "ブロック色対応表",
+        _ => kind,
     };
 }
