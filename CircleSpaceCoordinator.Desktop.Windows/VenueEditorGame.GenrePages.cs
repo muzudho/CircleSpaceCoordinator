@@ -39,7 +39,7 @@ public sealed partial class VenueEditorGame
 
     private void AddGenreTabs()
     {
-        if (mappingKnowledgeComments)
+        if (mappingKnowledgeComments && genrePageTab != 3)
         {
             foreach (var (label, spaceSort, codeSort) in new[] { ("サークルデータ", false, false), ("スペース数", true, false), ("ジャンルコード", false, true) })
             {

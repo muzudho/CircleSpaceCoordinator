@@ -381,6 +381,8 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
         Text(mappingKnowledgeComments ? "ジャンル" : $"{mappingKeyLabel}と色・網掛けパターンの紐づけ",
             MappingBounds(20, 18, mappingKnowledgeComments ? 78 : 960, 38), mappingKnowledgeComments ? 22 : 26);
+        if (mappingKnowledgeComments && genrePageTab == 3)
+            Text("スペース数順", MappingBounds(700, 18, 280, 36), 18, new Color(180, 220, 230));
         if (mappingKnowledgeComments) DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
         if (GenreChartVisible) DrawGenrePreview();
         else
