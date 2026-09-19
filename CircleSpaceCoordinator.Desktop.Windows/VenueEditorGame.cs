@@ -3466,7 +3466,7 @@ public sealed partial class VenueEditorGame : Game
     private static bool IsControlDown(KeyboardState keyboard) =>
         keyboard.IsKeyDown(Keys.LeftControl) || keyboard.IsKeyDown(Keys.RightControl);
 
-    private void DrawStatusBar(string? toolDescription = null)
+    private void DrawStatusBar(string? toolDescription = null, string? heading = null)
     {
         var width = GraphicsDevice.PresentationParameters.BackBufferWidth;
         var height = GraphicsDevice.PresentationParameters.BackBufferHeight;
@@ -3474,7 +3474,7 @@ public sealed partial class VenueEditorGame : Game
         DrawRectangle(new ScreenRectangle(0d, top, width, StatusBarHeight), new Color(14, 20, 28, 248));
         DrawRectangle(new ScreenRectangle(0d, top, width, 2d), new Color(72, 143, 153));
         textRenderer?.Draw(
-            HoveredButtonDescription(),
+            heading ?? HoveredButtonDescription(),
             new Rectangle(14, top + 5, Math.Max(1, width - 288), 23),
             Color.White,
             pixelHeight: 17,

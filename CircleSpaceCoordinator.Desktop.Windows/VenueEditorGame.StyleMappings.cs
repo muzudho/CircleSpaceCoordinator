@@ -33,12 +33,12 @@ public sealed partial class VenueEditorGame
     private static readonly double[] DefaultMappingColumnEdges = [20, 290, 450, 610, 810, 980];
     private static readonly double[] GenreMappingColumnEdges = [20, 290, 370, 450, 530, 610, 980];
     private double[] MappingColumnEdges => mappingKnowledgeComments ? GenreMappingColumnEdges : DefaultMappingColumnEdges;
-    private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight) / 660d));
+    private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight) / 660d));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
     {
         var scale = MappingEditorScale;
         return new((GraphicsDevice.Viewport.Width - 1000 * scale) / 2 + x * scale,
-            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - 660 * scale) / 2 + y * scale, width * scale, height * scale);
+            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight - 660 * scale) / 2 + y * scale, width * scale, height * scale);
     }
     private ScreenRectangle MappingCell(int visibleRow, int column) =>
         MappingBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46);
@@ -228,8 +228,10 @@ public sealed partial class VenueEditorGame
         }
         else
         {
-            Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollMappingRows(-MappingVisibleRows), mappingScroll > 0);
-            Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollMappingRows(MappingVisibleRows), mappingScroll + MappingVisibleRows < draft.Rows.Count);
+            Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollMappingRows(-MappingVisibleRows), mappingScroll > 0,
+                tooltip: "前のページの行を表示します。PageUpでも移動できます。");
+            Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollMappingRows(MappingVisibleRows), mappingScroll + MappingVisibleRows < draft.Rows.Count,
+                tooltip: "次のページの行を表示します。PageDownでも移動できます。");
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
                 tooltip: draft.HasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
             if (draft.HasChanges)
@@ -324,10 +326,8 @@ public sealed partial class VenueEditorGame
         void Text(string text, ScreenRectangle bounds, int size = 17, Color? color = null) =>
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
         Text($"{mappingKeyLabel}と色・網掛けパターンの紐づけ", MappingBounds(20, 18, 960, 38), 26);
-        Text(mappingKnowledgeComments ? "色・網掛けをクリックして選択。知見コメントはクリックして入力。黒＝主色、白＝副色。"
-            : "主色・副色・網掛けのセルをクリックして選択。黒＝主色、白＝副色。", MappingBounds(20, 68, 960, 30));
         var headers = mappingKnowledgeComments
-            ? new[] { "ジャンル", "主色", "副色", "網掛け", "見本", "知見" }
+            ? new[] { "ジャンル", "主色", "副色", "網掛け", "見本", "コメント" }
             : new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
         for (var column = 0; column < headers.Length; column++)
             Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
@@ -337,7 +337,8 @@ public sealed partial class VenueEditorGame
             for (var column = 0; column < headers.Length; column++)
             {
                 var bounds = MappingCell(row, column);
-                DrawRectangle(bounds, new Color(35, 43, 54));
+                var plainCell = mappingKnowledgeComments && column is 0 or 5;
+                if (!plainCell) DrawRectangle(bounds, new Color(35, 43, 54));
                 if (column == 0) Text(style.Key, bounds);
                 else if (column == 5) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds);
                 else if (column is 1 or 2)
@@ -360,13 +361,16 @@ public sealed partial class VenueEditorGame
                     if (column == 3 && !mappingKnowledgeComments) Text(StyleMappingDraft.Patterns.FirstOrDefault(choice => choice.Id == style.Pattern).Label ?? style.Pattern,
                         new(bounds.X, bounds.Y + bounds.Height * 0.58, bounds.Width, bounds.Height * 0.4), 12);
                 }
-                DrawOutline(bounds, 1, new Color(100, 119, 130));
+                if (!plainCell) DrawOutline(bounds, 1, new Color(100, 119, 130));
                 if (mappingPickerColumn == 0 && mappingFocus < 0 && mappingRow == mappingScroll + row && mappingColumn == column)
-                    DrawOutline(bounds, 2, OperationTargetColor);
+                {
+                    if (plainCell)
+                        DrawLine(new(bounds.X + 6, bounds.Y + bounds.Height - 7), new(bounds.X + bounds.Width - 6, bounds.Y + bounds.Height - 7), 2, OperationTargetColor);
+                    else DrawOutline(bounds, 2, OperationTargetColor);
+                }
             }
         }
         if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
-        Text($"{draft.Rows.Count} 件　矢印：セル移動　Enter：選択　Tab：操作ボタンへ", MappingBounds(370, 460, 610, 30), 14);
         DrawMappingChangeTag();
         if (mappingPickerColumn > 0)
         {
@@ -375,7 +379,6 @@ public sealed partial class VenueEditorGame
             DrawRectangle(panel, new Color(24, 29, 36));
             DrawOutline(panel, 2, Color.LightSlateGray);
             Text(mappingPickerColumn == 3 ? "網掛けを選択 — 黒が主色、白が副色" : mappingPickerColumn == 1 ? "主色を選択" : "副色を選択", MappingBounds(80, 108, 840, 38), 23);
-            Text("見本をクリックして選択　Tab・矢印で移動　Enterで決定　Escでキャンセル", MappingBounds(80, 146, 840, 26), 14);
         }
         for (var index = 0; index < mappingEditorButtons.Count; index++)
         {
@@ -407,17 +410,32 @@ public sealed partial class VenueEditorGame
 
     private void DrawMappingButtonTooltip()
     {
-        if (mappingPickerColumn > 0 || !CanShowEditorHover) return;
+        if (modalDialog is not null) return;
         var mouse = Mouse.GetState();
-        var hovered = mappingEditorButtons.FirstOrDefault(item => Contains(item.Button.Bounds, new(mouse.X, mouse.Y)));
+        var hovered = CanShowEditorHover ? mappingEditorButtons.FirstOrDefault(item => Contains(item.Button.Bounds, new(mouse.X, mouse.Y))) : null;
         var focused = !mappingTextFocused && mappingFocus >= 0 && mappingFocus < mappingEditorButtons.Count
             ? mappingEditorButtons[mappingFocus] : null;
-        var tooltip = (hovered ?? focused)?.Tooltip;
-        if (tooltip is null) return;
-        var width = GraphicsDevice.Viewport.Width;
-        var top = GraphicsDevice.Viewport.Height - 36;
-        DrawRectangle(new(0, top, width, 36), new Color(20, 32, 42));
-        textRenderer?.Draw(tooltip, new Rectangle(16, top + 6, Math.Max(1, width - 32), 24), new Color(220, 233, 239), 14);
+        var tooltip = hovered?.Tooltip;
+        if (mappingPickerColumn > 0)
+            tooltip ??= "見本をクリックして選択　Tab・矢印：移動　Enter：決定　Esc：キャンセル";
+        else if (tooltip is null && mappingDraft is { } draft)
+        {
+            if (CanShowEditorHover)
+                for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
+                    for (var column = 1; column < MappingColumnEdges.Length - 1; column++)
+                        if (Contains(MappingCell(row, column), new(mouse.X, mouse.Y)))
+                            tooltip = column switch
+                            {
+                                5 => "コメントをクリックして全文を編集します。1000文字以内、空欄で削除できます。",
+                                3 or 4 => "黒＝主色、白＝副色。網掛けのセルをクリックしてパターンを選択します。",
+                                _ => "色のセルをクリックして主色・副色を選択します。単色の副色は未使用です。",
+                            };
+            tooltip ??= focused?.Tooltip;
+            tooltip ??= mappingKnowledgeComments
+                ? "色・網掛け・コメントをクリックして編集　矢印：セル移動　Enter：選択　Tab：操作ボタンへ"
+                : "色・網掛けをクリックして編集　矢印：セル移動　Enter：選択　Tab：操作ボタンへ";
+        }
+        DrawStatusBar(tooltip, $"{mappingKeyLabel}：{mappingDraft?.Rows.Count ?? 0} 件");
     }
 
     private static Color MappingColorText(Color color) => color.R * 0.299 + color.G * 0.587 + color.B * 0.114 < 145 ? Color.White : Color.Black;
