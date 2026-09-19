@@ -13,7 +13,7 @@ public sealed class GenreStyleDraft
     public GenreStyleDraft(CircleSpaceProject project)
     {
         Mapping = new StyleMappingDraft(
-            project.Participants.Select(item => item.GenreId).OfType<string>()
+            project.GenreCodeOrder.Concat(project.Participants.Select(item => item.GenreId).OfType<string>())
                 .Concat(project.GenreStyles.Select(style => style.GenreId)),
             project.GenreStyles.Select(style => new StyleMappingEntry(style.GenreId,
                 style.PrimaryColor, style.SecondaryColor, style.Pattern) { KnowledgeComment = style.KnowledgeComment }), project.GenreStyleComment);

@@ -12,6 +12,9 @@ public sealed partial class VenueEditorGame
     private int genrePreviewScroll;
     private string? selectedGenreKey;
     private bool genreSpaceSort;
+    private bool genreCodeSort;
+    private string[] genreCodeOrder = [];
+    private string[] mappingGenreCodeOrder = [];
 
     private void SelectGenreTarget(string key, bool navigate = false)
     {
@@ -38,12 +41,28 @@ public sealed partial class VenueEditorGame
     {
         if (genrePageTab is 1 or 2)
         {
-            foreach (var (label, spaceSort) in new[] { ("サークルデータ順", false), ("スペース数順", true) })
+            foreach (var (label, spaceSort, codeSort) in new[] { ("サークルデータ", false, false), ("スペース数", true, false), ("ジャンルコード", false, true) })
             {
                 var sort = spaceSort;
-                mappingEditorButtons.Add(new(new IconButtonModel(MappingBounds(sort ? 840 : 700, 18, 140, 36), label)
-                    { IsSelected = genreSpaceSort == sort }, () =>
+                var code = codeSort;
+                var x = code ? 890 : sort ? 795 : 700;
+                mappingEditorButtons.Add(new(new IconButtonModel(MappingBounds(x, 18, code ? 90 : 90, 36), label)
+                    { IsSelected = code ? genreCodeSort : !genreCodeSort && genreSpaceSort == sort }, () =>
                 {
+                    if (code && genreCodeOrder.Length == 0)
+                    {
+                        OpenUnderlineInput("ジャンルコード順（カンマ区切り）", string.Join(",", mappingDraft?.Rows.Select(row => row.Key) ?? []), value =>
+                        {
+                            genreCodeOrder = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToArray();
+                            mappingGenreCodeOrder = genreCodeOrder;
+                            genreCodeSort = true;
+                            genreSpaceSort = false;
+                            genrePreviewScroll = 0;
+                            mappingWidth = -1;
+                        }, "ジャンルコードを表示したい順にカンマ区切りで入力してください。未入力のコードは末尾に並びます。", int.MaxValue);
+                        return;
+                    }
+                    genreCodeSort = code;
                     genreSpaceSort = sort;
                     genrePreviewScroll = 0;
                     mappingFocus = -1;
@@ -84,6 +103,9 @@ public sealed partial class VenueEditorGame
             if (!groups.Any(group => group.GenreId == style.Key)) groups.Add(new(style.Key, 0, 0));
         if (chartOrder || genreSpaceSort)
             return groups.OrderByDescending(group => group.SpaceCount).ThenBy(group => group.GenreId, StringComparer.Ordinal).ToArray();
+        if (genreCodeSort)
+            return groups.OrderBy(group => Array.IndexOf(genreCodeOrder, group.GenreId) is var index && index >= 0 ? index : int.MaxValue)
+                .ThenBy(group => group.GenreId, StringComparer.Ordinal).ToArray();
         var order = workspace?.Project.Participants
             .Select(item => string.IsNullOrWhiteSpace(item.GenreId) ? "（未設定）" : item.GenreId!)
             .Distinct(StringComparer.Ordinal).ToArray() ?? [];

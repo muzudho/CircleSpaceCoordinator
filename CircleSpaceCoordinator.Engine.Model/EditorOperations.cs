@@ -139,6 +139,7 @@ public sealed record PlanCatalogServiceAddOptimizedPlan(Plan optimizedPlan, stri
 public sealed record PlanCatalogServiceCopyDeskLayout(string sourcePlanId, string destinationPlanId) : EditorOperation;
 public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) : EditorOperation
 {
+    public IReadOnlyList<string>? GenreCodeOrder { get; init; }
     public bool UpdateOverallComment { get; init; }
     public string? OverallComment { get; init; }
 }
