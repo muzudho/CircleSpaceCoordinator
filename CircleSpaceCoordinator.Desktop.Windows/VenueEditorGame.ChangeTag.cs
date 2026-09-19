@@ -169,14 +169,15 @@ public sealed partial class VenueEditorGame
         DrawMappingBadge(badge, MappingLogBounds);
     }
 
-    private void DrawMappingBadge(ActionBadgeComponent badge, ScreenRectangle anchor)
+    private void DrawMappingBadge(ActionBadgeComponent badge, ScreenRectangle anchor, double? drawScale = null)
     {
         if (!badge.IsVisible) return;
+        var scale = drawScale ?? MappingEditorScale;
         var local = badge.Bounds;
-        var bounds = new ScreenRectangle(anchor.X + local.X * MappingEditorScale, anchor.Y + local.Y * MappingEditorScale,
-            local.Width * MappingEditorScale, local.Height * MappingEditorScale);
+        var bounds = new ScreenRectangle(anchor.X + local.X * scale, anchor.Y + local.Y * scale,
+            local.Width * scale, local.Height * scale);
         var rectangle = ToRectangle(bounds);
-        var radius = Math.Max(1, Math.Min((int)Math.Round(6 * MappingEditorScale), rectangle.Height / 2));
+        var radius = Math.Max(1, Math.Min((int)Math.Round(6 * scale), rectangle.Height / 2));
         // Scanlines provide the same six-pixel rounded silhouette on the host canvas.
         for (var y = 0; y < rectangle.Height; y++)
         {
@@ -184,7 +185,7 @@ public sealed partial class VenueEditorGame
             var inset = dy > 0 ? (int)Math.Ceiling(radius - Math.Sqrt(Math.Max(0, radius * radius - dy * dy))) : 0;
             DrawRectangle(new(rectangle.X + inset, rectangle.Y + y, rectangle.Width - 2 * inset, 1), MappingInk(ChangeTagInk.Badge));
         }
-        var fontSize = Math.Max(10, (int)(16 * MappingEditorScale));
+        var fontSize = Math.Max(10, (int)(16 * scale));
         var measured = textRenderer?.Measure(badge.Label, fontSize) ?? Point.Zero;
         textRenderer?.Draw(badge.Label, new Rectangle(rectangle.X + Math.Max(0, (rectangle.Width - measured.X) / 2),
             rectangle.Y, Math.Min(rectangle.Width, measured.X), rectangle.Height), MappingInk(ChangeTagInk.BadgeText), fontSize);

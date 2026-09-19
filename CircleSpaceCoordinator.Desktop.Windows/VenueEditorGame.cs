@@ -137,7 +137,7 @@ public sealed partial class VenueEditorGame : Game
         Window.Title = ApplicationIdentity.Title;
         Window.AllowUserResizing = true;
         IsMouseVisible = true;
-        Exiting += (_, args) => { if (!TryExitStyleMapping() || !FlushAutoSave()) { args.Cancel = true; return; } PersistWorkingState(); };
+        Exiting += (_, args) => { if (!FinishWorkerEdit(true) || !TryExitStyleMapping() || !FlushAutoSave()) { args.Cancel = true; return; } PersistWorkingState(); };
         CreateToolbar();
         Log("application_start", success: true, detail: workspace is null ? "empty_grid" : "project_loaded");
     }
@@ -217,7 +217,7 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
-        if (UpdateWorkerBar(mouse)) { previousKeyboard = keyboard; base.Update(gameTime); return; }
+        if (UpdateWorkerBar(keyboard, mouse)) { previousKeyboard = keyboard; base.Update(gameTime); return; }
 
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
