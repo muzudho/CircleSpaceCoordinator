@@ -84,7 +84,7 @@ public sealed partial class VenueEditorGame
         };
         form.Controls.AddRange([label, text, save, cancel]);
         form.CancelButton = cancel;
-        form.ShowDialog();
+        ShowEditorDialog(form);
         modalInputDrain = true;
     }
 }

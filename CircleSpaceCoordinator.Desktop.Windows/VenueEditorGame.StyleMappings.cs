@@ -1,6 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.Desktop.Core.Interaction;
+using CircleSpaceCoordinator.Core.Model;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StationeryUI.Canvas;
@@ -13,6 +14,8 @@ public sealed partial class VenueEditorGame
     private string mappingKeyLabel = "";
     private string mappingEmptyMessage = "";
     private Action<StyleMappingEntry[]>? applyStyleMapping;
+    private PersonCredits? mappingPreviousCredits;
+    private StyleMappingEntry[] mappingAppliedStyles = [];
     private readonly List<MappingEditorButton> mappingEditorButtons = [];
     private IconButtonModel? pressedMappingButton;
     private int mappingRow;
@@ -24,25 +27,27 @@ public sealed partial class VenueEditorGame
     private int mappingHeight = -1;
     private const int MappingVisibleRows = 8;
     private static readonly double[] MappingColumnEdges = [20, 290, 450, 610, 810, 980];
-    private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, GraphicsDevice.Viewport.Height / 660d));
+    private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight) / 660d));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
     {
         var scale = MappingEditorScale;
         return new((GraphicsDevice.Viewport.Width - 1000 * scale) / 2 + x * scale,
-            (GraphicsDevice.Viewport.Height - 660 * scale) / 2 + y * scale, width * scale, height * scale);
+            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - 660 * scale) / 2 + y * scale, width * scale, height * scale);
     }
     private ScreenRectangle MappingCell(int visibleRow, int column) =>
         MappingBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46);
 
     /// <summary>Opens the shared editor; the caller owns persistence and undo.</summary>
     private void OpenStyleMappingEditor(StyleMappingDraft draft, string keyLabel, string emptyMessage,
-        Action<StyleMappingEntry[]> apply)
+        Action<StyleMappingEntry[]> apply, PersonCredits? previousCredits = null)
     {
         CancelInProgressPointerInteraction();
         mappingDraft = draft;
         mappingKeyLabel = keyLabel;
         mappingEmptyMessage = emptyMessage;
         applyStyleMapping = apply;
+        mappingPreviousCredits = previousCredits;
+        mappingAppliedStyles = draft.Build();
         mappingRow = mappingScroll = mappingPickerColumn = 0;
         mappingColumn = 1;
         mappingFocus = -1;
@@ -62,13 +67,26 @@ public sealed partial class VenueEditorGame
 
     private void SaveStyleMapping()
     {
-        if (mappingDraft is null || applyStyleMapping is null) return;
+        TryFinishStyleMapping();
+    }
+
+    private bool TryFinishStyleMapping()
+    {
+        if (mappingDraft is null || applyStyleMapping is null) return true;
         try
         {
-            applyStyleMapping(mappingDraft.Build());
+            var styles = mappingDraft.Build();
+            if (!styles.SequenceEqual(mappingAppliedStyles))
+            {
+                if (!EnsureHandle()) return false;
+                applyStyleMapping(styles);
+                mappingAppliedStyles = styles;
+            }
+            if (!FlushAutoSave()) return false;
             CloseStyleMappingEditor();
+            return true;
         }
-        catch (Exception ex) { ShowInAppMessage($"{mappingKeyLabel}設定を反映できません", ex.Message); }
+        catch (Exception ex) { ShowInAppMessage($"{mappingKeyLabel}設定を反映できません", ex.Message); return false; }
     }
 
     private void OpenMappingPicker(int row, int column)
@@ -142,8 +160,7 @@ public sealed partial class VenueEditorGame
         {
             Add("前のページ", MappingBounds(20, 576, 160, 36), () => ScrollMappingRows(-MappingVisibleRows), mappingScroll > 0);
             Add("次のページ", MappingBounds(192, 576, 160, 36), () => ScrollMappingRows(MappingVisibleRows), mappingScroll + MappingVisibleRows < draft.Rows.Count);
-            Add("保存", MappingBounds(640, 606, 160, 38), SaveStyleMapping);
-            Add("キャンセル", MappingBounds(820, 606, 160, 38), CloseStyleMappingEditor);
+            Add("閉じる", MappingBounds(820, 606, 160, 38), SaveStyleMapping);
         }
         if (mappingFocus >= mappingEditorButtons.Count) mappingFocus = -1;
     }
@@ -161,7 +178,7 @@ public sealed partial class VenueEditorGame
         BuildMappingEditorButtons();
         if (IsPressed(keyboard, Keys.Escape))
         {
-            if (mappingPickerColumn > 0) CloseMappingPicker(); else CloseStyleMappingEditor();
+            if (mappingPickerColumn > 0) CloseMappingPicker(); else SaveStyleMapping();
             return;
         }
         if (mappingPickerColumn == 0 && IsControlDown(keyboard) && IsPressed(keyboard, Keys.S)) { SaveStyleMapping(); return; }
@@ -269,7 +286,8 @@ public sealed partial class VenueEditorGame
         }
         if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
         Text($"{draft.Rows.Count} 件　矢印：セル移動　Enter：選択　Tab：操作ボタンへ", MappingBounds(370, 576, 610, 30), 14);
-        Text("Ctrl+S：設定を反映　Esc：キャンセル　イベントのファイル保存は編集画面のCtrl+S", MappingBounds(20, 620, 610, 25), 12);
+        Text(draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate), MappingBounds(20, 606, 790, 38), 14);
+        Text("閉じる・Esc：変更を反映して自動保存", MappingBounds(20, 643, 790, 17), 11);
         if (mappingPickerColumn > 0)
         {
             DrawRectangle(new(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 190));

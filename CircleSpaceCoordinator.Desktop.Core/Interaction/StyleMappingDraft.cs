@@ -22,6 +22,15 @@ public sealed class StyleMappingDraft
         ("uniform-horizontal", "（均等）横縞"), ("dots", "水玉"),
     });
     private readonly List<StyleMappingEntry> rows;
+    private readonly StyleMappingEntry[] initialRows;
+    public bool HasChanges => !rows.SequenceEqual(initialRows);
+    public string AttributionSummary(PersonCredits? previous, string handle, DateOnly workDate)
+    {
+        var oldText = (previous ?? new PersonCredits()).AttributionText;
+        if (!HasChanges) return oldText;
+        var current = new PersonCredits(Modifier: string.IsNullOrWhiteSpace(handle) ? null : handle) { ModifiedOn = workDate };
+        return $"({oldText})  ({current.AttributionText})";
+    }
     private readonly StyleMappingEntry[] otherStyles;
     public IReadOnlyList<StyleMappingEntry> Rows { get; }
 
@@ -38,6 +47,7 @@ public sealed class StyleMappingDraft
                 patternIndex == 0 ? "solid" : Patterns[1 + (patternIndex - 1) % (Patterns.Count - 1)].Id);
             return style with { Pattern = NormalizePattern(style.Pattern) };
         }).ToList();
+        initialRows = rows.ToArray();
         Rows = rows.AsReadOnly();
         otherStyles = existing.Where(style => !keysToEdit.Contains(style.Key, StringComparer.Ordinal)).ToArray();
     }

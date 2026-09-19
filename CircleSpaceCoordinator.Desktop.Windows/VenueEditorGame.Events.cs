@@ -202,6 +202,7 @@ public sealed partial class VenueEditorGame
             {
                 workspace = opened;
                 workspace.HandleProvider = () => Handle;
+                if (workspace is not null) workspace.WorkDateProvider = () => WorkDate;
                 projectSavePath = registered.Path;
                 dragController = new DeskDragController(opened, viewport);
                 commandController = new EditorCommandController(opened);

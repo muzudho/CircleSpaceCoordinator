@@ -13,6 +13,6 @@ public sealed partial class VenueEditorGame
         OpenStyleMappingEditor(draft.Mapping, "ブロック番号", "ブロック番号がありません。セルにブロック番号を入力してください。",
             styles => targetWorkspace.Execute(new SetBlockStyles(styles.Select(style =>
                 new BlockStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)).ToArray()),
-                selectedPlanEdit: false));
+                selectedPlanEdit: false), targetWorkspace.Project.BlockStyleCredits);
     }
 }

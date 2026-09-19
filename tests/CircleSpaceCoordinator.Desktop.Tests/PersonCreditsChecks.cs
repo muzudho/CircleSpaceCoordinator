@@ -102,5 +102,37 @@ internal static partial class Program
         var roundTrip = ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project));
         AssertEqual("editor-B", roundTrip.CircleLayouts.Single().Credits!.Modifier!);
         AssertEqual(circleCredits.ModifiedOn, roundTrip.CircleLayouts.Single().Credits!.ModifiedOn);
+
+        var workDate = new DateOnly(2001, 2, 3); // Deliberately different from the machine date.
+        workspace.WorkDateProvider = () => workDate;
+        GenreStyleDefinition[] genreStyles = [new("G", "red", "white", "solid")];
+        workspace.Execute(new SetGenreStyles(genreStyles), selectedPlanEdit: false);
+        var previousMappingCredits = workspace.Project.GenreStyleCredits!;
+        AssertEqual("editor-B", previousMappingCredits.Modifier!);
+        AssertEqual(workDate, previousMappingCredits.ModifiedOn!.Value);
+        workspace.HandleProvider = () => "editor-C";
+        workspace.WorkDateProvider = () => workDate.AddDays(1);
+        workspace.Execute(new SetGenreStyles(genreStyles.ToArray()), selectedPlanEdit: false);
+        AssertEqual(previousMappingCredits, workspace.Project.GenreStyleCredits);
+        workspace.Execute(new SetGenreStyles([genreStyles[0] with { PrimaryColor = "blue" }]), selectedPlanEdit: false);
+        AssertEqual("editor-C", workspace.Project.GenreStyleCredits!.Modifier!);
+        AssertEqual(workDate.AddDays(1), workspace.Project.GenreStyleCredits!.ModifiedOn!.Value);
+        workspace.Undo();
+        AssertEqual(previousMappingCredits, workspace.Project.GenreStyleCredits);
+        workspace.Redo();
+        AssertEqual(workspace.Project.GenreStyleCredits,
+            ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project)).GenreStyleCredits);
+
+        var mapping = new CircleSpaceCoordinator.Desktop.Core.Interaction.StyleMappingDraft(["G"], [new("G", "red", "white", "solid")]);
+        var oldCredits = new PersonCredits(Modifier: "一郎") { ModifiedOn = new(2026, 9, 18) };
+        var today = new DateOnly(2026, 9, 19);
+        AssertEqual(false, mapping.HasChanges);
+        AssertEqual("by 一郎 since 2026-09-18", mapping.AttributionSummary(oldCredits, "二郎", today));
+        mapping.SetColor(0, true, "blue");
+        AssertEqual(true, mapping.HasChanges);
+        AssertEqual("(by 一郎 since 2026-09-18)  (by 二郎 since 2026-09-19)", mapping.AttributionSummary(oldCredits, "二郎", today));
+        mapping.SetColor(0, true, "red");
+        AssertEqual(false, mapping.HasChanges);
+        AssertEqual("by 一郎 since 2026-09-18", mapping.AttributionSummary(oldCredits, "二郎", today));
     }
 }

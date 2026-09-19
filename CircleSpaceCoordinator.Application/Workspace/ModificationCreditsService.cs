@@ -11,14 +11,14 @@ public static class ModificationCreditsService
     {
         if (string.IsNullOrWhiteSpace(operation.ActorHandle) || operation is ImportPortableSelection or ImportFrameLayout or RecordPortableProviders)
             return after;
-        return Apply(before, after, operation.ActorHandle);
+        return Apply(before, after, operation.ActorHandle, operation.WorkDate);
     }
 
-    public static CircleSpaceProject Apply(CircleSpaceProject before, CircleSpaceProject after, string? actorHandle)
+    public static CircleSpaceProject Apply(CircleSpaceProject before, CircleSpaceProject after, string? actorHandle, DateOnly? workDate = null)
     {
         if (string.IsNullOrWhiteSpace(actorHandle)) return after;
         var handle = PersonCredits.NormalizeHandle(actorHandle);
-        var date = DateOnly.FromDateTime(DateTime.Now);
+        var date = workDate ?? DateOnly.FromDateTime(DateTime.Now);
         PersonCredits Edited(PersonCredits? previous) => (previous ?? new()).WrittenBy(handle, date);
         var changedCircleIds = after.Plans.Where(plan =>
         {
@@ -36,6 +36,8 @@ public static class ModificationCreditsService
         }).Select(plan => after.CircleLayouts.FirstOrDefault(item => item.Id == plan.Id)?.DeskLayoutId).ToHashSet();
         return after with
         {
+            GenreStyleCredits = Changed(before.GenreStyles, after.GenreStyles) ? Edited(before.GenreStyleCredits) : before.GenreStyleCredits,
+            BlockStyleCredits = Changed(before.BlockStyles, after.BlockStyles) ? Edited(before.BlockStyleCredits) : before.BlockStyleCredits,
             CircleLayouts = after.CircleLayouts.Select(item =>
             {
                 var previous = before.CircleLayouts.FirstOrDefault(old => old.Id == item.Id);

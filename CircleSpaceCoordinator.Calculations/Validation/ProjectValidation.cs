@@ -12,7 +12,7 @@ public static class ProjectValidator
         foreach (var credits in project.DeskLayouts.Select(item => item.Credits)
             .Concat(project.CircleLayouts.Select(item => item.Credits))
             .Concat(project.DeskLayouts.SelectMany(item => item.DeskPlacements).Select(item => item.Credits))
-            .Concat(project.Evaluation.Features.Select(item => item.Credits)).Append(project.Venue.Credits))
+            .Concat(project.Evaluation.Features.Select(item => item.Credits)).Append(project.Venue.Credits).Append(project.GenreStyleCredits).Append(project.BlockStyleCredits))
         {
             try { credits?.Validate(); }
             catch (ArgumentException ex) { Add("credits.invalid", "credits", ex.Message); }

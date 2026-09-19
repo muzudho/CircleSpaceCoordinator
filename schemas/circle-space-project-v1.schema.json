@@ -14,6 +14,8 @@
     "evaluation"
   ],
   "properties": {
+    "genreStyleCredits": { "$ref": "#/$defs/personCredits" },
+    "blockStyleCredits": { "$ref": "#/$defs/personCredits" },
     "channelKnowledge": { "type": "array", "items": { "$ref": "channel-knowledge-v1.schema.json" } },
     "blockStyles": {
       "type": "array", "items": {

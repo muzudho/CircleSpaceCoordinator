@@ -70,6 +70,7 @@ using System.Text.Json.Serialization;
 public abstract record EditorOperation
 {
     public string? ActorHandle { get; init; }
+    public DateOnly? WorkDate { get; init; }
 }
 public sealed record UpdateChannelKnowledge(CircleSpaceCoordinator.Core.Evaluation.ChannelKnowledge Knowledge, string Handle) : EditorOperation;
 public sealed record RecordPortableProviders(PortablePackage Package, IReadOnlyList<PortableMaterialSelection> Materials,

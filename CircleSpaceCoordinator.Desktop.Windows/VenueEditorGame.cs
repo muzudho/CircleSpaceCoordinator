@@ -117,6 +117,7 @@ public sealed partial class VenueEditorGame : Game
     {
         this.workspace = workspace;
         if (workspace is not null) workspace.HandleProvider = () => Handle;
+        if (workspace is not null) workspace.WorkDateProvider = () => WorkDate;
         this.startEngines = startEngines;
         this.operationLogger = operationLogger ?? NullOperationLogger.Instance;
         this.projectSavePath = projectSavePath;
@@ -136,7 +137,7 @@ public sealed partial class VenueEditorGame : Game
         Window.Title = ApplicationIdentity.Title;
         Window.AllowUserResizing = true;
         IsMouseVisible = true;
-        Exiting += (_, args) => { if (!FlushAutoSave()) { args.Cancel = true; return; } PersistWorkingState(); };
+        Exiting += (_, args) => { if (!TryFinishStyleMapping() || !FlushAutoSave()) { args.Cancel = true; return; } PersistWorkingState(); };
         CreateToolbar();
         Log("application_start", success: true, detail: workspace is null ? "empty_grid" : "project_loaded");
     }
@@ -802,7 +803,6 @@ public sealed partial class VenueEditorGame : Game
         else if (workspace is null)
         {
             DrawEventProjects();
-            DrawWorkerBar();
             DrawModalDialog();
         }
         else
@@ -867,9 +867,9 @@ public sealed partial class VenueEditorGame : Game
             DrawToolRing();
             DrawSpaceCatalog();
             DrawProjectMenu();
-            DrawWorkerBar();
             DrawModalDialog();
         }
+        DrawWorkerBar();
         spriteBatch.End();
 
         if (screenshotRequested)

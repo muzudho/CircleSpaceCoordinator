@@ -31,12 +31,12 @@ public sealed partial class VenueEditorGame
     private static readonly string[] FrameKinds = ["机", "場所", "ブース"];
     private static readonly string[] FrameEdgeValues = ["開放", "壁", "入口", "正面"];
     private static readonly string[] FrameEdgeNames = ["上辺", "右辺", "下辺", "左辺"];
-    private double FrameScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, GraphicsDevice.Viewport.Height / 660d));
+    private double FrameScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight) / 660d));
     private ScreenRectangle FrameBounds(double x, double y, double width, double height)
     {
         var scale = FrameScale;
         return new((GraphicsDevice.Viewport.Width - 1000 * scale) / 2 + x * scale,
-            (GraphicsDevice.Viewport.Height - 660 * scale) / 2 + y * scale, width * scale, height * scale);
+            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - 660 * scale) / 2 + y * scale, width * scale, height * scale);
     }
     private double FrameCellSize => Math.Min(64, Math.Min(320d / frameDraft!.Width, 220d / frameDraft.Height));
     private ScreenRectangle FrameGridLayout => new(350 - FrameCellSize * frameDraft!.Width / 2,

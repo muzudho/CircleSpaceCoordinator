@@ -27,7 +27,7 @@ public sealed partial class VenueEditorGame
         form.Controls.AddRange([label, confidential, detail, export, cancel]);
         form.AcceptButton = export;
         form.CancelButton = cancel;
-        if (form.ShowDialog() != Forms.DialogResult.OK) { modalInputDrain = true; return; }
+        if (ShowEditorDialog(form) != Forms.DialogResult.OK) { modalInputDrain = true; return; }
         modalInputDrain = true;
         var isConfidential = confidential.Checked;
         var project = owner.Project with {

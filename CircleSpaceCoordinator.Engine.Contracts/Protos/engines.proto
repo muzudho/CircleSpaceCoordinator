@@ -39,6 +39,7 @@ message FillVacantSeatsRequest {
   string workspace_id = 1;
   int64 expected_revision = 2;
   string handle = 3;
+  string work_date = 4;
 }
 message OpenRequest { string project_json = 1; }
 message WorkspaceRequest { string workspace_id = 1; }
@@ -92,6 +93,7 @@ message EditorOptimizeRequest {
   OptimizationOptions options = 6;
   bool only_if_improved = 7;
   string handle = 8;
+  string work_date = 9;
 }
 
 message JobHandle { string job_id = 1; }

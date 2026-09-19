@@ -108,18 +108,18 @@ public sealed partial class VenueEditorGame
                     catch (Exception ex) { error.Text = ex.Message; }
                 };
                 editor.Controls.AddRange([save, cancel]); editor.CancelButton = cancel;
-                if (editor.ShowDialog(form) == Forms.DialogResult.OK) Reload();
+                if (ShowEditorDialog(editor, form) == Forms.DialogResult.OK) Reload();
             };
             import.Click += (_, _) => { if (Selected() is { Package: not null } entry) { form.Close(); ImportPortable(entry.Json); } };
             form.Controls.AddRange([folder, browse, search, refresh, undo, grid, preview, detail, status, edit, import, close]);
             form.CancelButton = close;
-            Reload(); form.ShowDialog();
+            Reload(); ShowEditorDialog(form);
         }
         catch (Exception ex) { ShowInAppMessage("ライブラリーを開けません", ex.Message); }
         finally { modalInputDrain = true; }
     }
 
-    private static bool ShowPortableReview(Forms.Form owner, PortablePackage package, string summary, string title,
+    private bool ShowPortableReview(Forms.Form owner, PortablePackage package, string summary, string title,
         CircleSpaceProject? candidate = null, CircleSpaceProject? previous = null)
     {
         using var form = new Forms.Form { Text = title, ClientSize = new(900, 650), StartPosition = Forms.FormStartPosition.CenterParent,
@@ -167,7 +167,7 @@ public sealed partial class VenueEditorGame
         var accept = new Forms.Button { Text = "確定", Left = 650, Top = 603, Width = 110, DialogResult = Forms.DialogResult.OK };
         var cancel = new Forms.Button { Text = "キャンセル", Left = 774, Top = 603, Width = 110, DialogResult = Forms.DialogResult.Cancel };
         form.Controls.AddRange([text, list, panel, legend, accept, cancel]); form.CancelButton = cancel;
-        return form.ShowDialog(owner) == Forms.DialogResult.OK;
+        return ShowEditorDialog(form, owner) == Forms.DialogResult.OK;
     }
 
     private static void DrawLayoutPreview(Drawing.Graphics graphics, Drawing.Rectangle bounds, CircleSpaceProject project, int index, CircleSpaceProject? previous = null)

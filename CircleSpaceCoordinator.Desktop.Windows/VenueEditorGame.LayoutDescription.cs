@@ -85,7 +85,7 @@ public sealed partial class VenueEditorGame
             };
             form.Controls.AddRange([hint, description, save, cancel]);
             form.CancelButton = cancel;
-            form.ShowDialog();
+            ShowEditorDialog(form);
         }
         catch (Exception ex) { ShowInAppMessage("説明を編集できません", ex.Message); }
         finally { modalInputDrain = true; }

@@ -137,12 +137,12 @@ public sealed partial class VenueEditorGame
 
     private ScreenRectangle ModalBounds()
     {
-        var availableHeight = GraphicsDevice.Viewport.Height - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
+        var availableHeight = GraphicsDevice.Viewport.Height - WorkerBarHeight - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
         var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null || evaluationRows is not null;
         var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
         var height = Math.Min(large ? 620d : weightCommentFeatureId is not null ? 460d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
-            (availableHeight - height) / 2d, width, height);
+            WorkerBarHeight + (availableHeight - height) / 2d, width, height);
     }
 
     private void EnsureModalButtons()

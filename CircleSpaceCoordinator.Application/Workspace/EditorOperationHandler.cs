@@ -15,8 +15,8 @@ public static class EditorOperationHandler
     private static CircleSpaceProject ApplyCore(CircleSpaceProject project, EditorOperation operation) => operation switch
     {
         RecordPortableProviders op => PortableCreditsService.Record(project, op.Package, op.Materials, op.FallbackDefinitions),
-        UpdateChannelKnowledge op => ChannelKnowledgeService.Update(project, op.Knowledge, op.Handle),
-        CaptureChannelKnowledge op => ChannelKnowledgeService.Capture(project, op.featureId, op.id, op.description, op.purpose, op.rule, op.confidential, op.Handle, op.Overwrite),
+        UpdateChannelKnowledge op => ChannelKnowledgeService.Update(project, op.Knowledge, op.Handle, op.WorkDate),
+        CaptureChannelKnowledge op => ChannelKnowledgeService.Capture(project, op.featureId, op.id, op.description, op.purpose, op.rule, op.confidential, op.Handle, op.Overwrite, op.WorkDate),
         BindChannelKnowledge op => ChannelKnowledgeService.Bind(project, op.id, op.featureId, op.name, op.column),
         ImportPortableSelection op => PortableSelectionService.Apply(project, op.package, op.selection),
         ImportFrameLayout op => FrameLayoutImportService.Add(project, op.incoming, op.id, op.name),
@@ -81,7 +81,7 @@ public static class EditorOperationHandler
         SetExportPlan op => op.planId is null || project.Plans.Any(plan => plan.Id == op.planId)
             ? project with { ExportPlanId = op.planId }
             : throw new InvalidOperationException("選択した配置案は存在しません。"),
-        UpsertChannel op => ChannelEditor.Upsert(project, op.id, op.name, op.sourceColumn, op.CommentForChannel, op.CommentForWeight, op.OverallWeight, op.Handle),
+        UpsertChannel op => ChannelEditor.Upsert(project, op.id, op.name, op.sourceColumn, op.CommentForChannel, op.CommentForWeight, op.OverallWeight, op.Handle, op.WorkDate),
         RemoveChannel op => ChannelEditor.Remove(project, op.id),
         SetChannelWeights op => ChannelEditor.SetWeights(project, op.planId, op.channelId, op.cells, op.weight),
         _ => throw new ArgumentException("Unsupported editor operation."),

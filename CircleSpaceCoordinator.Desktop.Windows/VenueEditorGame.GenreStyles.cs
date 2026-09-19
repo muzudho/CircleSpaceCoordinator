@@ -13,6 +13,6 @@ public sealed partial class VenueEditorGame
         OpenStyleMappingEditor(draft.Mapping, "ジャンルコード", "ジャンルが設定されたサークルはありません。",
             styles => targetWorkspace.Execute(new SetGenreStyles(styles.Select(style =>
                 new GenreStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)).ToArray()),
-                selectedPlanEdit: false));
+                selectedPlanEdit: false), targetWorkspace.Project.GenreStyleCredits);
     }
 }

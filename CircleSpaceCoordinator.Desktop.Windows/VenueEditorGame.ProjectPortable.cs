@@ -89,7 +89,7 @@ public sealed partial class VenueEditorGame
                 }
                 catch (Exception ex) { status.Text = ex.Message; }
             };
-            if (form.ShowDialog() == Forms.DialogResult.OK)
+            if (ShowEditorDialog(form) == Forms.DialogResult.OK)
                 ShowInAppMessage("部分書出しが完了しました", "選択した項目を保存しました。");
         }
         catch (Exception ex) { ShowInAppMessage("書き出せません", ex.Message); }
@@ -202,7 +202,7 @@ public sealed partial class VenueEditorGame
                 }
                 catch (Exception ex) { status.Text = ex.Message; }
             };
-            if (form.ShowDialog() == Forms.DialogResult.OK)
+            if (ShowEditorDialog(form) == Forms.DialogResult.OK)
             {
                 CancelInProgressPointerInteraction();
                 planScroll = 0;

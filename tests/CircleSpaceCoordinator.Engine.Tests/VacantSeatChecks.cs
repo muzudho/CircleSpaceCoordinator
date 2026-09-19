@@ -60,12 +60,13 @@ internal static class VacantSeatChecks
         using var connection = new EditorConnection(address);
         using var workspace = connection.Open(connection.Encode(source));
         workspace.HandleProvider = () => "fill-editor";
+        workspace.WorkDateProvider = () => new DateOnly(2001, 2, 3);
         var original = connection.Encode(workspace.Project);
         var revision = workspace.Revision;
         workspace.Accept(await workspace.FillVacantSeatsAsync());
         Check(workspace.SelectedPlan.Assignments.Count == 7 && workspace.CanUndo, "two-hop fill");
         Check(workspace.Project.CircleLayouts.Single().Credits?.Modifier == "fill-editor" &&
-            workspace.Project.CircleLayouts.Single().Credits?.ModifiedOn == DateOnly.FromDateTime(DateTime.Now), "fill records modifier and date");
+            workspace.Project.CircleLayouts.Single().Credits?.ModifiedOn == new DateOnly(2001, 2, 3), "fill records modifier and displayed work date");
         var result = connection.Encode(workspace.Project);
         workspace.Undo();
         Check(connection.Encode(workspace.Project) == original, "one undo restores all stones and temporary positions");

@@ -13,6 +13,8 @@ using CircleSpaceCoordinator.Core.Evaluation;
 
 public sealed partial class EditorService(Thinking.ThinkingClient thinking, SessionRepository repository) : Editor.EditorBase
 {
+    private static DateOnly? ReadWorkDate(string value) => string.IsNullOrEmpty(value) ? null
+        : DateOnly.ParseExact(value, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
     public override Task<EngineInfo> Describe(Empty request, ServerCallContext context) =>
         Task.FromResult(new EngineInfo { ApiMajor = 1, Engine = "editor" });
 
@@ -152,7 +154,7 @@ public sealed partial class EditorService(Thinking.ThinkingClient thinking, Sess
                 var session = Clone(Find(request.WorkspaceId));
                 CheckRevision(session, request.ExpectedRevision);
                 session.Workspace.ApplyProjectEdit(current => CircleSpaceCoordinator.Application.Workspace.ModificationCreditsService.Apply(current,
-                    PlanCatalogService.AddOptimizedPlan(current, bestPlan, request.NewPlanId, request.NewPlanName), request.Handle));
+                    PlanCatalogService.AddOptimizedPlan(current, bestPlan, request.NewPlanId, request.NewPlanName), request.Handle, ReadWorkDate(request.WorkDate)));
                 session.Revision++;
                 return Snapshot(request.WorkspaceId, session);
             }

@@ -6,10 +6,10 @@ using CircleSpaceCoordinator.Core.Model;
 
 public static class ChannelKnowledgeService
 {
-    public static CircleSpaceProject Update(CircleSpaceProject project, ChannelKnowledge knowledge, string handle)
+    public static CircleSpaceProject Update(CircleSpaceProject project, ChannelKnowledge knowledge, string handle, DateOnly? workDate = null)
     {
         var previous = project.ChannelKnowledge.Single(item => item.Id == knowledge.Id);
-        var credits = (previous.Credits ?? new PersonCredits()).WrittenBy(handle);
+        var credits = (previous.Credits ?? new PersonCredits()).WrittenBy(handle, workDate);
         if (previous.Credits?.Author is null) credits = credits with { Author = null, Modifier = PersonCredits.NormalizeHandle(handle) };
         knowledge = knowledge with { Credits = credits,
             IsConfidential = previous.IsConfidential || project.IsConfidential || knowledge.IsConfidential };
@@ -21,7 +21,7 @@ public static class ChannelKnowledgeService
     }
 
     public static CircleSpaceProject Capture(CircleSpaceProject project, string featureId, string id,
-        string description, string purpose, ChannelInputRule rule, bool confidential, string handle = "", bool overwrite = false)
+        string description, string purpose, ChannelInputRule rule, bool confidential, string handle = "", bool overwrite = false, DateOnly? workDate = null)
     {
         var feature = project.Evaluation.Features.Single(item => item.Id == featureId);
         var map = project.Evaluation.WeightMaps.Single(item => item.FeatureId == featureId);
@@ -29,7 +29,7 @@ public static class ChannelKnowledgeService
         var previous = project.ChannelKnowledge.SingleOrDefault(item => item.Id == id);
         if (overwrite && previous is null) throw new InvalidOperationException("上書きする知見がありません。");
         var credits = previous?.Credits ?? feature.Credits ?? new PersonCredits();
-        if (!string.IsNullOrWhiteSpace(handle)) credits = credits.WrittenBy(handle);
+        if (!string.IsNullOrWhiteSpace(handle)) credits = credits.WrittenBy(handle, workDate);
         if (previous is not null && previous.Credits?.Author is null && !string.IsNullOrWhiteSpace(handle))
             credits = credits with { Author = null, Modifier = PersonCredits.NormalizeHandle(handle) };
         var knowledge = new ChannelKnowledge(id, feature.Name, description, purpose, rule,

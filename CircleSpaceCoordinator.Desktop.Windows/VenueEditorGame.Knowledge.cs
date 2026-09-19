@@ -76,7 +76,7 @@ public sealed partial class VenueEditorGame
         form.Controls.AddRange([source, capture, list, detail, column, bind, edit, close]);
         form.CancelButton = close;
         Refresh();
-        form.ShowDialog();
+        ShowEditorDialog(form);
         modalInputDrain = true;
     }
 
@@ -120,6 +120,6 @@ public sealed partial class VenueEditorGame
         };
         form.Controls.AddRange([blank, confidential, save, cancel]);
         form.CancelButton = cancel;
-        form.ShowDialog();
+        ShowEditorDialog(form);
     }
 }
