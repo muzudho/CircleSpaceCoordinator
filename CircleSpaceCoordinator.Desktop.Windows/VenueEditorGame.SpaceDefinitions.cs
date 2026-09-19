@@ -18,7 +18,7 @@ public sealed partial class VenueEditorGame
     private string spaceDefinitionStatus = "型と申込スペースは編集中のフレーム配置に保存します。";
 
     private SpaceDefinitionStore SpaceDefinitions => spaceDefinitions ??= new SpaceDefinitionStore(
-        Path.Combine(AppContext.BaseDirectory, "space-definitions.json"));
+        UserSettingsPaths.PrepareFile("space-definitions.json"));
 
     private SpaceDefinitionCatalog CurrentSpaceDefinitions => workspace?.Project.DeskLayouts
         .FirstOrDefault(layout => layout.Id == workspace.SelectedDeskLayoutId)?.Definitions ?? SpaceDefinitions.Current;

@@ -53,6 +53,8 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release --no-buil
 
 ## 設計・開発資料
 
+ユーザー設定の保存先と旧設定の引継ぎは [アプリケーション設定ファイルについて](設計/アプリケーション設定ファイルについて.md) を参照してください。
+
 | 資料 | 内容 |
 | --- | --- |
 | [配布](配布/README.md) | 署名、リリース、ソース配布の知見 |

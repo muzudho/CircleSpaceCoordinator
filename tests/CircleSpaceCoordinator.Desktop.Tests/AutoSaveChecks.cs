@@ -58,9 +58,9 @@ internal static partial class Program
             new AutoSaveSession(emptyProject).Save("first version", new SavePointStore(Path.Combine(root, "backups"), emptyProject), day);
             AssertEqual("first version", File.ReadAllText(emptyProject));
             var settingsPath = Path.Combine(root, "settings.json");
-            var settings = new ApplicationSettingsService(settingsPath);
+            var settings = CreateIsolatedSettings(settingsPath);
             settings.ConfigureBackups(Path.Combine(root, "custom"), 7);
-            var reloaded = new ApplicationSettingsService(settingsPath);
+            var reloaded = CreateIsolatedSettings(settingsPath);
             AssertEqual(7, reloaded.Current.BackupGenerations);
             AssertEqual(Path.Combine(root, "custom"), reloaded.Current.BackupDirectory);
             var protectedBytes = WindowsBackupProtection.Protect(Encoding.UTF8.GetBytes("round trip"));

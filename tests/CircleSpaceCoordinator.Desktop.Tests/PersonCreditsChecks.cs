@@ -15,9 +15,9 @@ internal static partial class Program
         var path = Path.Combine(Path.GetTempPath(), "csc-worker-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
-            var settings = new ApplicationSettingsService(path);
+            var settings = CreateIsolatedSettings(path);
             settings.SaveHandle(string.Concat(Enumerable.Repeat("あ😀", 8)));
-            AssertEqual(settings.Current.Handle, new ApplicationSettingsService(path).Current.Handle);
+            AssertEqual(settings.Current.Handle, CreateIsolatedSettings(path).Current.Handle);
             var rejected = false;
             try { settings.SaveHandle(new string('a', 17)); } catch (ArgumentException) { rejected = true; }
             AssertEqual(true, rejected);
@@ -27,7 +27,7 @@ internal static partial class Program
             RejectPortable(() => settings.SaveHandle(new string('\ud800', 1)));
             RejectPortable(() => settings.SaveHandle(string.Concat(Enumerable.Repeat("e\u0301", 9))));
             File.WriteAllText(path, "{\"workerName\":\"legacy\"}");
-            AssertEqual("legacy", new ApplicationSettingsService(path).Current.Handle);
+            AssertEqual("legacy", CreateIsolatedSettings(path).Current.Handle);
         }
         finally { File.Delete(path); }
 

@@ -123,7 +123,7 @@ public sealed partial class VenueEditorGame : Game
         this.projectSavePath = projectSavePath;
         // Settings migration can read project metadata through EditorConnection too.
         this.settings = settings ?? (startEngines ? null
-            : new ApplicationSettingsService(Path.Combine(AppContext.BaseDirectory, "application-settings.json")));
+            : new ApplicationSettingsService(UserSettingsPaths.PrepareFile("application-settings.json")));
         dragController = workspace is null ? null : new DeskDragController(workspace, viewport);
         commandController = workspace is null ? null : new EditorCommandController(workspace);
         participantController = workspace is null ? null : new ParticipantPlacementController(workspace);
@@ -165,7 +165,7 @@ public sealed partial class VenueEditorGame : Game
             RunBackground("エンジンの起動", () => ownedEngineRuntime = EngineRuntime.StartAsync(AppContext.BaseDirectory).GetAwaiter().GetResult(), runtime =>
             {
                 EditorConnection.Current = runtime.Connection;
-                this.settings ??= new ApplicationSettingsService(Path.Combine(AppContext.BaseDirectory, "application-settings.json"));
+                this.settings ??= new ApplicationSettingsService(UserSettingsPaths.PrepareFile("application-settings.json"));
                 RefreshEventProjects(this.settings?.Current.LastProjectPath);
                 modalDialog = null;
                 modalButtons.Clear();

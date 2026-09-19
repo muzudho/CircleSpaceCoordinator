@@ -24,6 +24,7 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("User settings use OS directories, migrate once, discover first-run projects and survive bin deletion", UserSettingsSurviveBuildOutputRemoval),
             ("Diagonal patterns preserve orientation, widths, diamonds and persisted identifiers", DiagonalPatterns),
             ("Genre knowledge comments preserve Unicode, enforce limits and restore opening drafts", GenreKnowledgeComments),
             ("Change tag input validates Unicode, prevents empty exits, scrolls and retains failed saves", ChangeTagEditing),
@@ -95,7 +96,7 @@ internal static partial class Program
             ("A two-cell participant swaps with both participants on another desk", TwoCellParticipantSwapsWholeDesk),
             ("Desktop startup uses the fictional example by default", StartupUsesFictionalExample),
             ("Desktop startup honors an explicit project path", StartupUsesExplicitPath),
-            ("Application settings remember the last project beside the executable", SettingsRememberLastProject),
+            ("Application settings remember the last project at the supplied settings path", SettingsRememberLastProject),
             ("Application settings remember separate import and export directories", SettingsRememberExcelDirectories),
             ("Application settings preserve the shared circle label display", SettingsPreserveCircleLabelDisplay),
             ("Circle labels show channel coefficients and preserve ID regex behavior", CircleLabelsShowChannelValues),
@@ -1078,10 +1079,10 @@ internal static partial class Program
         try
         {
             File.WriteAllText(projectPath, "{}");
-            var settings = new ApplicationSettingsService(settingsPath);
+            var settings = CreateIsolatedSettings(settingsPath);
             settings.RememberProject(projectPath);
 
-            var reloaded = new ApplicationSettingsService(settingsPath);
+            var reloaded = CreateIsolatedSettings(settingsPath);
             AssertEqual("1.1", reloaded.Current.SchemaVersion);
             AssertEqual(Path.GetFullPath(projectPath), reloaded.Current.LastProjectPath);
             AssertEqual(Path.GetFullPath(directory), reloaded.Current.ProjectsDirectory);
@@ -1105,11 +1106,11 @@ internal static partial class Program
         try
         {
             var settingsPath = Path.Combine(directory, "application-settings.json");
-            var settings = new ApplicationSettingsService(settingsPath);
+            var settings = CreateIsolatedSettings(settingsPath);
             settings.RememberParticipantImportPath(Path.Combine(importDirectory, "circles.xlsx"));
             settings.RememberCircleSeatExportPath(Path.Combine(exportDirectory, "result.xlsx"));
 
-            var reloaded = new ApplicationSettingsService(settingsPath);
+            var reloaded = CreateIsolatedSettings(settingsPath);
             AssertEqual(Path.GetFullPath(importDirectory), reloaded.Current.ParticipantImportDirectory!);
             AssertEqual(Path.GetFullPath(exportDirectory), reloaded.Current.CircleSeatExportDirectory!);
         }
@@ -1127,21 +1128,21 @@ internal static partial class Program
         try
         {
             var settingsPath = Path.Combine(directory, "application-settings.json");
-            var settings = new ApplicationSettingsService(settingsPath);
+            var settings = CreateIsolatedSettings(settingsPath);
             settings.SaveCircleLabelDisplay(new CircleLabelDisplaySettings("circleId", "\\w+\\d+-(\\d+)", "$1"));
 
-            var display = new ApplicationSettingsService(settingsPath).Current.CircleLabelDisplay!;
+            var display = CreateIsolatedSettings(settingsPath).Current.CircleLabelDisplay!;
             AssertEqual("circleId", display.DisplayField);
             AssertEqual("\\w+\\d+-(\\d+)", display.CircleIdPattern!);
             AssertEqual("$1", display.CircleIdReplacement!);
             settings.SaveCircleLabelDisplay(display with { DisplayField = "channel", ChannelId = "books" });
-            var channel = new ApplicationSettingsService(settingsPath).Current.CircleLabelDisplay!;
+            var channel = CreateIsolatedSettings(settingsPath).Current.CircleLabelDisplay!;
             AssertEqual("channel", channel.DisplayField);
             AssertEqual("books", channel.ChannelId!);
             AssertEqual(display.CircleIdPattern!, channel.CircleIdPattern!);
             AssertEqual("$1", channel.CircleIdReplacement!);
             settings.SaveCircleLabelDisplay(channel with { DisplayField = "circleId", ChannelId = null });
-            AssertEqual(display, new ApplicationSettingsService(settingsPath).Current.CircleLabelDisplay!);
+            AssertEqual(display, CreateIsolatedSettings(settingsPath).Current.CircleLabelDisplay!);
         }
         finally
         {
@@ -2049,7 +2050,7 @@ internal static partial class Program
         {
             File.WriteAllText(first, "{}");
             File.WriteAllText(second, "{}");
-            var settings = new ApplicationSettingsService(Path.Combine(directory, "settings.json"));
+            var settings = CreateIsolatedSettings(Path.Combine(directory, "settings.json"));
             settings.RememberProject(first);
             settings.RememberProject(second);
             settings.RememberProject(first);
@@ -2075,12 +2076,12 @@ internal static partial class Program
         var projectPath = Path.Combine(directory, "event.json");
         try
         {
-            var settings = new ApplicationSettingsService(settingsPath);
+            var settings = CreateIsolatedSettings(settingsPath);
             settings.SaveWorkingState(new ProjectWorkingState(
                 projectPath, "plan-2", "GenrePlacement", 1.75d, -42d, 88d,
                 new Dictionary<string, bool> { ["evaluationAnalysis"] = true }, "unused-desk", ["plan-2", "plan-1"]));
 
-            var restored = new ApplicationSettingsService(settingsPath).GetWorkingState(projectPath)!;
+            var restored = CreateIsolatedSettings(settingsPath).GetWorkingState(projectPath)!;
             AssertEqual("plan-2", restored.SelectedPlanId);
             AssertEqual("unused-desk", restored.SelectedDeskLayoutId!);
             AssertEqual("GenrePlacement", restored.EditorMode);
@@ -2089,7 +2090,7 @@ internal static partial class Program
             AssertEqual("plan-2,plan-1", string.Join(",", restored.PinnedExportPlanIds!));
             var otherPath = Path.Combine(directory, "other.json");
             settings.SaveWorkingState(new ProjectWorkingState(otherPath, "plan-1", "CirclePlacement", 1, 0, 0));
-            var reloaded = new ApplicationSettingsService(settingsPath);
+            var reloaded = CreateIsolatedSettings(settingsPath);
             AssertEqual<IReadOnlyList<string>?>(null, reloaded.GetWorkingState(otherPath)!.PinnedExportPlanIds);
             AssertEqual(2, reloaded.GetWorkingState(projectPath)!.PinnedExportPlanIds!.Count);
         }
@@ -2115,7 +2116,7 @@ internal static partial class Program
                   "lastProjectPath": {{System.Text.Json.JsonSerializer.Serialize(projectPath)}}
                 }
                 """);
-            var settings = new ApplicationSettingsService(settingsPath);
+            var settings = CreateIsolatedSettings(settingsPath);
             AssertEqual("1.1", settings.Current.SchemaVersion);
             using (var savedSettings = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settingsPath)))
                 AssertEqual("1.1", savedSettings.RootElement.GetProperty("schemaVersion").GetString()!);
@@ -2151,7 +2152,7 @@ internal static partial class Program
                 }
                 """);
 
-            var settings = new ApplicationSettingsService(settingsPath);
+            var settings = CreateIsolatedSettings(settingsPath);
 
             AssertEqual(2, settings.Current.EventProjects!.Count);
             AssertEqual("復旧対象イベント", settings.Current.EventProjects.Single(item => item.Path == Path.GetFullPath(projectPath)).DisplayName);
@@ -2171,7 +2172,7 @@ internal static partial class Program
         try
         {
             var path = Path.Combine(directory, "event.json");
-            var settings = new ApplicationSettingsService(Path.Combine(directory, "settings.json"));
+            var settings = CreateIsolatedSettings(Path.Combine(directory, "settings.json"));
             var created = new EventProjectCatalogService(settings).Create(path, "架空イベント");
             var project = ProjectFileService.Load(path);
             AssertEqual("架空イベント", created.DisplayName);
@@ -2207,7 +2208,7 @@ internal static partial class Program
         try
         {
             var path = Path.Combine(directory, "secret-event.json");
-            var settings = new ApplicationSettingsService(Path.Combine(directory, "settings.json"));
+            var settings = CreateIsolatedSettings(Path.Combine(directory, "settings.json"));
             var catalog = new EventProjectCatalogService(settings);
             catalog.Create(path, "架空の非公開イベント");
             AssertEqual(false, ProjectFileService.Load(path).IsConfidential);
@@ -2233,7 +2234,7 @@ internal static partial class Program
             var sourcePath = Path.Combine(directory, "source.json");
             var copyPath = Path.Combine(directory, "copy.json");
             ProjectFileService.Save(sourcePath, CreateProject());
-            var settings = new ApplicationSettingsService(Path.Combine(directory, "settings.json"));
+            var settings = CreateIsolatedSettings(Path.Combine(directory, "settings.json"));
             var catalog = new EventProjectCatalogService(settings);
             catalog.Register(sourcePath);
             catalog.Duplicate(sourcePath, copyPath, "複製イベント");

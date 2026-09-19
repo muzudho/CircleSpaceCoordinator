@@ -50,11 +50,13 @@ public sealed class ApplicationSettingsService
         WriteIndented = true,
     };
     private readonly string settingsPath;
+    private readonly string defaultProjectsDirectory;
 
-    public ApplicationSettingsService(string settingsPath)
+    public ApplicationSettingsService(string settingsPath, string? defaultProjectsDirectory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(settingsPath);
         this.settingsPath = Path.GetFullPath(settingsPath);
+        this.defaultProjectsDirectory = defaultProjectsDirectory ?? ProjectFileService.GetDefaultProjectsDirectory();
         Current = LoadOrDefault();
         TrySave();
     }
@@ -175,14 +177,12 @@ public sealed class ApplicationSettingsService
 
     private ApplicationSettings LoadOrDefault()
     {
-        var fallback = new ApplicationSettings(ProjectFileService.GetDefaultProjectsDirectory(), null, [], []);
+        var fallback = new ApplicationSettings(defaultProjectsDirectory, null, [], []);
         try
         {
-            if (!File.Exists(settingsPath))
-                return fallback;
-            var loaded = JsonSerializer.Deserialize<ApplicationSettings>(File.ReadAllText(settingsPath), JsonOptions);
-            if (loaded is null)
-                return fallback;
+            var loaded = File.Exists(settingsPath)
+                ? JsonSerializer.Deserialize<ApplicationSettings>(File.ReadAllText(settingsPath), JsonOptions) ?? fallback
+                : fallback;
             var directory = string.IsNullOrWhiteSpace(loaded.ProjectsDirectory)
                 ? fallback.ProjectsDirectory
                 : Path.GetFullPath(loaded.ProjectsDirectory);
@@ -248,17 +248,18 @@ public sealed class ApplicationSettingsService
         try
         {
             var json = JsonSerializer.Serialize(Current, JsonOptions);
+            Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
             var temporaryPath = settingsPath + ".tmp";
             File.WriteAllText(temporaryPath, json);
             File.Move(temporaryPath, settingsPath, overwrite: true);
         }
         catch (UnauthorizedAccessException)
         {
-            // A read-only deployment directory must not prevent the editor from starting.
+            // Keep the in-memory settings when the user settings directory is read-only.
         }
         catch (IOException)
         {
-            // Keep the in-memory settings when the deployment directory is temporarily unavailable.
+            // Keep the in-memory settings when the settings directory is temporarily unavailable.
         }
     }
 
