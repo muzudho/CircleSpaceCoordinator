@@ -11,6 +11,7 @@ public sealed partial class VenueEditorGame
     private int genrePageTab;
     private int genrePreviewScroll;
     private string? selectedGenreKey;
+    private bool genreSpaceSort;
 
     private void SelectGenreTarget(string key, bool navigate = false)
     {
@@ -35,6 +36,21 @@ public sealed partial class VenueEditorGame
 
     private void AddGenreTabs()
     {
+        if (genrePageTab is 1 or 2)
+        {
+            foreach (var (label, spaceSort) in new[] { ("サークルデータ順", false), ("スペース数順", true) })
+            {
+                var sort = spaceSort;
+                mappingEditorButtons.Add(new(new IconButtonModel(MappingBounds(sort ? 840 : 700, 18, 140, 36), label)
+                    { IsSelected = genreSpaceSort == sort }, () =>
+                {
+                    genreSpaceSort = sort;
+                    genrePreviewScroll = 0;
+                    mappingFocus = -1;
+                    mappingWidth = -1;
+                }, Tooltip: $"{label}でジャンルを並べ替えます。"));
+            }
+        }
         if (genrePageTab == 3)
             mappingEditorButtons.Add(new(new IconButtonModel(MappingBounds(740, 102, 240, 36), "画面いっぱいに表示"), () =>
             {
@@ -46,7 +62,7 @@ public sealed partial class VenueEditorGame
         for (var index = 0; index < GenrePageTabs.Length; index++)
         {
             var tab = index;
-            var button = new IconButtonModel(MappingBounds(180 + index * 200, 18, 192, 36), GenrePageTabs[index])
+            var button = new IconButtonModel(MappingBounds(105 + index * 145, 18, 140, 36), GenrePageTabs[index])
                 { IsSelected = index == genrePageTab };
             mappingEditorButtons.Add(new(button, () =>
             {
@@ -61,12 +77,18 @@ public sealed partial class VenueEditorGame
         }
     }
 
-    private IReadOnlyList<GenreDataGroup> BuildGenrePreviewGroups()
+    private IReadOnlyList<GenreDataGroup> BuildGenrePreviewGroups(bool chartOrder = false)
     {
         var groups = BuildGenreDataGroups().ToList();
         foreach (var style in mappingDraft?.Build() ?? [])
             if (!groups.Any(group => group.GenreId == style.Key)) groups.Add(new(style.Key, 0, 0));
-        return groups.OrderByDescending(group => group.SpaceCount).ThenBy(group => group.GenreId, StringComparer.Ordinal).ToArray();
+        if (chartOrder || genreSpaceSort)
+            return groups.OrderByDescending(group => group.SpaceCount).ThenBy(group => group.GenreId, StringComparer.Ordinal).ToArray();
+        var order = workspace?.Project.Participants
+            .Select(item => string.IsNullOrWhiteSpace(item.GenreId) ? "（未設定）" : item.GenreId!)
+            .Distinct(StringComparer.Ordinal).ToArray() ?? [];
+        return groups.OrderBy(group => Array.IndexOf(order, group.GenreId) is var index && index >= 0 ? index : int.MaxValue)
+            .ThenBy(group => group.GenreId, StringComparer.Ordinal).ToArray();
     }
 
     private void ScrollGenreOrMapping(int offset)
@@ -84,7 +106,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawGenrePreview()
     {
-        var groups = BuildGenrePreviewGroups();
+        var groups = BuildGenrePreviewGroups(chartOrder: genrePageTab == 3);
         var total = groups.Sum(group => group.SpaceCount);
         if (genrePageTab == 1)
         {
@@ -119,7 +141,7 @@ public sealed partial class VenueEditorGame
         }
         if (genrePageTab == 3 && total > 0)
         {
-            DrawGenrePie(GenrePieArea, groups);
+            DrawGenrePie(GenrePieArea, BuildGenrePreviewGroups(chartOrder: true));
         }
         if (genrePageTab != 1 && total == 0) GenrePreviewText("スペース数が 0 のため、グラフは表示されません。", 20, 142, 960);
         var visible = groups.Skip(genrePreviewScroll).Take(GenrePreviewPageSize).ToArray();
@@ -137,7 +159,7 @@ public sealed partial class VenueEditorGame
 
     private string GenrePreviewTooltip(ScreenPoint pointer)
     {
-        var groups = BuildGenrePreviewGroups();
+        var groups = BuildGenrePreviewGroups(chartOrder: genrePageTab == 3);
         var total = groups.Sum(group => group.SpaceCount);
         if (genrePageTab == 1)
         {
@@ -212,7 +234,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawExpandedGenrePie()
     {
-        var groups = BuildGenrePreviewGroups();
+        var groups = BuildGenrePreviewGroups(chartOrder: true);
         if (groups.Sum(group => group.SpaceCount) > 0) DrawGenrePie(GenrePieArea, groups);
         else textRenderer?.Draw("スペース数が 0 のため、グラフは表示されません。", ToRectangle(GenrePieArea, 8), Color.White, 20);
         var button = GenrePieRestoreButton();

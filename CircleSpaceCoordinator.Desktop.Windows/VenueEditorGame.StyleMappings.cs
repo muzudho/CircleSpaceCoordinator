@@ -380,7 +380,7 @@ public sealed partial class VenueEditorGame
         void Text(string text, ScreenRectangle bounds, int size = 17, Color? color = null) =>
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
         Text(mappingKnowledgeComments ? "ジャンル" : $"{mappingKeyLabel}と色・網掛けパターンの紐づけ",
-            MappingBounds(20, 18, mappingKnowledgeComments ? 150 : 960, 38), 26);
+            MappingBounds(20, 18, mappingKnowledgeComments ? 78 : 960, 38), mappingKnowledgeComments ? 22 : 26);
         if (mappingKnowledgeComments) DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
         if (GenreChartVisible) DrawGenrePreview();
         else
@@ -397,13 +397,16 @@ public sealed partial class VenueEditorGame
                 for (var column = 0; column < headers.Length; column++)
                 {
                     var bounds = MappingCell(row, column);
+                    if (mappingKnowledgeComments && column == 2 && style.Pattern == "solid")
+                        continue;
                     var plainCell = mappingKnowledgeComments && column is 0 or 5;
                     if (!plainCell) DrawRectangle(bounds, new Color(35, 43, 54));
                     if (column == 0) Text(style.Key, bounds);
                     else if (column == 5) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds);
                     else if (column is 1 or 2)
                     {
-                        if (column == 2 && style.Pattern == "solid") Text(mappingKnowledgeComments ? "未使用" : "単色では未使用", bounds, 14, Color.Gray);
+                        if (column == 2 && style.Pattern == "solid")
+                            continue;
                         else
                         {
                             var id = column == 1 ? style.PrimaryColor : style.SecondaryColor;
