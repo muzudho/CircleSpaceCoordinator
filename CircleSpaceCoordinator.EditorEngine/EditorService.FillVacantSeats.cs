@@ -31,8 +31,8 @@ public sealed partial class EditorService
                 CheckRevision(session, request.ExpectedRevision);
                 if (filled.Assignments.Count != session.Workspace.SelectedPlan.Assignments.Count)
                 {
-                    session.Workspace.ApplySelectedPlanEdit(project => project with
-                    { Plans = project.Plans.Select(p => p.Id == input.PlanId ? filled : p).ToArray() });
+                    session.Workspace.ApplySelectedPlanEdit(project => CircleSpaceCoordinator.Application.Workspace.ModificationCreditsService.Apply(project, project with
+                    { Plans = project.Plans.Select(p => p.Id == input.PlanId ? filled : p).ToArray() }, request.Handle));
                     session.Revision++;
                 }
                 return Snapshot(request.WorkspaceId, session);

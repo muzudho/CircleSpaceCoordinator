@@ -50,6 +50,7 @@ public static class ProjectJsonSerializer
             source.Venue.Height,
             source.Venue.BlockedCells.Select(ToCore).ToHashSet())
         {
+            Credits = source.Venue.Credits,
             Zones = source.Venue.Zones.Select(zone => new VenueZone(
                 zone.Id,
                 zone.Name,
@@ -79,6 +80,7 @@ public static class ProjectJsonSerializer
             item.OverallWeight)
         {
             Description = item.Description,
+            Credits = item.Credits,
             SourceColumn = item.SourceColumn,
             InputRule = item.InputRule,
             Purpose = item.Purpose,
@@ -133,6 +135,7 @@ public static class ProjectJsonSerializer
         var deskLayouts = source.DeskLayouts.Select(item => new DeskLayout(
             item.Id, item.Name, item.DeskPlacements.Select(ToCore).ToArray())
         {
+            Credits = item.Credits,
             Definitions = item.Definitions,
             IsConfidential = item.IsConfidential,
             Description = item.Description,
@@ -145,6 +148,7 @@ public static class ProjectJsonSerializer
         var circleLayouts = source.CircleLayouts.Select(item => new CircleLayout(
             item.Id, item.Name, item.DeskLayoutId, item.Assignments.Select(ToCore).ToArray())
         {
+            Credits = item.Credits,
             Description = item.Description,
             TemporaryPlacements = item.TemporaryPlacements.Select(ToCore).ToArray(),
         }).ToArray();
@@ -230,6 +234,7 @@ public static class ProjectJsonSerializer
         BlockStyles = source.BlockStyles.OrderBy(item => item.BlockNumber, StringComparer.Ordinal).ToList(),
         Venue = new VenueDocument
         {
+            Credits = source.Venue.Credits,
             Id = source.Venue.Id,
             Name = source.Venue.Name,
             Width = source.Venue.Width,
@@ -273,6 +278,7 @@ public static class ProjectJsonSerializer
                 Scale = item.Scale,
                 Offset = item.Offset,
                 OverallWeight = item.OverallWeight,
+                Credits = item.Credits,
                 SourceColumn = item.SourceColumn,
                 InputRule = item.InputRule,
                 Purpose = item.Purpose,
@@ -293,6 +299,7 @@ public static class ProjectJsonSerializer
         },
         DeskLayouts = migrated.DeskLayouts.Select(item => new DeskLayoutDocument
         {
+            Credits = item.Credits,
             Definitions = item.Definitions,
             IsConfidential = item.IsConfidential,
             Id = item.Id,
@@ -307,6 +314,7 @@ public static class ProjectJsonSerializer
         }).ToList(),
         CircleLayouts = migrated.CircleLayouts.Select(item => new CircleLayoutDocument
         {
+            Credits = item.Credits,
             Id = item.Id,
             Name = item.Name,
             Description = item.Description,
@@ -334,7 +342,7 @@ public static class ProjectJsonSerializer
 
     private static DeskPlacement ToCore(DeskPlacementDocument source) => new(
         source.Id, source.DeskTypeId, ToCore(source.Anchor), ParseOrientation(source.Orientation))
-    { DeskNumber = source.DeskNumber };
+    { DeskNumber = source.DeskNumber, Credits = source.Credits };
 
     private static ParticipantAssignment ToCore(AssignmentDocument source) => new(
         source.ParticipantId, source.OccupiedCells.Select(ToCore).ToHashSet(), ToCore(source.ScoringPosition))
@@ -365,7 +373,7 @@ public static class ProjectJsonSerializer
     private static PositionDocument FromCore(GridPosition source) => new() { X = source.X, Y = source.Y };
 
     private static DeskPlacementDocument FromCore(DeskPlacement source) => new()
-    { Id = source.Id, DeskTypeId = source.DeskTypeId, Anchor = FromCore(source.Anchor), Orientation = FormatOrientation(source.Orientation), DeskNumber = source.DeskNumber };
+    { Credits = source.Credits, Id = source.Id, DeskTypeId = source.DeskTypeId, Anchor = FromCore(source.Anchor), Orientation = FormatOrientation(source.Orientation), DeskNumber = source.DeskNumber };
 
     private static AssignmentDocument FromCore(ParticipantAssignment source) => new()
     { ParticipantId = source.ParticipantId, OccupiedCells = OrderPositions(source.OccupiedCells).Select(FromCore).ToList(), ScoringPosition = FromCore(source.ScoringPosition), CombinedSpaceId = source.CombinedSpaceId };
@@ -465,6 +473,7 @@ public static class ProjectJsonSerializer
 
     private sealed class VenueDocument
     {
+        public PersonCredits? Credits { get; set; }
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public int Width { get; set; }
@@ -515,6 +524,7 @@ public static class ProjectJsonSerializer
 
     private sealed class EvaluationFeatureDocument
     {
+        public PersonCredits? Credits { get; set; }
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public string? Description { get; set; }
@@ -564,6 +574,7 @@ public static class ProjectJsonSerializer
 
     private sealed class DeskLayoutDocument
     {
+        public PersonCredits? Credits { get; set; }
         public SpaceDefinitionCatalog? Definitions { get; set; }
         public bool IsConfidential { get; set; }
         public string Id { get; set; } = "";
@@ -579,6 +590,7 @@ public static class ProjectJsonSerializer
 
     private sealed class CircleLayoutDocument
     {
+        public PersonCredits? Credits { get; set; }
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public string? Description { get; set; }
@@ -611,6 +623,7 @@ public static class ProjectJsonSerializer
 
     private sealed class DeskPlacementDocument
     {
+        public PersonCredits? Credits { get; set; }
         public string Id { get; set; } = "";
         public string DeskTypeId { get; set; } = "";
         public PositionDocument Anchor { get; set; } = new();

@@ -25,6 +25,7 @@ public sealed record PortableMaterialSelection(string Kind, string SourceId, str
 public sealed record PortableExportRequest(CircleSpaceProject Project, IReadOnlyList<string> LayoutIds,
     SpaceDefinitionCatalog Definitions, string Name, string Description, IReadOnlyList<string> Tags, bool IsConfidential)
 {
+    public string Handle { get; init; } = "";
     public IReadOnlyList<string> KnowledgeIds { get; init; } = [];
     public bool TemplateOnly { get; init; }
     public IReadOnlyList<PortableMaterialSelection> Materials { get; init; } = [];

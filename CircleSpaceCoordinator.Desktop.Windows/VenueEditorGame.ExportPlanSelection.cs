@@ -144,13 +144,13 @@ public sealed partial class VenueEditorGame
         if (workspace is null) return;
         var project = workspace.Project;
         var plan = CircleSeatExportBuilder.GetExportPlan(project);
-        DrawRectangle(new ScreenRectangle(12, 118, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 104), new Color(24, 34, 44));
-        var preview = new ScreenRectangle(20, 122, 156, 92);
+        DrawRectangle(new ScreenRectangle(12, 118 + WorkerBarHeight, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 104), new Color(24, 34, 44));
+        var preview = new ScreenRectangle(20, 122 + WorkerBarHeight, 156, 92);
         if (plan is not null) DrawExportPlanPreview(project, plan, preview, compact: true);
         else textRenderer?.Draw("未選択", ToRectangle(preview, 8), Color.LightGray, 18);
         var textWidth = Math.Max(1, GraphicsDevice.Viewport.Width - 212);
-        textRenderer?.Draw("書き出すサークル配置案", new Rectangle(192, 122, textWidth, 24), Color.LightGray, 16);
-        textRenderer?.Draw(plan?.Name ?? "未決定（［変更］から選択）", new Rectangle(192, 148, textWidth, 30), Color.White, 22, true);
+        textRenderer?.Draw("書き出すサークル配置案", new Rectangle(192, 122 + WorkerBarHeight, textWidth, 24), Color.LightGray, 16);
+        textRenderer?.Draw(plan?.Name ?? "未決定（［変更］から選択）", new Rectangle(192, 148 + WorkerBarHeight, textWidth, 30), Color.White, 22, true);
     }
 
     private void DrawExportPlanPreview(CircleSpaceProject project, Plan plan, ScreenRectangle area, bool compact = false)

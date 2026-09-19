@@ -23,9 +23,9 @@ public sealed partial class VenueEditorGame
     private SpaceDefinitionCatalog CurrentSpaceDefinitions => workspace?.Project.DeskLayouts
         .FirstOrDefault(layout => layout.Id == workspace.SelectedDeskLayoutId)?.Definitions ?? SpaceDefinitions.Current;
 
-    private int SpaceRows => Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - 226) / 42);
+    private int SpaceRows => Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - WorkerBarHeight - 226) / 42);
     private int SpaceCount => spaceRequestsTab ? CurrentSpaceDefinitions.Requests.Count : CurrentSpaceDefinitions.Types.Count;
-    private ScreenRectangle SpaceRow(int row) => new(12, 224 + row * 42, 330, 38);
+    private ScreenRectangle SpaceRow(int row) => new(12, 224 + WorkerBarHeight + row * 42, 330, 38);
 
     private void OpenSpaceDefinitions()
     {
@@ -45,7 +45,7 @@ public sealed partial class VenueEditorGame
         spaceButtons.Clear();
         pressedSpaceButton = null;
         void Add(string label, double x, double y, double width, Action action) =>
-            spaceButtons.Add((new IconButtonModel(new ScreenRectangle(x, y, width, 34), label), action));
+            spaceButtons.Add((new IconButtonModel(new ScreenRectangle(x, y + WorkerBarHeight, width, 34), label), action));
         Add("配置物の型", 12, 122, 155, () => SelectSpaceTab(false));
         Add("申込スペース", 177, 122, 165, () => SelectSpaceTab(true));
         Add("追加", 12, 174, 70, () => EditSpaceDefinition(true, false));
@@ -176,7 +176,7 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(spaceRequestsTab ? catalog.Requests[index].Value : catalog.Types[index].Name, ToRectangle(bounds, 6), Color.White, 17);
         }
         void Text(string value, int y, int size = 18) => textRenderer?.Draw(value,
-            new Rectangle(370, y, Math.Max(1, GraphicsDevice.Viewport.Width - 390), 30), Color.White, size);
+            new Rectangle(370, y + WorkerBarHeight, Math.Max(1, GraphicsDevice.Viewport.Width - 390), 30), Color.White, size);
         Text("このフレーム配置の定義", 124, 23);
         Text("定義の編集はこのフレーム配置に保存します。", 162, 16);
         if (SpaceCount == 0) { Text("［追加］から定義を作成してください", 222); return; }

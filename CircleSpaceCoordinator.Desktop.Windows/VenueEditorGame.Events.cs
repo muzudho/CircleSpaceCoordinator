@@ -23,10 +23,10 @@ public sealed partial class VenueEditorGame
     private DateTime lastEventClickAt;
     private EventProjectCatalogService EventCatalog => new(settings!);
     private EventListEntry? SelectedEvent => eventProjects.ElementAtOrDefault(eventSelection);
-    private int EventRows => Math.Max(1, (GraphicsDevice.Viewport.Height - 220) / 64);
+    private int EventRows => Math.Max(1, (GraphicsDevice.Viewport.Height - WorkerBarHeight - 220) / 64);
     private int EventActionColumns => GraphicsDevice.Viewport.Height < 560 ? 2 : 1;
     private double EventSidebarWidth => EventActionColumns == 2 ? 280 : 188;
-    private ScreenRectangle EventRowBounds(int row) => new(24, 108 + row * 64,
+    private ScreenRectangle EventRowBounds(int row) => new(24, 108 + WorkerBarHeight + row * 64,
         Math.Max(100, GraphicsDevice.Viewport.Width - EventSidebarWidth - 72), 58);
 
     private void RefreshEventProjects(string? selectedPath = null)
@@ -59,10 +59,10 @@ public sealed partial class VenueEditorGame
         {
             var columns = EventActionColumns;
             var rows = (10 + columns - 1) / columns;
-            var step = Math.Clamp((eventHeight - 164d) / rows, 30, 44);
+            var step = Math.Clamp((eventHeight - WorkerBarHeight - 164d) / rows, 30, 44);
             var width = (EventSidebarWidth - (columns - 1) * 12) / columns;
             var bounds = new ScreenRectangle(eventWidth - 24 - EventSidebarWidth + (eventButtons.Count % columns) * (width + 12),
-                108 + eventButtons.Count / columns * step, width, step - 6);
+                108 + WorkerBarHeight + eventButtons.Count / columns * step, width, step - 6);
             eventButtons.Add((new IconButtonModel(bounds, label) { IsEnabled = enabled }, execute));
         }
         Add("開く", () => { if (SelectedEvent is { } item) OpenEventProject(item.Project.Path); }, usable);
@@ -146,8 +146,8 @@ public sealed partial class VenueEditorGame
         EnsureEventButtons();
         void Text(string text, ScreenRectangle bounds, int size = 18, bool bold = false) =>
             textRenderer?.Draw(text, ToRectangle(bounds), Color.White, size, bold);
-        Text("イベントプロジェクト一覧", new(24, 22, GraphicsDevice.Viewport.Width - 48, 42), 28, true);
-        Text("この版から編集は自動保存されます。［プロジェクト］の［すぐ保存］／［セーブポイント］も利用できます。", new(24, 68, GraphicsDevice.Viewport.Width - 48, 28));
+        Text("イベントプロジェクト一覧", new(24, 22 + WorkerBarHeight, GraphicsDevice.Viewport.Width - 48, 42), 28, true);
+        Text("この版から編集は自動保存されます。［プロジェクト］の［すぐ保存］／［セーブポイント］も利用できます。", new(24, 68 + WorkerBarHeight, GraphicsDevice.Viewport.Width - 48, 28));
         for (var row = 0; row < EventRows && eventScroll + row < eventProjects.Count; row++)
         {
             var index = eventScroll + row;
@@ -201,6 +201,7 @@ public sealed partial class VenueEditorGame
             try
             {
                 workspace = opened;
+                workspace.HandleProvider = () => Handle;
                 projectSavePath = registered.Path;
                 dragController = new DeskDragController(opened, viewport);
                 commandController = new EditorCommandController(opened);

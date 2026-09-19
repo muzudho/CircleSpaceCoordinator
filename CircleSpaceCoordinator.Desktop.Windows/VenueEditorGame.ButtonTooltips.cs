@@ -72,8 +72,14 @@ public sealed partial class VenueEditorGame
             HitTestParticipant(pointer) is { } token)
         {
             var genre = workspace.Project.Participants.Single(item => item.Id == token.ParticipantId).GenreId;
-            return string.IsNullOrWhiteSpace(genre) ? "（ジャンル未設定）" : genre;
+            return GenreAttributionPrefix() + (string.IsNullOrWhiteSpace(genre) ? "（ジャンル未設定）" : genre);
         }
         return "";
+    }
+
+    private string GenreAttributionPrefix(string? layoutId = null)
+    {
+        var credits = workspace?.Project.CircleLayouts.FirstOrDefault(item => item.Id == (layoutId ?? workspace.SelectedPlanId))?.Credits;
+        return (credits ?? new CircleSpaceCoordinator.Core.Model.PersonCredits()).AttributionText + "  ｜  ";
     }
 }

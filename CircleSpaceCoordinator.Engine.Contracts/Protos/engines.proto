@@ -38,6 +38,7 @@ message PortableReply { string json = 1; }
 message FillVacantSeatsRequest {
   string workspace_id = 1;
   int64 expected_revision = 2;
+  string handle = 3;
 }
 message OpenRequest { string project_json = 1; }
 message WorkspaceRequest { string workspace_id = 1; }
@@ -90,6 +91,7 @@ message EditorOptimizeRequest {
   string new_plan_name = 5;
   OptimizationOptions options = 6;
   bool only_if_improved = 7;
+  string handle = 8;
 }
 
 message JobHandle { string job_id = 1; }

@@ -40,6 +40,9 @@
     },
     "venue": {
       "$ref": "channel-knowledge-v1.schema.json#/properties/venue"
+    },
+    "credits": {
+      "$ref": "circle-space-project-v1.schema.json#/$defs/personCredits"
     }
   },
   "oneOf": [

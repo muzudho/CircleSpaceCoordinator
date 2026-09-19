@@ -9,6 +9,14 @@ public static class ProjectValidator
     {
         ArgumentNullException.ThrowIfNull(project);
         var issues = new List<ValidationIssue>();
+        foreach (var credits in project.DeskLayouts.Select(item => item.Credits)
+            .Concat(project.CircleLayouts.Select(item => item.Credits))
+            .Concat(project.DeskLayouts.SelectMany(item => item.DeskPlacements).Select(item => item.Credits))
+            .Concat(project.Evaluation.Features.Select(item => item.Credits)).Append(project.Venue.Credits))
+        {
+            try { credits?.Validate(); }
+            catch (ArgumentException ex) { Add("credits.invalid", "credits", ex.Message); }
+        }
         CheckUnique(project.ChannelKnowledge.Select(item => item.Id), "channelKnowledge");
         foreach (var knowledge in project.ChannelKnowledge)
         {

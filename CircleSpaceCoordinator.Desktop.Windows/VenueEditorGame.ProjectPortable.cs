@@ -8,7 +8,7 @@ public sealed partial class VenueEditorGame
 {
     private void ExportPortable()
     {
-        if (workspace is null) return;
+        if (workspace is null || !EnsureHandle()) return;
         try
         {
             var snapshot = workspace.Project;
@@ -68,7 +68,7 @@ public sealed partial class VenueEditorGame
                     if (fragment.Checked && layoutIds.Contains(sourceLayout.Id)) fragments.Add(sourceLayout.Id, frameIds);
                     var json = EditorConnection.Current.ExportPortable(new(snapshot, layoutIds, definitions,
                         name.Text.Trim(), description.Text, tags.Text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), secret.Checked)
-                    { KnowledgeIds = selected.Where(row => Equals(row.Tag, "knowledge")).Select(row => (string)row.Cells[3].Value!).ToArray(), TemplateOnly = template.Checked,
+                    { Handle = Handle, KnowledgeIds = selected.Where(row => Equals(row.Tag, "knowledge")).Select(row => (string)row.Cells[3].Value!).ToArray(), TemplateOnly = template.Checked,
                         Materials = selected.Select(row => row.Tag).OfType<PortableMaterialSelection>().ToArray(), Fragments = fragments });
                     var package = EditorConnection.Current.ParsePortable(json);
                     var summary = string.Join("\n", package.Items.Select(item => $"・{item.Name}（型 {item.Project.DeskTypes.Count} 件、申込定義 {item.Project.DeskLayouts[0].Definitions!.Requests.Count} 件）")
@@ -83,6 +83,8 @@ public sealed partial class VenueEditorGame
                     if (projectSavePath is not null && string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(projectSavePath), StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException("編集中のイベントとは別のファイルを指定してください。");
                     FrameLayoutPortableService.SaveDocument(dialog.FileName, json, overwrite: true);
+                    workspace.Execute(new RecordPortableProviders(package,
+                        selected.Select(row => row.Tag).OfType<PortableMaterialSelection>().ToArray(), definitions), selectedPlanEdit: false);
                     form.DialogResult = Forms.DialogResult.OK;
                 }
                 catch (Exception ex) { status.Text = ex.Message; }

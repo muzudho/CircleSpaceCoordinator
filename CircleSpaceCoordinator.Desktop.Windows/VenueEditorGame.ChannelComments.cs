@@ -53,12 +53,13 @@ public sealed partial class VenueEditorGame
     private void EditWeightComment()
     {
         if (workspace is not { } owner || weightCommentFeatureId is not { } id) return;
+        if (!EnsureHandle()) return;
         var feature = owner.Project.Evaluation.Features.Single(item => item.Id == id);
         textInputService?.Stop();
         EditChannelCommentText(feature.Name, feature.CommentForWeight ?? "", value =>
         {
             var current = owner.Project.Evaluation.Features.Single(item => item.Id == id);
-            owner.Execute(new UpsertChannel(id, current.Name, current.SourceColumn) { CommentForWeight = value }, selectedPlanEdit: false);
+            owner.Execute(new UpsertChannel(id, current.Name, current.SourceColumn) { CommentForWeight = value, Handle = Handle }, selectedPlanEdit: false);
         });
         modalWidth = -1;
         modalInputDrain = true;

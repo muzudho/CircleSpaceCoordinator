@@ -7,7 +7,12 @@ public sealed partial class VenueEditorGame
 {
     private string? HoveredDeskLayoutDescription()
     {
-        if (!CanShowEditorHover || !ShowsDeskLayouts || workspace is null || hoveredPlanId is null) return null;
+        if (!CanShowEditorHover || (!ShowsDeskLayouts && editorMode != EditorMode.GenrePlacement) || workspace is null || hoveredPlanId is null) return null;
+        if (editorMode == EditorMode.GenrePlacement)
+        {
+            var layout = workspace.Project.CircleLayouts.FirstOrDefault(item => item.Id == hoveredPlanId);
+            return layout is null ? null : GenreAttributionPrefix(layout.Id) + CommentExcerpt(layout.Description ?? "");
+        }
         var description = UsesSeparatedLayouts
             ? workspace.Project.DeskLayouts.FirstOrDefault(item => item.Id == hoveredPlanId)?.Description
             : workspace.Project.Plans.FirstOrDefault(item => item.Id == hoveredPlanId)?.Description;

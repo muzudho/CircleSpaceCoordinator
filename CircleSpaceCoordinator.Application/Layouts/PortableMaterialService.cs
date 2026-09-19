@@ -13,7 +13,7 @@ public static class PortableMaterialService
         {
             var venue = project.Venue;
             return new("venue:" + venue.Id, "venue", venue.Name, project.IsConfidential)
-            { Venue = new(venue.Name, venue.Width, venue.Height, venue.BlockedCells.ToArray(),
+            { Credits = venue.Credits, Venue = new(venue.Name, venue.Width, venue.Height, venue.BlockedCells.ToArray(),
                 venue.Zones.Select(zone => new KnowledgeZone(zone.Name, zone.Cells.ToArray())).ToArray()) };
         }
         var layout = selected.LayoutId is null ? null : project.DeskLayouts.Single(item => item.Id == selected.LayoutId);
@@ -24,14 +24,14 @@ public static class PortableMaterialService
         if (selected.Kind == "frame-definition")
         {
             var type = catalog.Types.Single(item => item.Id == selected.SourceId);
-            return new(id, selected.Kind, type.Name, confidential) { Definitions = new([type], []) { IsConfidential = confidential } };
+            return new(id, selected.Kind, type.Name, confidential) { Credits = type.Credits, Definitions = new([type], []) { IsConfidential = confidential } };
         }
         if (selected.Kind == "request-definition")
         {
             var request = catalog.Requests.Single(item => item.Id == selected.SourceId);
             var ids = request.Targets.Select(target => target.TypeId).ToHashSet();
             return new(id, selected.Kind, request.Value, confidential)
-            { Definitions = new(catalog.Types.Where(type => ids.Contains(type.Id)).ToArray(), [request]) { IsConfidential = confidential } };
+            { Credits = request.Credits, Definitions = new(catalog.Types.Where(type => ids.Contains(type.Id)).ToArray(), [request]) { IsConfidential = confidential } };
         }
         throw new InvalidOperationException("未対応の素材種類です。");
     }
@@ -48,7 +48,11 @@ public static class PortableMaterialService
         foreach (var type in incoming.Types)
         {
             var existing = types.FirstOrDefault(item => item.Id == type.Id);
-            if (existing is not null && Same(existing, type)) { mapping.Add(type.Id, existing.Id); continue; }
+            if (existing is not null && Same(existing with { Credits = null }, type with { Credits = null }))
+            {
+                if (existing.Credits is null) types[types.IndexOf(existing)] = existing with { Credits = type.Credits };
+                mapping.Add(type.Id, existing.Id); continue;
+            }
             var id = type.Id;
             if (!ids.Add(id))
             {
@@ -66,7 +70,11 @@ public static class PortableMaterialService
             var sameValue = requests.FirstOrDefault(item => item.Value == mapped.Value);
             if (sameValue is not null)
             {
-                if (Same(sameValue with { Id = mapped.Id }, mapped)) continue;
+                if (Same(sameValue with { Id = mapped.Id, Credits = null }, mapped with { Credits = null }))
+                {
+                    if (sameValue.Credits is null) requests[requests.IndexOf(sameValue)] = sameValue with { Credits = mapped.Credits };
+                    continue;
+                }
                 throw new InvalidOperationException($"申込値「{mapped.Value}」の意味・参照先が既存定義と異なります。読込み値を変更するか、この項目を見送ってください。");
             }
             var id = mapped.Id;
@@ -90,7 +98,7 @@ public static class PortableMaterialService
         {
             var source = material.Venue!;
             var venue = new Venue(selected.NewId, selected.Name, source.Width, source.Height, source.BlockedCells.ToHashSet())
-            { Zones = source.Zones.Select((zone, index) => new VenueZone("zone-" + index, zone.Name, zone.Cells.ToHashSet())).ToArray() };
+            { Credits = material.Credits, Zones = source.Zones.Select((zone, index) => new VenueZone("zone-" + index, zone.Name, zone.Cells.ToHashSet())).ToArray() };
             if (!FrameLayoutImportService.CanAdoptVenue(project) && !FrameLayoutImportService.SameGeometry(project.Venue, venue))
                 throw new InvalidOperationException("既存配置があるため、形状の異なる会場は取り込めません。新しいイベントで取り込んでください。");
             project = project with { Venue = venue };

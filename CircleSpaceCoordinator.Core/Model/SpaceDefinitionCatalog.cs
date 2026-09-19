@@ -6,6 +6,7 @@ public sealed record SpaceCell(int X, int Y, int Area);
 public sealed record SpaceTypeDefinition(string Id, string Name, string Kind, int Width, int Height,
     IReadOnlyList<SpaceCell> Cells, IReadOnlyList<string> Edges)
 {
+    public PersonCredits? Credits { get; init; }
     // Keep the legacy JSON field; positive area numbers all mean placeable now.
     public SpaceTypeDefinition NormalizeCellStates() => this with
     {
@@ -15,7 +16,10 @@ public sealed record SpaceTypeDefinition(string Id, string Name, string Kind, in
     public IReadOnlyList<FrameCellConnection>? Connections { get; init; }
 }
 public sealed record SpaceTarget(string TypeId, int Area);
-public sealed record SpaceRequestDefinition(string Id, string Value, string Description, IReadOnlyList<SpaceTarget> Targets);
+public sealed record SpaceRequestDefinition(string Id, string Value, string Description, IReadOnlyList<SpaceTarget> Targets)
+{
+    public PersonCredits? Credits { get; init; }
+}
 public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> Types, IReadOnlyList<SpaceRequestDefinition> Requests)
 {
     public int SchemaVersion { get; init; } = 1;
@@ -57,6 +61,8 @@ public sealed record SpaceDefinitionCatalog(IReadOnlyList<SpaceTypeDefinition> T
         if (Types is null || Requests is null) throw new InvalidDataException("型と申込スペースの一覧が必要です。");
         if (Types.Any(type => type is null) || Requests.Any(request => request is null))
             throw new InvalidDataException("空の定義は使えません。");
+        foreach (var item in Types) item.Credits?.Validate();
+        foreach (var item in Requests) item.Credits?.Validate();
         if (Types.Select(t => t.Id).Distinct().Count() != Types.Count || Requests.Select(r => r.Id).Distinct().Count() != Requests.Count)
             throw new InvalidDataException("定義IDが重複しています。");
         if (Requests.Select(r => r.Value).Distinct(StringComparer.Ordinal).Count() != Requests.Count)

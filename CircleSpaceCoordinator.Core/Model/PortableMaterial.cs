@@ -9,11 +9,13 @@ public sealed record PortableMaterial(
     [property: JsonRequired] string Name,
     [property: JsonRequired] bool IsConfidential)
 {
+    public PersonCredits? Credits { get; init; }
     public SpaceDefinitionCatalog? Definitions { get; init; }
     public KnowledgeVenue? Venue { get; init; }
 
     public void Validate()
     {
+        Credits?.Validate();
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name))
             throw new InvalidDataException("素材のIDと名前が必要です。");
         if (Kind == "venue")

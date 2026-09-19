@@ -38,7 +38,7 @@ public sealed partial class VenueEditorGame
         var width = Math.Max(1, GraphicsDevice.Viewport.Width - 24 - 60 - 18);
         var cellWidth = Math.Min(180d, width);
         var columns = Math.Max(1, (int)(width / cellWidth));
-        var top = editorMode == EditorMode.CirclePlacementDecision ? 358 : 182;
+        var top = WorkerBarHeight + (editorMode == EditorMode.CirclePlacementDecision ? 358 : 182);
         var rows = Math.Max(1, (GraphicsDevice.Viewport.Height - StatusBarHeight - top - 30 - 18 - 12) / 28);
         return (new ScreenRectangle(72, top, columns * cellWidth, 30 + rows * 28), rows, columns, cellWidth);
     }
@@ -170,7 +170,7 @@ public sealed partial class VenueEditorGame
             tableTextPage = page;
         }
         var ink = new Color(222, 234, 240);
-        var headerOffset = editorMode == EditorMode.CirclePlacementDecision ? 112 : 0;
+        var headerOffset = WorkerBarHeight + (editorMode == EditorMode.CirclePlacementDecision ? 112 : 0);
         if (editorMode == EditorMode.CirclePlacementDecision) DrawCurrentExportPlan();
         tableTextRenderer!.Draw($"申込スペース数 合計：{GetSpaceCapacity().Requested:N0} sp　｜　{table.SourceDescription}　{table.RowCount:N0} 行 × {table.ColumnCount:N0} 列",
             new Rectangle(12, 118 + headerOffset, Math.Max(1, GraphicsDevice.Viewport.Width - 24), 28), ink, 17, true);

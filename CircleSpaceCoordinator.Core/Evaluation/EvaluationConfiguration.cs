@@ -9,6 +9,7 @@ public sealed record EvaluationFeature(
     double Offset,
     double OverallWeight)
 {
+    public CircleSpaceCoordinator.Core.Model.PersonCredits? Credits { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     [System.Text.Json.Serialization.JsonPropertyName("comment-for-channel")]
     public string? CommentForChannel { get; init; }

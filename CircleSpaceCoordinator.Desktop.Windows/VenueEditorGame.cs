@@ -26,7 +26,7 @@ using StationeryUI.Controls;
 public sealed partial class VenueEditorGame : Game
 {
     private const int StatusBarHeight = 58;
-    private const int ToolbarHeight = 112;
+    private const int ToolbarHeight = 112 + WorkerBarHeight;
     private static readonly Color CanvasGridColor = new(70, 78, 92);
     private static readonly Color GenreDeskWireframeColor = new(126, 150, 164);
     private static readonly Color OperationTargetColor = new(115, 231, 255);
@@ -116,6 +116,7 @@ public sealed partial class VenueEditorGame : Game
         bool startEngines = false)
     {
         this.workspace = workspace;
+        if (workspace is not null) workspace.HandleProvider = () => Handle;
         this.startEngines = startEngines;
         this.operationLogger = operationLogger ?? NullOperationLogger.Instance;
         this.projectSavePath = projectSavePath;
@@ -214,6 +215,8 @@ public sealed partial class VenueEditorGame : Game
             base.Update(gameTime);
             return;
         }
+
+        if (UpdateWorkerBar(mouse)) { previousKeyboard = keyboard; base.Update(gameTime); return; }
 
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
@@ -799,6 +802,7 @@ public sealed partial class VenueEditorGame : Game
         else if (workspace is null)
         {
             DrawEventProjects();
+            DrawWorkerBar();
             DrawModalDialog();
         }
         else
@@ -863,6 +867,7 @@ public sealed partial class VenueEditorGame : Game
             DrawToolRing();
             DrawSpaceCatalog();
             DrawProjectMenu();
+            DrawWorkerBar();
             DrawModalDialog();
         }
         spriteBatch.End();
@@ -2519,7 +2524,7 @@ public sealed partial class VenueEditorGame : Game
         projectToolbarWidth = toolbarWidth;
         var modeWidth = Math.Min(158d, Math.Max(44d, (toolbarWidth - 362d) / visibleModeCount));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.ProjectMenu,
-            new IconButtonModel(new ScreenRectangle(12, 7, 142, 40), GetAccessibleName(ToolbarAction.ProjectMenu))));
+            new IconButtonModel(new ScreenRectangle(12, 7 + WorkerBarHeight, 142, 40), GetAccessibleName(ToolbarAction.ProjectMenu))));
         var modeX = 164d;
         for (var index = 0; index < modeActions.Length; index++)
         {
@@ -2531,7 +2536,7 @@ public sealed partial class VenueEditorGame : Game
                 var groupName = frameGroup ? "フレーム配置・島定義" : "ジャンル配置・サークル配置";
                 toolbarButtons.Add(new ToolbarButton(
                     frameGroup ? ToolbarAction.ToggleFrameModes : ToolbarAction.ToggleCircleModes,
-                    new IconButtonModel(new ScreenRectangle(modeX, 7d, 24d, 24d),
+                    new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight, 24d, 24d),
                         $"{groupName}を{(collapsed ? "展開する" : "収納する")}")));
                 modeX += 30d;
             }
@@ -2540,7 +2545,7 @@ public sealed partial class VenueEditorGame : Game
                 continue;
             toolbarButtons.Add(new ToolbarButton(
                 action,
-                new IconButtonModel(new ScreenRectangle(modeX, 7d, modeWidth - 8d, 40d), GetAccessibleName(action))));
+                new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight, modeWidth - 8d, 40d), GetAccessibleName(action))));
             modeX += modeWidth;
         }
         var modeSpecificActions = editorMode switch
@@ -2572,12 +2577,12 @@ public sealed partial class VenueEditorGame : Game
                 editorMode == EditorMode.DeskPlacement ? 42d : 44d;
             toolbarButtons.Add(new ToolbarButton(
                 action,
-                new IconButtonModel(new ScreenRectangle(actionX, 59d, buttonWidth, 44d), GetAccessibleName(action))));
+                new IconButtonModel(new ScreenRectangle(actionX, 59d + WorkerBarHeight, buttonWidth, 44d), GetAccessibleName(action))));
             actionX += buttonWidth + 5d;
         }
         if (editorMode == EditorMode.CirclePlacementDecision)
             toolbarButtons.Add(new ToolbarButton(ToolbarAction.SelectExportPlan,
-                new IconButtonModel(new ScreenRectangle(192, 184, 84, 32), GetAccessibleName(ToolbarAction.SelectExportPlan))));
+                new IconButtonModel(new ScreenRectangle(192, 184 + WorkerBarHeight, 84, 32), GetAccessibleName(ToolbarAction.SelectExportPlan))));
     }
 
     // Canvas tools share activeCanvasTool; the analysis toggle has independent state.
@@ -3043,7 +3048,7 @@ public sealed partial class VenueEditorGame : Game
     {
         DrawRectangle(new ScreenRectangle(0d, 0d, GraphicsDevice.Viewport.Width, ToolbarHeight), new Color(18, 22, 28));
         foreach (var separatorX in toolbarSeparators)
-            DrawRectangle(new ScreenRectangle(separatorX, 65d, 1d, 32d), new Color(80, 87, 98));
+            DrawRectangle(new ScreenRectangle(separatorX, 65d + WorkerBarHeight, 1d, 32d), new Color(80, 87, 98));
         foreach (var button in toolbarButtons)
         {
             if (button.Action is ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes)

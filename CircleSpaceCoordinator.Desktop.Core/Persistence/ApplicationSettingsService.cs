@@ -35,6 +35,11 @@ public sealed record ApplicationSettings(
     public string SchemaVersion { get; init; } = "1.1";
     public string? BackupDirectory { get; init; }
     public int BackupGenerations { get; init; } = 10;
+    public string Handle { get; init; } = "";
+    // Read the previous settings key; subsequent saves use only "handle".
+    [JsonPropertyName("workerName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyWorkerName { get => null; init { if (value is not null && Handle.Length == 0) Handle = value; } }
 }
 
 public sealed class ApplicationSettingsService
@@ -55,6 +60,13 @@ public sealed class ApplicationSettingsService
     }
 
     public ApplicationSettings Current { get; private set; }
+    public void SaveHandle(string name)
+    {
+        name = CircleSpaceCoordinator.Core.Model.PersonCredits.NormalizeHandle(name);
+        var next = Current with { Handle = name };
+        SavePointStore.AtomicWrite(settingsPath, JsonSerializer.Serialize(next, JsonOptions));
+        Current = next;
+    }
     public void ConfigureBackups(string directory, int generations)
     {
         if (generations is < 1 or > 1000) throw new ArgumentOutOfRangeException(nameof(generations));
@@ -220,6 +232,7 @@ public sealed class ApplicationSettingsService
                 NormalizeCircleLabelDisplay(loaded.CircleLabelDisplay))
             {
                 SchemaVersion = "1.1",
+                Handle = NormalizeHandle(loaded.Handle),
                 BackupDirectory = string.IsNullOrWhiteSpace(loaded.BackupDirectory) ? null : Path.GetFullPath(loaded.BackupDirectory),
                 BackupGenerations = loaded.BackupGenerations is >= 1 and <= 1000 ? loaded.BackupGenerations : 10,
             };
@@ -247,6 +260,12 @@ public sealed class ApplicationSettingsService
         {
             // Keep the in-memory settings when the deployment directory is temporarily unavailable.
         }
+    }
+
+    private static string NormalizeHandle(string? name)
+    {
+        try { return CircleSpaceCoordinator.Core.Model.PersonCredits.NormalizeHandle(name ?? ""); }
+        catch (ArgumentException) { return name ?? ""; } // Do not silently discard a previously saved long name.
     }
 
     private void RememberFileDirectory(string filePath, bool isParticipantImport)

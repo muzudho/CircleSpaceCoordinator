@@ -151,8 +151,8 @@ public sealed partial class EditorService(Thinking.ThinkingClient thinking, Sess
             {
                 var session = Clone(Find(request.WorkspaceId));
                 CheckRevision(session, request.ExpectedRevision);
-                session.Workspace.ApplyProjectEdit(current => PlanCatalogService.AddOptimizedPlan(
-                    current, bestPlan, request.NewPlanId, request.NewPlanName));
+                session.Workspace.ApplyProjectEdit(current => CircleSpaceCoordinator.Application.Workspace.ModificationCreditsService.Apply(current,
+                    PlanCatalogService.AddOptimizedPlan(current, bestPlan, request.NewPlanId, request.NewPlanName), request.Handle));
                 session.Revision++;
                 return Snapshot(request.WorkspaceId, session);
             }

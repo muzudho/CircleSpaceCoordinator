@@ -65,9 +65,21 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(SetChannelWeights), "SetChannelWeights")]
 [JsonDerivedType(typeof(SetIslandStart), "SetIslandStart")]
 [JsonDerivedType(typeof(NumberFramesFromIslands), "NumberFramesFromIslands")]
-public abstract record EditorOperation;
+[JsonDerivedType(typeof(RecordPortableProviders), "RecordPortableProviders")]
+[JsonDerivedType(typeof(UpdateChannelKnowledge), "UpdateChannelKnowledge")]
+public abstract record EditorOperation
+{
+    public string? ActorHandle { get; init; }
+}
+public sealed record UpdateChannelKnowledge(CircleSpaceCoordinator.Core.Evaluation.ChannelKnowledge Knowledge, string Handle) : EditorOperation;
+public sealed record RecordPortableProviders(PortablePackage Package, IReadOnlyList<PortableMaterialSelection> Materials,
+    SpaceDefinitionCatalog FallbackDefinitions) : EditorOperation;
 public sealed record CaptureChannelKnowledge(string featureId, string id, string description, string purpose,
-    CircleSpaceCoordinator.Core.Evaluation.ChannelInputRule rule, bool confidential) : EditorOperation;
+    CircleSpaceCoordinator.Core.Evaluation.ChannelInputRule rule, bool confidential) : EditorOperation
+{
+    public string Handle { get; init; } = "";
+    public bool Overwrite { get; init; }
+}
 public sealed record BindChannelKnowledge(string id, string featureId, string name, string column) : EditorOperation;
 public sealed record ImportPortableSelection(PortablePackage package, IReadOnlyList<PortableImportItem> selection) : EditorOperation;
 public sealed record ImportFrameLayout(CircleSpaceProject incoming, string id, string name) : EditorOperation;
@@ -130,6 +142,7 @@ public sealed record SwapNumberAddresses(string planId, int channel, GridPositio
 public sealed record SetExportPlan(string? planId) : EditorOperation;
 public sealed record UpsertChannel(string id, string name, string? sourceColumn) : EditorOperation
 {
+    public string Handle { get; init; } = "";
     public double? OverallWeight { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     [System.Text.Json.Serialization.JsonPropertyName("comment-for-channel")]

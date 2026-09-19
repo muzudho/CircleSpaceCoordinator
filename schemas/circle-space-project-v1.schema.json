@@ -105,6 +105,7 @@
     { "required": ["deskLayouts", "circleLayouts"] }
   ],
   "$defs": {
+    "personCredits": {"anyOf": [{"type": "null"}, {"type": "object", "additionalProperties": false, "properties": {"author": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "modifier": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "firstProvider": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "latestProvider": {"type": ["string", "null"], "maxLength": 16, "description": "At most 16 Unicode scalar values (64 UTF-8 bytes)."}, "modifiedOn": {"type": ["string", "null"], "format": "date"}}}]},
     "identifier": {
       "type": "string",
       "minLength": 1,
@@ -193,6 +194,7 @@
       "additionalProperties": false,
       "required": ["id", "name", "width", "height"],
       "properties": {
+        "credits": {"$ref": "#/$defs/personCredits"},
         "id": {
           "$ref": "#/$defs/identifier"
         },
@@ -370,6 +372,7 @@
       "additionalProperties": false,
       "required": ["id", "name", "scale", "offset", "overallWeight"],
       "properties": {
+        "credits": {"$ref": "#/$defs/personCredits"},
         "inputRule": { "$ref": "channel-knowledge-v1.schema.json#/$defs/inputRule" },
         "purpose": { "type": "string" },
         "comment-for-channel": { "type": ["string", "null"] },
@@ -458,6 +461,7 @@
           "type": "object", "additionalProperties": false,
           "required": ["id", "value", "description", "targets"],
           "properties": {
+            "credits": {"$ref": "#/$defs/personCredits"},
             "id": { "$ref": "#/$defs/identifier" },
             "value": { "type": "string", "minLength": 1 },
             "description": { "type": "string" },
@@ -473,6 +477,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["id", "name", "kind", "width", "height", "cells", "edges"],
       "properties": {
+        "credits": {"$ref": "#/$defs/personCredits"},
         "id": { "$ref": "#/$defs/identifier" },
         "name": { "$ref": "#/$defs/displayText" },
         "kind": { "enum": ["机", "場所", "ブース"] },
@@ -491,6 +496,7 @@
       "additionalProperties": false,
       "required": ["id", "name", "deskPlacements"],
       "properties": {
+        "credits": {"$ref": "#/$defs/personCredits"},
         "definitions": { "$ref": "#/$defs/spaceDefinitionCatalog" },
         "isConfidential": { "type": "boolean", "default": false },
         "id": { "$ref": "#/$defs/identifier" },
@@ -509,6 +515,7 @@
       "additionalProperties": false,
       "required": ["id", "name", "deskLayoutId", "assignments"],
       "properties": {
+        "credits": { "$ref": "#/$defs/personCredits" },
         "id": { "$ref": "#/$defs/identifier" },
         "name": { "$ref": "#/$defs/displayText" },
         "description": { "$ref": "#/$defs/displayText" },
@@ -595,6 +602,7 @@
       "additionalProperties": false,
       "required": ["id", "deskTypeId", "anchor", "orientation"],
       "properties": {
+        "credits": { "$ref": "#/$defs/personCredits" },
         "deskNumber": { "type": ["string", "null"] },
         "id": {
           "$ref": "#/$defs/identifier"

@@ -20,10 +20,11 @@ public sealed partial class EditorService
                 if (export.Fragments.Keys.Any(id => !export.LayoutIds.Contains(id))) throw new ArgumentException("部分配置の元となる案を選択してください。");
                 var projects = export.LayoutIds.Select(id => export.Fragments.TryGetValue(id, out var frames)
                     ? PortableFragmentService.Extract(export.Project, id, frames, export.Definitions)
-                    : PortableSelectionService.Extract(export.Project, id, export.Definitions)).ToArray();
-                var materials = export.Materials.Select(selected => PortableMaterialService.Extract(export.Project, export.Definitions, selected)).ToArray();
+                    : PortableSelectionService.Extract(export.Project, id, export.Definitions))
+                    .Select(project => PortableCreditsService.Provide(project, export.Handle)).ToArray();
+                var materials = export.Materials.Select(selected => PortableCreditsService.Provide(PortableMaterialService.Extract(export.Project, export.Definitions, selected), export.Handle)).ToArray();
                 var knowledge = export.KnowledgeIds.Select(id => export.Project.ChannelKnowledge.Single(item => item.Id == id))
-                    .Select(item => item with { IsConfidential = item.IsConfidential || export.Project.IsConfidential,
+                    .Select(item => item with { Credits = PortableCreditsService.Provide(item.Credits, export.Handle), IsConfidential = item.IsConfidential || export.Project.IsConfidential,
                         Cells = export.TemplateOnly ? [] : item.Cells, Venue = export.TemplateOnly ? null : item.Venue }).ToArray();
                 result = ProjectPortableSerializer.Save(export.Name, export.Description, export.Tags.ToArray(), export.IsConfidential, projects, knowledge, materials,
                     export.Fragments.Keys.ToHashSet());

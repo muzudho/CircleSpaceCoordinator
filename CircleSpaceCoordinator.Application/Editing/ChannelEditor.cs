@@ -7,7 +7,7 @@ using CircleSpaceCoordinator.Core.Model;
 
 public static class ChannelEditor
 {
-    public static CircleSpaceProject Upsert(CircleSpaceProject project, string id, string name, string? sourceColumn, string? commentForChannel = null, string? commentForWeight = null, double? overallWeight = null)
+    public static CircleSpaceProject Upsert(CircleSpaceProject project, string id, string name, string? sourceColumn, string? commentForChannel = null, string? commentForWeight = null, double? overallWeight = null, string handle = "")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -23,6 +23,9 @@ public static class ChannelEditor
             OverallWeight = overallWeight ?? existing?.OverallWeight ?? 1,
             CommentForChannel = commentForChannel ?? existing?.CommentForChannel,
             CommentForWeight = commentForWeight ?? existing?.CommentForWeight };
+        if (!string.IsNullOrWhiteSpace(handle) &&
+            (feature.CommentForChannel != existing?.CommentForChannel || feature.CommentForWeight != existing?.CommentForWeight))
+            feature = feature with { Credits = (existing?.Credits ?? new PersonCredits()).WrittenBy(handle) };
         var features = existing is null ? project.Evaluation.Features.Append(feature).ToArray()
             : project.Evaluation.Features.Select(item => item.Id == id ? feature : item).ToArray();
         var maps = project.Evaluation.WeightMaps.Any(item => item.FeatureId == id)

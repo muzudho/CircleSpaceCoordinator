@@ -27,6 +27,7 @@ public sealed record DeskLayout(
     string Name,
     IReadOnlyList<DeskPlacement> DeskPlacements)
 {
+    public PersonCredits? Credits { get; init; }
     public SpaceDefinitionCatalog? Definitions { get; init; }
     public bool IsConfidential { get; init; }
     public string? Description { get; init; }
@@ -44,6 +45,7 @@ public sealed record CircleLayout(
     string DeskLayoutId,
     IReadOnlyList<ParticipantAssignment> Assignments)
 {
+    public PersonCredits? Credits { get; init; }
     public string? Description { get; init; }
     public IReadOnlyList<ParticipantAssignment> TemporaryPlacements { get; init; } = [];
 }

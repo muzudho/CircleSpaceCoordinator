@@ -32,8 +32,9 @@ public sealed class RemoteWorkspace : IEditorWorkspace, IDisposable
     public IReadOnlyList<RankedPlan> RankPlans() => View.Ranking;
     public PlanSnapshot GetSelectedPlanSnapshot() => View.Snapshot;
     public void Refresh() => Accept(EditorConnection.Invoke(() => connection.Client.Get(new WorkspaceRequest { WorkspaceId = Id }, EditorConnection.Deadline())));
+    public Func<string>? HandleProvider { get; set; }
     public void Execute(EditorOperation operation, bool selectedPlanEdit = true) => Accept(EditorConnection.Invoke(() => connection.Client.Execute(
-        new OperationRequest { WorkspaceId = Id, ExpectedRevision = Revision, SelectedPlanEdit = selectedPlanEdit, OperationJson = WireJson.Write(operation) }, EditorConnection.Deadline())));
+        new OperationRequest { WorkspaceId = Id, ExpectedRevision = Revision, SelectedPlanEdit = selectedPlanEdit, OperationJson = WireJson.Write(operation with { ActorHandle = operation.ActorHandle ?? HandleProvider?.Invoke() }) }, EditorConnection.Deadline())));
     public void SelectPlan(string id) => Select(new SelectionRequest { PlanId = id });
     public void SelectDeskLayout(string id) => Select(new SelectionRequest { DeskLayoutId = id });
     private void Select(SelectionRequest request)
@@ -66,6 +67,7 @@ public sealed class RemoteWorkspace : IEditorWorkspace, IDisposable
             WorkspaceId = Id, ExpectedRevision = Revision, SourcePlanId = plan.Id,
             NewPlanId = $"{plan.Id}-optimized-{Guid.NewGuid():N}", NewPlanName = $"{plan.Name} 自動最適化",
             OnlyIfImproved = true,
+            Handle = HandleProvider?.Invoke() ?? "",
             Options = new OptimizationOptions { MaximumIterations = int.MaxValue, TimeLimitMs = checked(minutes * 60000) },
         }, EditorConnection.Deadline()).ConfigureAwait(false);
         using var watch = connection.Client.WatchJob(handle, deadline: DateTime.UtcNow.AddMinutes(minutes + 1));
@@ -98,7 +100,7 @@ public sealed class RemoteWorkspace : IEditorWorkspace, IDisposable
     }
     public async Task<WorkspaceState> FillVacantSeatsAsync(CancellationToken cancellationToken = default) =>
         await connection.Client.FillVacantSeatsAsync(new FillVacantSeatsRequest
-        { WorkspaceId = Id, ExpectedRevision = Revision }, deadline: DateTime.UtcNow.AddMinutes(2),
+        { WorkspaceId = Id, ExpectedRevision = Revision, Handle = HandleProvider?.Invoke() ?? "" }, deadline: DateTime.UtcNow.AddMinutes(2),
             cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
     public void Dispose()
     {

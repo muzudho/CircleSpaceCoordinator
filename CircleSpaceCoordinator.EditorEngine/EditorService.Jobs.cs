@@ -67,8 +67,8 @@ public sealed partial class EditorService
                         CheckRevision(session, job.Request.ExpectedRevision);
                         if (!job.Request.OnlyIfImproved || result.BestScore.CompareTo(result.InitialScore) > 0)
                         {
-                            session.Workspace.ApplyProjectEdit(project => PlanCatalogService.AddOptimizedPlan(project,
-                                result.BestPlan, job.Request.NewPlanId, job.Request.NewPlanName));
+                            session.Workspace.ApplyProjectEdit(project => CircleSpaceCoordinator.Application.Workspace.ModificationCreditsService.Apply(project,
+                                PlanCatalogService.AddOptimizedPlan(project, result.BestPlan, job.Request.NewPlanId, job.Request.NewPlanName), job.Request.Handle));
                             session.Workspace.SelectPlan(job.Request.NewPlanId);
                             session.Revision++;
                         }

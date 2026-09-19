@@ -27,6 +27,7 @@ public sealed record DeskPlacement(
 {
     /// <summary>Desk number used instead of a seat number for a two-cell circle placed at this desk.</summary>
     public string? DeskNumber { get; init; }
+    public PersonCredits? Credits { get; init; }
 
     public IReadOnlySet<GridPosition> GetOccupiedCells(DeskType deskType) =>
         deskType.Footprint

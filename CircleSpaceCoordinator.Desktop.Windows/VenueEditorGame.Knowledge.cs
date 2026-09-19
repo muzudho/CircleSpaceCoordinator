@@ -24,6 +24,7 @@ public sealed partial class VenueEditorGame
         form.Controls.Add(new Forms.Label { Left = 16, Top = 457, Width = 155, Text = "実際のサークル列" });
         var status = PortableStatus(form);
         var bind = new Forms.Button { Text = "列対応を確認して追加", Left = 330, Top = 558, Width = 235 };
+        var edit = new Forms.Button { Text = "選択した知見を編集", Left = 16, Top = 558, Width = 220 };
         var close = new Forms.Button { Text = "閉じる", Left = 580, Top = 558, Width = 135, DialogResult = Forms.DialogResult.Cancel };
         ChannelKnowledge[] knowledge = [];
         void Refresh()
@@ -33,6 +34,7 @@ public sealed partial class VenueEditorGame
             list.Items.AddRange(knowledge.Select(item => (object)$"{(item.IsConfidential ? "【マル秘】" : "")}{item.Name}（保存された知見・未対応付け）").ToArray());
             if (knowledge.Length > 0) list.SelectedIndex = 0;
             bind.Enabled = knowledge.Length > 0 && column.Items.Count > 0;
+            edit.Enabled = knowledge.Length > 0;
         }
         list.SelectedIndexChanged += (_, _) =>
         {
@@ -41,11 +43,20 @@ public sealed partial class VenueEditorGame
             name.Text = item.Name;
             detail.Text = $"{item.Description}\r\n狙い・適用条件：{item.Purpose}\r\n推奨列：{item.InputRule.RecommendedColumn}\r\n意味：{item.InputRule.Meaning}\r\n値：{item.InputRule.ValueMeanings}\r\n空欄：{(item.InputRule.BlankIsZero ? "0" : "エラー")}\r\n許可する数値：{(item.InputRule.AllowedValues is null ? "有限の数値" : string.Join(", ", item.InputRule.AllowedValues))}\r\nScale={item.Scale}, Offset={item.Offset}, OverallWeight={item.OverallWeight}\r\n既定重み：{item.DefaultWeight}\r\n{(item.Venue is null ? "ひな形（座標なし）" : $"会場：{item.Venue.Name} / {item.Venue.Width} × {item.Venue.Height}")}\r\n" +
                 string.Join("\r\n", item.Cells.Select(cell => $"({cell.X}, {cell.Y}) = {cell.Weight:0.000}"));
+            detail.Text = $"{(item.Credits ?? new CircleSpaceCoordinator.Core.Model.PersonCredits()).AttributionText}\r\n" + detail.Text;
         };
         capture.Click += (_, _) =>
         {
             if (source.SelectedIndex < 0) return;
             CaptureKnowledgeDialog(sources[source.SelectedIndex]);
+            Refresh();
+        };
+        edit.Click += (_, _) =>
+        {
+            if (list.SelectedIndex < 0) return;
+            var item = knowledge[list.SelectedIndex];
+            CaptureKnowledgeDialog(new(item.Id, item.Name, item.Scale, item.Offset, item.OverallWeight)
+                { Description = item.Description, Purpose = item.Purpose, InputRule = item.InputRule, IsConfidential = item.IsConfidential }, item);
             Refresh();
         };
         bind.Click += (_, _) =>
@@ -62,16 +73,19 @@ public sealed partial class VenueEditorGame
             }
             catch (Exception ex) { status.Text = ex.Message; }
         };
-        form.Controls.AddRange([source, capture, list, detail, column, bind, close]);
+        form.Controls.AddRange([source, capture, list, detail, column, bind, edit, close]);
         form.CancelButton = close;
         Refresh();
         form.ShowDialog();
         modalInputDrain = true;
     }
 
-    private void CaptureKnowledgeDialog(EvaluationFeature feature)
+    private void CaptureKnowledgeDialog(EvaluationFeature feature, ChannelKnowledge? editing = null)
     {
-        if (workspace is null) return;
+        if (workspace is null || !EnsureHandle()) return;
+        var previous = editing ?? workspace.Project.ChannelKnowledge.FirstOrDefault(item => item.Name == feature.Name);
+        if (previous is not null)
+            feature = feature with { Description = previous.Description, Purpose = previous.Purpose, InputRule = previous.InputRule };
         using var form = PortableForm("運営の知見を保存 — サークル実データは含めません");
         var description = PortableText(form, "説明", 20, feature.Description ?? "");
         var purpose = PortableText(form, "狙い・適用条件", 60, feature.Purpose ?? "");
@@ -86,7 +100,7 @@ public sealed partial class VenueEditorGame
         var confidential = new Forms.CheckBox { Left = 16, Top = 350, Width = 600, Text = "この知見をマル秘として保存",
             Checked = workspace.Project.IsConfidential || feature.IsConfidential, Enabled = !workspace.Project.IsConfidential && !feature.IsConfidential };
         var status = PortableStatus(form);
-        var save = new Forms.Button { Left = 440, Top = 558, Width = 130, Text = "知見を保存" };
+        var save = new Forms.Button { Left = 440, Top = 558, Width = 130, Text = previous is null ? "知見を保存" : "知見を上書き" };
         var cancel = new Forms.Button { Left = 580, Top = 558, Width = 135, Text = "キャンセル", DialogResult = Forms.DialogResult.Cancel };
         save.Click += (_, _) =>
         {
@@ -94,8 +108,12 @@ public sealed partial class VenueEditorGame
             {
                 var parsed = string.IsNullOrWhiteSpace(allowed.Text) ? null : allowed.Text.Split(',')
                     .Select(value => double.Parse(value.Trim(), System.Globalization.CultureInfo.InvariantCulture)).ToArray();
-                workspace.Execute(new CaptureChannelKnowledge(feature.Id, "knowledge-" + Guid.NewGuid().ToString("N"), description.Text, purpose.Text,
-                    new(column.Text, meaning.Text, values.Text, blank.Checked, parsed), confidential.Checked), selectedPlanEdit: false);
+                if (editing is not null)
+                    workspace.Execute(new UpdateChannelKnowledge(editing with { Description = description.Text, Purpose = purpose.Text,
+                        InputRule = new(column.Text, meaning.Text, values.Text, blank.Checked, parsed), IsConfidential = confidential.Checked }, Handle), selectedPlanEdit: false);
+                else workspace.Execute(new CaptureChannelKnowledge(feature.Id, previous?.Id ?? "knowledge-" + Guid.NewGuid().ToString("N"), description.Text, purpose.Text,
+                    new(column.Text, meaning.Text, values.Text, blank.Checked, parsed), confidential.Checked)
+                    { Handle = Handle, Overwrite = previous is not null }, selectedPlanEdit: false);
                 form.DialogResult = Forms.DialogResult.OK;
             }
             catch (Exception ex) { status.Text = ex.Message; }

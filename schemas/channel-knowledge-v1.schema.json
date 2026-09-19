@@ -17,6 +17,7 @@
     "cells"
   ],
   "properties": {
+        "credits": {"$ref": "circle-space-project-v1.schema.json#/$defs/personCredits"},
         "comment-for-channel": { "type": ["string", "null"] },
         "comment-for-weight": { "type": ["string", "null"] },
     "id": {

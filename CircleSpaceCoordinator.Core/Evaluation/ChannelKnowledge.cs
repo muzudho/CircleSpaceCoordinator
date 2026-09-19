@@ -34,6 +34,7 @@ public sealed record ChannelKnowledge(
     [property: System.Text.Json.Serialization.JsonRequired] double DefaultWeight,
     [property: System.Text.Json.Serialization.JsonRequired] KnowledgeCell[] Cells, KnowledgeVenue? Venue)
 {
+    public CircleSpaceCoordinator.Core.Model.PersonCredits? Credits { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     [System.Text.Json.Serialization.JsonPropertyName("comment-for-channel")]
     public string? CommentForChannel { get; init; }
@@ -42,6 +43,7 @@ public sealed record ChannelKnowledge(
     public string? CommentForWeight { get; init; }
     public void Validate()
     {
+        Credits?.Validate();
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name) || Name == "番地" ||
             Description is null || Purpose is null || InputRule is null ||
             string.IsNullOrWhiteSpace(InputRule.RecommendedColumn) || InputRule.Meaning is null || InputRule.ValueMeanings is null ||

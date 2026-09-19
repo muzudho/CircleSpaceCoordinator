@@ -180,7 +180,7 @@ public sealed partial class VenueEditorGame
 
     private void EditChannelDefinition(bool create)
     {
-        if (workspace is null) return;
+        if (workspace is null || !EnsureHandle()) return;
         var owner = workspace;
         var feature = create ? null : workspace.Project.Evaluation.Features.Single(item => item.Id == selectedChannelId);
         var columns = workspace.Project.Participants.SelectMany(item => item.SourceValues.Keys).Distinct(StringComparer.Ordinal).ToArray();
@@ -195,7 +195,7 @@ public sealed partial class VenueEditorGame
             if (workspace != owner) throw new InvalidOperationException("編集対象が変わりました。選び直してください。");
             if (feature is not null && name == nextName && column == nextColumn && channelComment == nextComment && overallWeight == nextWeight) return;
             owner.Execute(new UpsertChannel(id, nextName, nextColumn)
-                { CommentForChannel = nextComment, OverallWeight = nextWeight }, selectedPlanEdit: false);
+                { CommentForChannel = nextComment, OverallWeight = nextWeight, Handle = Handle }, selectedPlanEdit: false);
             name = nextName;
             column = nextColumn;
             channelComment = nextComment;

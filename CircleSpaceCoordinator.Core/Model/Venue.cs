@@ -9,6 +9,7 @@ public sealed record Venue(
     int Height,
     IReadOnlySet<GridPosition> BlockedCells)
 {
+    public PersonCredits? Credits { get; init; }
     public IReadOnlyList<VenueZone> Zones { get; init; } = [];
 
     public bool Contains(GridPosition position) =>
