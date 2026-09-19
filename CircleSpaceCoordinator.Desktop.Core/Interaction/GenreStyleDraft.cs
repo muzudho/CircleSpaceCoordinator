@@ -15,7 +15,7 @@ public sealed class GenreStyleDraft
         Mapping = new StyleMappingDraft(
             project.Participants.Select(item => item.GenreId).OfType<string>(),
             project.GenreStyles.Select(style => new StyleMappingEntry(style.GenreId,
-                style.PrimaryColor, style.SecondaryColor, style.Pattern)));
+                style.PrimaryColor, style.SecondaryColor, style.Pattern) { KnowledgeComment = style.KnowledgeComment }));
     }
 
     public static string NormalizePattern(string pattern) => StyleMappingDraft.NormalizePattern(pattern);
@@ -23,5 +23,5 @@ public sealed class GenreStyleDraft
     public void SetPattern(int index, string pattern) => Mapping.SetPattern(index, pattern);
     public GenreStyleDefinition[] Build() => Mapping.Build().Select(ToGenreStyle).ToArray();
     private static GenreStyleDefinition ToGenreStyle(StyleMappingEntry style) =>
-        new(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern);
+        new(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern) { KnowledgeComment = style.KnowledgeComment };
 }

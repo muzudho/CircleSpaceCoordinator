@@ -191,7 +191,7 @@ public static class ProjectJsonSerializer
                 item.GenreId,
                 item.PrimaryColor,
                 item.SecondaryColor,
-                item.Pattern)).OrderBy(item => item.GenreId, StringComparer.Ordinal).ToArray(),
+                item.Pattern) { KnowledgeComment = item.KnowledgeComment }).OrderBy(item => item.GenreId, StringComparer.Ordinal).ToArray(),
             EditorView = source.EditorView is null
                 ? null
                 : ToCore(source.EditorView),
@@ -234,6 +234,7 @@ public static class ProjectJsonSerializer
             PrimaryColor = item.PrimaryColor,
             SecondaryColor = item.SecondaryColor,
             Pattern = item.Pattern,
+            KnowledgeComment = item.KnowledgeComment,
         }).OrderBy(item => item.GenreId, StringComparer.Ordinal).ToList(),
         BlockStyles = source.BlockStyles.OrderBy(item => item.BlockNumber, StringComparer.Ordinal).ToList(),
         Venue = new VenueDocument
@@ -463,6 +464,7 @@ public static class ProjectJsonSerializer
 
     private sealed class GenreStyleDocument
     {
+        public string? KnowledgeComment { get; set; }
         public string GenreId { get; set; } = "";
         public string PrimaryColor { get; set; } = "";
         public string SecondaryColor { get; set; } = "";

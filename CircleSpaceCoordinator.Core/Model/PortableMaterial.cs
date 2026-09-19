@@ -31,6 +31,8 @@ public sealed record PortableMaterial(
             var rows = Kind == "genre-styles"
                 ? GenreStyles!.Select(s => s is null ? default : (s.GenreId, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray()
                 : BlockStyles!.Select(s => s is null ? default : (s.BlockNumber, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray();
+            foreach (var style in GenreStyles ?? [])
+                if (style is not null) GenreStyleDefinition.NormalizeKnowledgeComment(style.KnowledgeComment);
             if (rows.Select(s => s.Item1).Distinct(StringComparer.Ordinal).Count() != rows.Length ||
                 rows.Any(s => string.IsNullOrWhiteSpace(s.Item1) || string.IsNullOrWhiteSpace(s.Item2) ||
                     string.IsNullOrWhiteSpace(s.Item3) || string.IsNullOrWhiteSpace(s.Item4)))

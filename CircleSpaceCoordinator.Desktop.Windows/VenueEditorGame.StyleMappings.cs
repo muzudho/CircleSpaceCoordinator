@@ -11,6 +11,7 @@ public sealed partial class VenueEditorGame
 {
     private sealed record MappingEditorButton(IconButtonModel Button, Action Execute, string? ColorId = null, string? PatternId = null, string? Tooltip = null);
     private bool mappingButtonsHaveChanges;
+    private bool mappingKnowledgeComments;
     private StyleMappingDraft? mappingDraft;
     private string mappingKeyLabel = "";
     private string mappingEmptyMessage = "";
@@ -29,7 +30,9 @@ public sealed partial class VenueEditorGame
     private int mappingWidth = -1;
     private int mappingHeight = -1;
     private const int MappingVisibleRows = 6;
-    private static readonly double[] MappingColumnEdges = [20, 290, 450, 610, 810, 980];
+    private static readonly double[] DefaultMappingColumnEdges = [20, 290, 450, 610, 810, 980];
+    private static readonly double[] GenreMappingColumnEdges = [20, 290, 370, 450, 650, 820, 980];
+    private double[] MappingColumnEdges => mappingKnowledgeComments ? GenreMappingColumnEdges : DefaultMappingColumnEdges;
     private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight) / 660d));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
     {
@@ -42,10 +45,11 @@ public sealed partial class VenueEditorGame
 
     /// <summary>Opens the shared editor; the caller owns persistence and undo.</summary>
     private void OpenStyleMappingEditor(StyleMappingDraft draft, string keyLabel, string emptyMessage,
-        Action<StyleMappingEntry[], string, string, DateOnly> apply, PersonCredits? previousCredits = null)
+        Action<StyleMappingEntry[], string, string, DateOnly> apply, PersonCredits? previousCredits = null, bool knowledgeComments = false)
     {
         CancelInProgressPointerInteraction();
         mappingDraft = draft;
+        mappingKnowledgeComments = knowledgeComments;
         mappingKeyLabel = keyLabel;
         mappingEmptyMessage = emptyMessage;
         applyStyleMapping = apply;
@@ -146,6 +150,11 @@ public sealed partial class VenueEditorGame
 
     private void OpenMappingPicker(int row, int column)
     {
+        if (mappingKnowledgeComments && column == 5)
+        {
+            OpenGenreKnowledgeComment(row);
+            return;
+        }
         if (mappingDraft is null || row < 0 || row >= mappingDraft.Rows.Count || column is < 1 or > 3) return;
         if (column == 2 && mappingDraft.Rows[row].Pattern == "solid") return;
         mappingRow = row;
@@ -265,8 +274,8 @@ public sealed partial class VenueEditorGame
         }
         else if (mappingFocus < 0)
         {
-            if (IsPressed(keyboard, Keys.Left)) mappingColumn = Math.Max(1, mappingColumn - 1);
-            if (IsPressed(keyboard, Keys.Right)) mappingColumn = Math.Min(3, mappingColumn + 1);
+            if (IsPressed(keyboard, Keys.Left)) mappingColumn = mappingColumn == 5 ? 3 : Math.Max(1, mappingColumn - 1);
+            if (IsPressed(keyboard, Keys.Right)) mappingColumn = mappingKnowledgeComments && mappingColumn >= 3 ? 5 : Math.Min(3, mappingColumn + 1);
             if (IsPressed(keyboard, Keys.Up)) mappingRow = Math.Max(0, mappingRow - 1);
             if (IsPressed(keyboard, Keys.Down)) mappingRow = Math.Min(Math.Max(0, draft.Rows.Count - 1), mappingRow + 1);
             if (IsPressed(keyboard, Keys.Up) || IsPressed(keyboard, Keys.Down))
@@ -296,7 +305,8 @@ public sealed partial class VenueEditorGame
             if (pressedMappingButton is not null) mappingFocus = mappingEditorButtons.FindIndex(item => item.Button == pressedMappingButton);
             else if (mappingPickerColumn == 0)
                 for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
-                for (var column = 1; column <= 3; column++)
+                for (var column = 1; column <= (mappingKnowledgeComments ? 5 : 3); column++)
+                    if (column != 4)
                     if (Contains(MappingCell(row, column), pointer)) { OpenMappingPicker(mappingScroll + row, column); return; }
         }
         if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed)
@@ -314,21 +324,25 @@ public sealed partial class VenueEditorGame
         void Text(string text, ScreenRectangle bounds, int size = 17, Color? color = null) =>
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
         Text($"{mappingKeyLabel}と色・網掛けパターンの紐づけ", MappingBounds(20, 18, 960, 38), 26);
-        Text("主色・副色・網掛けのセルをクリックして選択。黒＝主色、白＝副色。", MappingBounds(20, 68, 960, 30));
-        var headers = new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
+        Text(mappingKnowledgeComments ? "色・網掛けをクリックして選択。知見コメントはクリックして入力。黒＝主色、白＝副色。"
+            : "主色・副色・網掛けのセルをクリックして選択。黒＝主色、白＝副色。", MappingBounds(20, 68, 960, 30));
+        var headers = mappingKnowledgeComments
+            ? new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本", "知見コメント" }
+            : new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
         for (var column = 0; column < headers.Length; column++)
             Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
         for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
         {
             var style = draft.Rows[mappingScroll + row];
-            for (var column = 0; column < 5; column++)
+            for (var column = 0; column < headers.Length; column++)
             {
                 var bounds = MappingCell(row, column);
                 DrawRectangle(bounds, new Color(35, 43, 54));
                 if (column == 0) Text(style.Key, bounds);
+                else if (column == 5) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds);
                 else if (column is 1 or 2)
                 {
-                    if (column == 2 && style.Pattern == "solid") Text("単色では未使用", bounds, 14, Color.Gray);
+                    if (column == 2 && style.Pattern == "solid") Text(mappingKnowledgeComments ? "未使用" : "単色では未使用", bounds, 14, Color.Gray);
                     else
                     {
                         var id = column == 1 ? style.PrimaryColor : style.SecondaryColor;
@@ -339,10 +353,11 @@ public sealed partial class VenueEditorGame
                 }
                 else
                 {
-                    var swatch = new ScreenRectangle(bounds.X + 4, bounds.Y + 3, bounds.Width - 8, column == 3 ? bounds.Height * 0.54 : bounds.Height - 6);
+                    var swatch = new ScreenRectangle(bounds.X + 4, bounds.Y + 3, bounds.Width - 8,
+                        column == 3 && !mappingKnowledgeComments ? bounds.Height * 0.54 : bounds.Height - 6);
                     DrawRectangle(swatch, column == 3 ? Color.Black : GenreColorFromId(style.PrimaryColor, Color.Gray));
                     DrawGenrePattern(swatch, GenrePatternFromId(style.Pattern), column == 3 ? Color.White : GenreColorFromId(style.SecondaryColor, Color.White), column == 3 ? (byte)255 : (byte)180);
-                    if (column == 3) Text(StyleMappingDraft.Patterns.FirstOrDefault(choice => choice.Id == style.Pattern).Label ?? style.Pattern,
+                    if (column == 3 && !mappingKnowledgeComments) Text(StyleMappingDraft.Patterns.FirstOrDefault(choice => choice.Id == style.Pattern).Label ?? style.Pattern,
                         new(bounds.X, bounds.Y + bounds.Height * 0.58, bounds.Width, bounds.Height * 0.4), 12);
                 }
                 DrawOutline(bounds, 1, new Color(100, 119, 130));

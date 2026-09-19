@@ -3,7 +3,10 @@ namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 using CircleSpaceCoordinator.Core.Model;
 
 /// <summary>Appearance associated with an arbitrary genre code, block number, or other string key.</summary>
-public sealed record StyleMappingEntry(string Key, string PrimaryColor, string SecondaryColor, string Pattern);
+public sealed record StyleMappingEntry(string Key, string PrimaryColor, string SecondaryColor, string Pattern)
+{
+    public string? KnowledgeComment { get; init; }
+}
 
 /// <summary>Edits keyed appearances without changing the project until explicitly applied.</summary>
 public sealed class StyleMappingDraft
@@ -92,4 +95,7 @@ public sealed class StyleMappingDraft
         }
         return [.. rows, .. otherStyles];
     }
+
+    public void SetKnowledgeComment(int index, string? value) => rows[index] = rows[index] with
+    { KnowledgeComment = GenreStyleDefinition.NormalizeKnowledgeComment(value) };
 }

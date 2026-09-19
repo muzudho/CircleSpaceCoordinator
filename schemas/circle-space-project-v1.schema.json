@@ -137,6 +137,7 @@
       "required": ["genreId", "primaryColor", "secondaryColor", "pattern"],
       "properties": {
         "genreId": { "type": "string", "minLength": 1 },
+        "knowledgeComment": { "type": ["string", "null"], "maxLength": 1000 },
         "primaryColor": { "type": "string", "minLength": 1 },
         "secondaryColor": { "type": "string", "minLength": 1 },
         "pattern": { "type": "string", "minLength": 1 }

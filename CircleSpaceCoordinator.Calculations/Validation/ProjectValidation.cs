@@ -76,6 +76,8 @@ public static class ProjectValidator
 
         foreach (var style in project.GenreStyles)
         {
+            try { GenreStyleDefinition.NormalizeKnowledgeComment(style.KnowledgeComment); }
+            catch (ArgumentException ex) { Add("genreStyle.comment.invalid", $"genreStyles[{style.GenreId}].knowledgeComment", ex.Message); }
             if (string.IsNullOrWhiteSpace(style.GenreId) || string.IsNullOrWhiteSpace(style.PrimaryColor) ||
                 string.IsNullOrWhiteSpace(style.SecondaryColor) || string.IsNullOrWhiteSpace(style.Pattern))
                 Add("genreStyle.empty", $"genreStyles[{style.GenreId}]", "Genre style fields must not be empty.");

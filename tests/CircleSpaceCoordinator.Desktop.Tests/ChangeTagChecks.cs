@@ -94,7 +94,7 @@ internal static partial class Program
     {
         using var workspace = EditorConnection.Current.Open(ProjectJsonSerializer.Save(PortableExample()));
         var date = new DateOnly(2001, 2, 3);
-        var styles = new[] { new GenreStyleDefinition("G", "blue", "white", "solid") };
+        var styles = new[] { new GenreStyleDefinition("G", "blue", "white", "solid") { KnowledgeComment = "アクションRPGを含む" } };
         var oldCredits = workspace.Project.GenreStyleCredits;
         workspace.Execute(new SetGenreStyles(styles) { ActorHandle = "editor", WorkDate = date, ChangeLog = "色を青に変更" }, selectedPlanEdit: false);
         var credits = workspace.Project.GenreStyleCredits!;
@@ -102,6 +102,7 @@ internal static partial class Program
         AssertEqual("editor", credits.Modifier!);
         AssertEqual(date, credits.ModifiedOn!.Value);
         AssertEqual(credits, ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project)).GenreStyleCredits);
+        AssertEqual("アクションRPGを含む", ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project)).GenreStyles.Single().KnowledgeComment!);
         workspace.Undo();
         AssertEqual(oldCredits, workspace.Project.GenreStyleCredits);
         workspace.Redo();
@@ -131,6 +132,7 @@ internal static partial class Program
         receiver.Execute(new ImportPortableSelection(package, package.Materials.Select(m => new PortableImportItem(m.Id, Guid.NewGuid().ToString(), m.Name)).ToArray()), selectedPlanEdit: false);
         AssertEqual(material.Credits, receiver.Project.GenreStyleCredits);
         AssertEqual("blue", receiver.Project.GenreStyles.Single().PrimaryColor);
+        AssertEqual("アクションRPGを含む", receiver.Project.GenreStyles.Single().KnowledgeComment!);
         receiver.Undo(); AssertEqual(before, receiver.Project.GenreStyleCredits);
         receiver.Redo(); AssertEqual(material.Credits, receiver.Project.GenreStyleCredits);
         receiver.Execute(new SetGenreStyles([styles[0] with { PrimaryColor = "red" }])
@@ -143,5 +145,38 @@ internal static partial class Program
         RejectPortable(() => new PersonCredits { ChangeLog = "missing author and date" }.Validate());
         RejectPortable(() => (material with { BlockStyles = [] }).Validate());
         RejectPortable(() => (material with { GenreStyles = [styles[0], styles[0]] }).Validate());
+        RejectPortable(() => (material with { GenreStyles = [styles[0] with { KnowledgeComment = new string('a', 1001) }] }).Validate());
+        var beforeCommentEdit = receiver.Project.GenreStyles.Single();
+        receiver.Execute(new SetGenreStyles([beforeCommentEdit with { KnowledgeComment = "RPG全般" }])
+            { ActorHandle = "comment-editor", WorkDate = date.AddDays(2), ChangeLog = "範囲の説明を修正" }, selectedPlanEdit: false);
+        AssertEqual("comment-editor", receiver.Project.GenreStyleCredits!.Modifier!);
+        AssertEqual("RPG全般", receiver.Project.GenreStyles.Single().KnowledgeComment!);
+        receiver.Undo();
+        AssertEqual(beforeCommentEdit, receiver.Project.GenreStyles.Single());
+        RejectPortable(() => receiver.Execute(new SetGenreStyles([beforeCommentEdit with { KnowledgeComment = new string('a', 1001) }]), selectedPlanEdit: false));
+        AssertEqual(beforeCommentEdit, receiver.Project.GenreStyles.Single());
+    }
+
+    private static void GenreKnowledgeComments()
+    {
+        var original = new GenreStyleDefinition("RPG", "red", "white", "solid") { KnowledgeComment = "アクションRPGを含む" };
+        var project = PortableExample() with { GenreStyles = [original] };
+        AssertEqual(original, new CircleSpaceCoordinator.Desktop.Core.Interaction.GenreStyleDraft(project).Build().Single(item => item.GenreId == "RPG"));
+        var draft = new CircleSpaceCoordinator.Desktop.Core.Interaction.StyleMappingDraft(["RPG"],
+            [new("RPG", "red", "white", "solid") { KnowledgeComment = original.KnowledgeComment }]);
+        var maximum = string.Concat(Enumerable.Repeat("😀", 1000));
+        draft.SetKnowledgeComment(0, maximum);
+        AssertEqual(true, draft.HasChanges);
+        AssertEqual(maximum, draft.Build().Single().KnowledgeComment!);
+        RejectPortable(() => draft.SetKnowledgeComment(0, maximum + "a"));
+        AssertEqual(maximum, draft.Build().Single().KnowledgeComment!);
+        draft.RestoreOpeningSnapshot();
+        AssertEqual(false, draft.HasChanges);
+        AssertEqual(original.KnowledgeComment!, draft.Build().Single().KnowledgeComment!);
+        draft.SetKnowledgeComment(0, "   ");
+        AssertEqual<string?>(null, draft.Build().Single().KnowledgeComment);
+        AssertEqual(true, draft.HasChanges);
+        RejectPortable(() => draft.SetKnowledgeComment(0, "first\nsecond"));
+        RejectPortable(() => draft.SetKnowledgeComment(0, "\ud800"));
     }
 }
