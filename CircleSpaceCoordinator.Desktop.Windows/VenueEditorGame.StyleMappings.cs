@@ -415,7 +415,7 @@ public sealed partial class VenueEditorGame
         else
         {
             var headers = mappingKnowledgeComments
-                ? new[] { "ジャンル", "並び順", "太線色", "細線色", "網掛け", "見本", "コメント" }
+                ? new[] { "並び順", "ジャンル", "太線色", "細線色", "網掛け", "見本", "コメント" }
                 : new[] { mappingKeyLabel, "太線色", "細線色", "網掛け（白黒見本）", "配色の見本" };
             DrawRectangle(MappingBounds(20, 102, 960, 34), new Color(48, 65, 77));
             for (var column = 0; column < headers.Length; column++)
