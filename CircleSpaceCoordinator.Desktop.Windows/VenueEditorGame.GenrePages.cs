@@ -5,6 +5,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StationeryUI.Canvas;
 using StationeryUI.Controls;
+using StationeryUI.Text;
+using global::StationeryUI.Windows;
+using StationeryUI.MonoGame.Controls.ActionBadge;
 
 public sealed partial class VenueEditorGame
 {
@@ -18,7 +21,12 @@ public sealed partial class VenueEditorGame
     private string? mappingGenreCodeOrderComment;
     private bool genreOrderDialogOpen;
     private int genreOrderDragIndex = -1;
-    private ScreenRectangle GenreOrderCommentBounds => new(80, 84, 700, 34);
+    private int genreOrderPage;
+    private const int GenreOrderPageSize = 16;
+    private ScreenRectangle GenreOrderCommentBounds => new(80, 86, 700, 34);
+    private UnderlineTextEditor? genreOrderCommentEditor;
+    private bool genreOrderCommentEditing;
+    private string genreOrderCommentComposition = "";
 
     private void SelectGenreTarget(string key, bool navigate = false)
     {
@@ -37,41 +45,48 @@ public sealed partial class VenueEditorGame
     {
         genreOrderDialogOpen = true;
         genreOrderDragIndex = -1;
+        genreOrderPage = 0;
         SetMappingTextFocus(false);
         modalInputDrain = true;
     }
 
     private ScreenRectangle GenreOrderCard(int index)
     {
-        var column = index / 10;
-        var row = index % 10;
-        return new(80 + column * 440, 130 + row * 52, 410, 46);
+        var column = index / 8;
+        var row = index % 8;
+        return new(80 + column * 440, 150 + row * 52, 410, 46);
     }
 
-    private void UpdateGenreOrderDialog(MouseState mouse)
+    private void UpdateGenreOrderDialog(KeyboardState keyboard, MouseState mouse)
     {
         if (mappingDraft is not { } draft) return;
+        if (genreOrderCommentEditing) { UpdateGenreOrderCommentInput(keyboard, mouse); return; }
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
-            if (Contains(new ScreenRectangle(860, 570, 120, 38), pointer)) { genreOrderDialogOpen = false; return; }
-            if (Contains(GenreOrderCommentBounds, pointer))
+            if (Contains(new ScreenRectangle(860, 590, 120, 38), pointer)) { genreOrderDialogOpen = false; return; }
+            if (Contains(new ScreenRectangle(580, 590, 120, 38), pointer) && genreOrderPage > 0) { genreOrderPage--; genreOrderDragIndex = -1; return; }
+            if (Contains(new ScreenRectangle(710, 590, 120, 38), pointer) && genreOrderPage < Math.Max(0, (draft.Rows.Count - 1) / GenreOrderPageSize))
             {
-                OpenUnderlineInput("並び順のコメント", mappingGenreCodeOrderComment ?? "", value =>
-                {
-                    var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-                    if (normalized == mappingGenreCodeOrderComment) return;
-                    mappingGenreCodeOrderComment = normalized;
-                    mappingOrderChanged = true;
-                }, "並び順についてのコメントを入力してください。", maxLength: 1000, allowEmpty: true, trim: false);
+                genreOrderPage = Math.Min(Math.Max(0, (draft.Rows.Count - 1) / GenreOrderPageSize), genreOrderPage + 1);
+                genreOrderDragIndex = -1;
                 return;
             }
-            for (var index = 0; index < draft.Rows.Count; index++)
-                if (Contains(GenreOrderCard(index), pointer)) { genreOrderDragIndex = index; break; }
+            if (Contains(GenreOrderCommentBounds, pointer))
+            {
+                BeginGenreOrderCommentEdit();
+                return;
+            }
+            var pageStart = genreOrderPage * GenreOrderPageSize;
+            for (var local = 0; local < GenreOrderPageSize && pageStart + local < draft.Rows.Count; local++)
+                if (Contains(GenreOrderCard(local), pointer)) { genreOrderDragIndex = pageStart + local; break; }
         }
         if (genreOrderDragIndex >= 0 && mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Pressed)
-            for (var index = 0; index < draft.Rows.Count; index++)
-                if (index != genreOrderDragIndex && Contains(GenreOrderCard(index), pointer))
+            for (var local = 0; local < GenreOrderPageSize; local++)
+            {
+                var index = genreOrderPage * GenreOrderPageSize + local;
+                if (index >= draft.Rows.Count) break;
+                if (index != genreOrderDragIndex && Contains(GenreOrderCard(local), pointer))
                 {
                     draft.MoveRow(genreOrderDragIndex, index - genreOrderDragIndex);
                     genreOrderDragIndex = index;
@@ -80,8 +95,62 @@ public sealed partial class VenueEditorGame
                     mappingOrderChanged = true;
                     break;
                 }
+            }
         if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed) genreOrderDragIndex = -1;
         if (IsPressed(previousKeyboard, Keys.Escape)) { genreOrderDialogOpen = false; genreOrderDragIndex = -1; }
+    }
+
+    private void BeginGenreOrderCommentEdit()
+    {
+        genreOrderCommentEditor = new UnderlineTextEditor(mappingGenreCodeOrderComment ?? "", 1000);
+        genreOrderCommentEditing = true;
+        genreOrderCommentComposition = "";
+        ResetUnderlineKeyRepeat();
+        textInputService ??= new WindowsTextInputService(Window.Handle);
+        textInputService.Start();
+    }
+
+    private void UpdateGenreOrderCommentInput(KeyboardState keyboard, MouseState mouse)
+    {
+        if (genreOrderCommentEditor is not { } editor || textInputService is null) return;
+        foreach (var update in textInputService.DrainUpdates())
+        {
+            if (update.IsComposition) genreOrderCommentComposition = update.Text;
+            else { editor.Insert(update.Text); genreOrderCommentComposition = ""; }
+        }
+        if (genreOrderCommentComposition.Length == 0)
+        {
+            if (IsPressed(keyboard, Keys.Enter)) { CommitGenreOrderCommentEdit(); return; }
+            if (IsPressed(keyboard, Keys.Escape)) { CancelGenreOrderCommentEdit(); return; }
+            var shift = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
+            if (underlineLeftRepeat.Update(keyboard.IsKeyDown(Keys.Left), IsPressed(keyboard, Keys.Left), statusHintTime, true)) editor.Move(-1, shift);
+            if (underlineRightRepeat.Update(keyboard.IsKeyDown(Keys.Right), IsPressed(keyboard, Keys.Right), statusHintTime, true)) editor.Move(1, shift);
+            if (underlineBackRepeat.Update(keyboard.IsKeyDown(Keys.Back), IsPressed(keyboard, Keys.Back), statusHintTime, true)) editor.Delete(true);
+            if (underlineDeleteRepeat.Update(keyboard.IsKeyDown(Keys.Delete), IsPressed(keyboard, Keys.Delete), statusHintTime, true)) editor.Delete(false);
+        }
+        if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released &&
+            !Contains(GenreOrderCommentBounds, new ScreenPoint(mouse.X, mouse.Y))) CommitGenreOrderCommentEdit();
+    }
+
+    private void CommitGenreOrderCommentEdit()
+    {
+        if (genreOrderCommentEditor is not { } editor) return;
+        var value = string.IsNullOrWhiteSpace(editor.Text) ? null : editor.Text.Trim();
+        if (value != mappingGenreCodeOrderComment) { mappingGenreCodeOrderComment = value; mappingOrderChanged = true; }
+        genreOrderCommentEditing = false;
+        genreOrderCommentEditor = null;
+        genreOrderCommentComposition = "";
+        textInputService?.Stop();
+        ResetUnderlineKeyRepeat();
+    }
+
+    private void CancelGenreOrderCommentEdit()
+    {
+        genreOrderCommentEditing = false;
+        genreOrderCommentEditor = null;
+        genreOrderCommentComposition = "";
+        textInputService?.Stop();
+        ResetUnderlineKeyRepeat();
     }
 
     private void DrawGenreOrderDialog()
@@ -92,16 +161,28 @@ public sealed partial class VenueEditorGame
         DrawRectangle(panel, new Color(24, 29, 36));
         DrawOutline(panel, 2, Color.LightSlateGray);
         textRenderer?.Draw("ジャンルコードの並び順", ToRectangle(new(panel.X + 24, panel.Y + 18, panel.Width - 48, 34), 0), Color.White, 23, true);
-        textRenderer?.Draw("カードをドラッグして２列の間を移動できます。知見は色網掛けページで確認できます。", ToRectangle(new(panel.X + 24, panel.Y + 52, panel.Width - 48, 26), 0), new Color(190, 210, 218), 15);
         var commentBounds = GenreOrderCommentBounds;
-        var comment = mappingGenreCodeOrderComment;
-        textRenderer?.Draw(string.IsNullOrWhiteSpace(comment) ? "並び順のコメント" : comment,
-            ToRectangle(commentBounds, 0), string.IsNullOrWhiteSpace(comment) ? new Color(150, 165, 170) : Color.White, 16, true);
+        var comment = genreOrderCommentEditing ? genreOrderCommentEditor?.Text : mappingGenreCodeOrderComment;
+        var commentDisplay = genreOrderCommentEditing && genreOrderCommentEditor is { } editingEditor && genreOrderCommentComposition.Length > 0
+            ? editingEditor.Text.Insert(editingEditor.Caret, genreOrderCommentComposition) : comment;
+        var commentText = string.IsNullOrWhiteSpace(commentDisplay) ? "並び順のコメント" : commentDisplay;
+        textRenderer?.Draw(commentText, ToRectangle(commentBounds, 0), string.IsNullOrWhiteSpace(comment) ? new Color(150, 165, 170) : Color.White, 16, true);
         DrawLine(new(commentBounds.X, commentBounds.Y + commentBounds.Height - 3),
-            new(commentBounds.X + commentBounds.Width, commentBounds.Y + commentBounds.Height - 3), 2, new Color(99, 223, 185));
-        for (var index = 0; index < draft.Rows.Count; index++)
+            new(commentBounds.X + commentBounds.Width, commentBounds.Y + commentBounds.Height - 3), genreOrderCommentEditing ? 3 : 2, new Color(99, 223, 185));
+        var editBadge = ActionBadgeComponent.Create("EDIT", new Rectangle(0, 0, 100, 26));
+        editBadge.Show();
+        DrawMappingBadge(editBadge, commentBounds);
+        if (genreOrderCommentEditing && genreOrderCommentEditor is { } activeEditor)
         {
-            var card = GenreOrderCard(index);
+            var caretX = commentBounds.X + (textRenderer?.Measure(activeEditor.Text[..activeEditor.Caret], 16).X ?? 0);
+            DrawRectangle(new ScreenRectangle(caretX, commentBounds.Y + 3, 2, commentBounds.Height - 8), new Color(147, 244, 200));
+            textInputService?.SetInputArea(new ScreenRectangle(caretX, commentBounds.Y, Math.Max(1, commentBounds.Width - (caretX - commentBounds.X)), commentBounds.Height));
+        }
+        var pageStart = genreOrderPage * GenreOrderPageSize;
+        for (var local = 0; local < GenreOrderPageSize && pageStart + local < draft.Rows.Count; local++)
+        {
+            var index = pageStart + local;
+            var card = GenreOrderCard(local);
             DrawRectangle(card, index == genreOrderDragIndex ? new Color(45, 115, 112) : new Color(35, 43, 54));
             textRenderer?.Draw($"{index + 1,2}  {draft.Rows[index].Key}", ToRectangle(new(card.X + 8, card.Y + 3, card.Width - 16, 20), 0), Color.White, 17, true);
             var knowledge = draft.Rows[index].KnowledgeComment;
@@ -109,8 +190,13 @@ public sealed partial class VenueEditorGame
                 textRenderer?.Draw(knowledge.Length > 42 ? knowledge[..42] + "…" : knowledge,
                     ToRectangle(new(card.X + 8, card.Y + 24, card.Width - 16, 18), 0), new Color(190, 205, 210), 12, true);
         }
-        DrawRectangle(new ScreenRectangle(860, 570, 120, 38), new Color(48, 70, 78));
-        textRenderer?.Draw("閉じる", ToRectangle(new ScreenRectangle(860, 570, 120, 38), 5), Color.White, 17, true);
+        var lastPage = Math.Max(0, (draft.Rows.Count - 1) / GenreOrderPageSize);
+        DrawRectangle(new ScreenRectangle(580, 590, 120, 38), genreOrderPage > 0 ? new Color(48, 70, 78) : new Color(40, 45, 50));
+        textRenderer?.Draw("前へ", ToRectangle(new ScreenRectangle(580, 590, 120, 38), 5), genreOrderPage > 0 ? Color.White : new Color(110, 120, 125), 15, true);
+        DrawRectangle(new ScreenRectangle(710, 590, 120, 38), genreOrderPage < lastPage ? new Color(48, 70, 78) : new Color(40, 45, 50));
+        textRenderer?.Draw("次へ", ToRectangle(new ScreenRectangle(710, 590, 120, 38), 5), genreOrderPage < lastPage ? Color.White : new Color(110, 120, 125), 15, true);
+        DrawRectangle(new ScreenRectangle(860, 590, 120, 38), new Color(48, 70, 78));
+        textRenderer?.Draw("閉じる", ToRectangle(new ScreenRectangle(860, 590, 120, 38), 5), Color.White, 17, true);
         DrawStatusBar("ジャンル名のカードをドラッグして並び替えます。閉じると色網掛けの並び順へ反映します。", "ジャンルコード順");
     }
     private static readonly string[] GenrePageTabs = ["色網掛け", "色見本カタログ", "スペース数比率", "円グラフ"];
@@ -126,17 +212,18 @@ public sealed partial class VenueEditorGame
     {
         if (mappingKnowledgeComments && genrePageTab != 3)
         {
-            foreach (var (label, spaceSort, codeSort) in new[] { ("サークルデータ", false, false), ("スペース数", true, false), ("ジャンルコード", false, true) })
+            foreach (var (label, spaceSort, codeSort) in new[] { ("スペース順", true, false), ("ジャンルコード順", false, true) })
             {
                 var sort = spaceSort;
                 var code = codeSort;
-                var x = code ? 890 : sort ? 795 : 700;
+                if (!code && !sort) continue;
+                var x = code ? 700 : 795;
                 mappingEditorButtons.Add(new(new IconButtonModel(MappingBounds(x, 18, code ? 90 : 90, 36), label)
                     { IsSelected = code ? genreCodeSort : !genreCodeSort && genreSpaceSort == sort }, () =>
                 {
                     if (code && genreCodeOrder.Length == 0)
                     {
-                        OpenUnderlineInput("ジャンルコード順（カンマ区切り）", string.Join(",", mappingDraft?.Rows.Select(row => row.Key) ?? []), value =>
+                        OpenUnderlineInput("ジャンルコード順（カンマ区切り）", string.Join(",", BuildGenrePreviewGroups().Select(group => group.GenreId)), value =>
                         {
                             genreCodeOrder = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.Ordinal).ToArray();
                             mappingGenreCodeOrder = genreCodeOrder;

@@ -47,7 +47,9 @@ public sealed class StyleMappingDraft
     {
         var destination = Math.Clamp(index + offset, 0, rows.Count - 1);
         if (index < 0 || index >= rows.Count || destination == index) return;
-        (rows[index], rows[destination]) = (rows[destination], rows[index]);
+        var row = rows[index];
+        rows.RemoveAt(index);
+        rows.Insert(Math.Clamp(destination, 0, rows.Count), row);
     }
     public void SetOverallComment(string? value) => OverallComment = GenreStyleDefinition.NormalizeKnowledgeComment(value);
     /// <summary>Restore the immutable copy captured when the page was opened.</summary>

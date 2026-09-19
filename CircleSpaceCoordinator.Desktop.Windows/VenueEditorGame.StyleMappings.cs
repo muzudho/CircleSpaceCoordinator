@@ -293,7 +293,7 @@ public sealed partial class VenueEditorGame
     private void UpdateStyleMappingEditor(KeyboardState keyboard, MouseState mouse)
     {
         if (mappingDraft is not { } draft) return;
-        if (genreOrderDialogOpen) { UpdateGenreOrderDialog(mouse); return; }
+        if (genreOrderDialogOpen) { UpdateGenreOrderDialog(keyboard, mouse); return; }
         if (genrePieExpanded) { UpdateExpandedGenrePie(keyboard, mouse); return; }
         BuildMappingEditorButtons();
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
