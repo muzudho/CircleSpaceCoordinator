@@ -14,6 +14,7 @@ public sealed record CircleSpaceProject(
 {
     public string? Description { get; init; }
     public PersonCredits? GenreStyleCredits { get; init; }
+    public string? GenreStyleComment { get; init; }
     public PersonCredits? BlockStyleCredits { get; init; }
     public IReadOnlyList<ChannelKnowledge> ChannelKnowledge { get; init; } = [];
 

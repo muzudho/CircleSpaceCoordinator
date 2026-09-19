@@ -137,7 +137,11 @@ public sealed record PlanCatalogServiceRemovePlan(string planId) : EditorOperati
 public sealed record PlanCatalogServiceDuplicatePlan(string sourcePlanId, string newPlanId, string newPlanName) : EditorOperation;
 public sealed record PlanCatalogServiceAddOptimizedPlan(Plan optimizedPlan, string newPlanId, string newPlanName) : EditorOperation;
 public sealed record PlanCatalogServiceCopyDeskLayout(string sourcePlanId, string destinationPlanId) : EditorOperation;
-public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) : EditorOperation;
+public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) : EditorOperation
+{
+    public bool UpdateOverallComment { get; init; }
+    public string? OverallComment { get; init; }
+}
 public sealed record SetBlockStyles(IReadOnlyList<BlockStyleDefinition> styles) : EditorOperation;
 public sealed record SwapNumberAddresses(string planId, int channel, GridPosition source, GridPosition destination,
     int width, int height, IReadOnlyList<string> sourceFrameIds) : EditorOperation, IPlanOperation;

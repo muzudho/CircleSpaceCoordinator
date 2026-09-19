@@ -74,6 +74,8 @@ public static class ProjectValidator
         var participantCircleIds = project.Participants.Select(item => item.CircleId).ToHashSet(StringComparer.Ordinal);
         var featureIds = project.Evaluation.Features.Select(item => item.Id).ToHashSet();
 
+        try { GenreStyleDefinition.NormalizeKnowledgeComment(project.GenreStyleComment); }
+        catch (ArgumentException ex) { Add("genreStyle.comment.invalid", "genreStyleComment", ex.Message); }
         foreach (var style in project.GenreStyles)
         {
             try { GenreStyleDefinition.NormalizeKnowledgeComment(style.KnowledgeComment); }

@@ -15,7 +15,7 @@ public sealed class GenreStyleDraft
         Mapping = new StyleMappingDraft(
             project.Participants.Select(item => item.GenreId).OfType<string>(),
             project.GenreStyles.Select(style => new StyleMappingEntry(style.GenreId,
-                style.PrimaryColor, style.SecondaryColor, style.Pattern) { KnowledgeComment = style.KnowledgeComment }));
+                style.PrimaryColor, style.SecondaryColor, style.Pattern) { KnowledgeComment = style.KnowledgeComment }), project.GenreStyleComment);
     }
 
     public static string NormalizePattern(string pattern) => StyleMappingDraft.NormalizePattern(pattern);

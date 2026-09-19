@@ -96,13 +96,15 @@ internal static partial class Program
         var date = new DateOnly(2001, 2, 3);
         var styles = new[] { new GenreStyleDefinition("G", "blue", "white", "solid") { KnowledgeComment = "アクションRPGを含む" } };
         var oldCredits = workspace.Project.GenreStyleCredits;
-        workspace.Execute(new SetGenreStyles(styles) { ActorHandle = "editor", WorkDate = date, ChangeLog = "色を青に変更" }, selectedPlanEdit: false);
+        workspace.Execute(new SetGenreStyles(styles) { ActorHandle = "editor", WorkDate = date, ChangeLog = "色を青に変更",
+            UpdateOverallComment = true, OverallComment = "RPGとアクションが２大勢力" }, selectedPlanEdit: false);
         var credits = workspace.Project.GenreStyleCredits!;
         AssertEqual("色を青に変更", credits.ChangeLog!);
         AssertEqual("editor", credits.Modifier!);
         AssertEqual(date, credits.ModifiedOn!.Value);
         AssertEqual(credits, ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project)).GenreStyleCredits);
         AssertEqual("アクションRPGを含む", ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project)).GenreStyles.Single().KnowledgeComment!);
+        AssertEqual("RPGとアクションが２大勢力", ProjectJsonSerializer.Load(ProjectJsonSerializer.Save(workspace.Project)).GenreStyleComment!);
         workspace.Undo();
         AssertEqual(oldCredits, workspace.Project.GenreStyleCredits);
         workspace.Redo();
@@ -133,6 +135,7 @@ internal static partial class Program
         AssertEqual(material.Credits, receiver.Project.GenreStyleCredits);
         AssertEqual("blue", receiver.Project.GenreStyles.Single().PrimaryColor);
         AssertEqual("アクションRPGを含む", receiver.Project.GenreStyles.Single().KnowledgeComment!);
+        AssertEqual("RPGとアクションが２大勢力", receiver.Project.GenreStyleComment!);
         receiver.Undo(); AssertEqual(before, receiver.Project.GenreStyleCredits);
         receiver.Redo(); AssertEqual(material.Credits, receiver.Project.GenreStyleCredits);
         receiver.Execute(new SetGenreStyles([styles[0] with { PrimaryColor = "red" }])
@@ -155,6 +158,16 @@ internal static partial class Program
         AssertEqual(beforeCommentEdit, receiver.Project.GenreStyles.Single());
         RejectPortable(() => receiver.Execute(new SetGenreStyles([beforeCommentEdit with { KnowledgeComment = new string('a', 1001) }]), selectedPlanEdit: false));
         AssertEqual(beforeCommentEdit, receiver.Project.GenreStyles.Single());
+        var beforeOverallCredits = receiver.Project.GenreStyleCredits;
+        receiver.Execute(new SetGenreStyles(receiver.Project.GenreStyles)
+        { UpdateOverallComment = true, OverallComment = "テーブルを新設。", ActorHandle = "overview-editor", WorkDate = date, ChangeLog = "全体の傾向を更新" }, selectedPlanEdit: false);
+        AssertEqual("overview-editor", receiver.Project.GenreStyleCredits!.Modifier!);
+        AssertEqual("テーブルを新設。", receiver.Project.GenreStyleComment!);
+        receiver.Undo();
+        AssertEqual(beforeOverallCredits, receiver.Project.GenreStyleCredits);
+        AssertEqual("RPGとアクションが２大勢力", receiver.Project.GenreStyleComment!);
+        RejectPortable(() => receiver.Execute(new SetGenreStyles(receiver.Project.GenreStyles)
+        { UpdateOverallComment = true, OverallComment = new string('a', 1001) }, selectedPlanEdit: false));
     }
 
     private static void GenreKnowledgeComments()
@@ -178,5 +191,13 @@ internal static partial class Program
         AssertEqual(true, draft.HasChanges);
         RejectPortable(() => draft.SetKnowledgeComment(0, "first\nsecond"));
         RejectPortable(() => draft.SetKnowledgeComment(0, "\ud800"));
+        draft.RestoreOpeningSnapshot();
+        draft.SetOverallComment(maximum);
+        AssertEqual(true, draft.HasChanges);
+        AssertEqual(maximum, draft.OverallComment!);
+        RejectPortable(() => draft.SetOverallComment(maximum + "a"));
+        draft.RestoreOpeningSnapshot();
+        AssertEqual(false, draft.HasChanges);
+        AssertEqual<string?>(null, draft.OverallComment);
     }
 }

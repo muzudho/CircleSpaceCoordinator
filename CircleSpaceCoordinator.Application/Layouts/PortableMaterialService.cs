@@ -11,7 +11,7 @@ public static class PortableMaterialService
     {
         if (selected.Kind == "genre-styles")
             return new("genre-styles:" + selected.SourceId, selected.Kind, "ジャンルコードの網掛け", project.IsConfidential)
-            { Credits = project.GenreStyleCredits, GenreStyles = project.GenreStyles.ToArray() };
+            { Credits = project.GenreStyleCredits, GenreStyles = project.GenreStyles.ToArray(), OverallComment = project.GenreStyleComment };
         if (selected.Kind == "block-styles")
             return new("block-styles:" + selected.SourceId, selected.Kind, "ブロック色の対応表", project.IsConfidential)
             { Credits = project.BlockStyleCredits, BlockStyles = project.BlockStyles.ToArray() };
@@ -101,7 +101,7 @@ public static class PortableMaterialService
     {
         material.Validate();
         if (material.Kind == "genre-styles")
-            project = project with { GenreStyles = material.GenreStyles!, GenreStyleCredits = material.Credits };
+            project = project with { GenreStyles = material.GenreStyles!, GenreStyleCredits = material.Credits, GenreStyleComment = material.OverallComment };
         else if (material.Kind == "block-styles")
             project = project with { BlockStyles = material.BlockStyles!, BlockStyleCredits = material.Credits };
         else if (material.Kind == "venue")

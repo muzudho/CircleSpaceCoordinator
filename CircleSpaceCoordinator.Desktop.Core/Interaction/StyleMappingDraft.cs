@@ -26,12 +26,16 @@ public sealed class StyleMappingDraft
     });
     private readonly List<StyleMappingEntry> rows;
     private readonly StyleMappingEntry[] initialRows;
-    public bool HasChanges => !rows.SequenceEqual(initialRows);
+    private readonly string? initialOverallComment;
+    public string? OverallComment { get; private set; }
+    public bool HasChanges => !rows.SequenceEqual(initialRows) || OverallComment != initialOverallComment;
+    public void SetOverallComment(string? value) => OverallComment = GenreStyleDefinition.NormalizeKnowledgeComment(value);
     /// <summary>Restore the immutable copy captured when the page was opened.</summary>
     public void RestoreOpeningSnapshot()
     {
         rows.Clear();
         rows.AddRange(initialRows);
+        OverallComment = initialOverallComment;
     }
     public string AttributionSummary(PersonCredits? previous, string handle, DateOnly workDate)
     {
@@ -43,8 +47,9 @@ public sealed class StyleMappingDraft
     private readonly StyleMappingEntry[] otherStyles;
     public IReadOnlyList<StyleMappingEntry> Rows { get; }
 
-    public StyleMappingDraft(IEnumerable<string> keys, IEnumerable<StyleMappingEntry> styles)
+    public StyleMappingDraft(IEnumerable<string> keys, IEnumerable<StyleMappingEntry> styles, string? overallComment = null)
     {
+        OverallComment = initialOverallComment = overallComment;
         var keysToEdit = keys.Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
         var existing = styles.ToArray();

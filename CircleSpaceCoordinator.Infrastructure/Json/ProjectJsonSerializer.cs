@@ -185,6 +185,7 @@ public static class ProjectJsonSerializer
             ExportPlanId = source.ExportPlanId,
             IsConfidential = source.Project.IsConfidential,
             GenreStyleCredits = source.GenreStyleCredits,
+            GenreStyleComment = source.GenreStyleComment,
             BlockStyleCredits = source.BlockStyleCredits,
             BlockStyles = source.BlockStyles.OrderBy(item => item.BlockNumber, StringComparer.Ordinal).ToArray(),
             GenreStyles = source.GenreStyles.Select(item => new GenreStyleDefinition(
@@ -227,6 +228,7 @@ public static class ProjectJsonSerializer
                 OriginY = source.EditorView.OriginY,
             },
         GenreStyleCredits = source.GenreStyleCredits,
+        GenreStyleComment = source.GenreStyleComment,
         BlockStyleCredits = source.BlockStyleCredits,
         GenreStyles = source.GenreStyles.Select(item => new GenreStyleDocument
         {
@@ -442,6 +444,7 @@ public static class ProjectJsonSerializer
         public ParticipantTableSource? ParticipantTableSource { get; set; }
         public string? ExportPlanId { get; set; }
         public PersonCredits? GenreStyleCredits { get; set; }
+        public string? GenreStyleComment { get; set; }
         public PersonCredits? BlockStyleCredits { get; set; }
         public List<GenreStyleDocument> GenreStyles { get; set; } = [];
         public List<BlockStyleDefinition> BlockStyles { get; set; } = [];

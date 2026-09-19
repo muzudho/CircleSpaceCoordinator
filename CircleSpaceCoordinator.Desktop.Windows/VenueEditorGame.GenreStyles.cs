@@ -14,7 +14,8 @@ public sealed partial class VenueEditorGame
             (styles, log, handle, date) => targetWorkspace.Execute(new SetGenreStyles(styles.Select(style =>
                 new GenreStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)
                     { KnowledgeComment = style.KnowledgeComment }).ToArray())
-                { ChangeLog = log, ActorHandle = handle, WorkDate = date },
+                { ChangeLog = log, ActorHandle = handle, WorkDate = date,
+                    UpdateOverallComment = true, OverallComment = draft.Mapping.OverallComment },
                 selectedPlanEdit: false), targetWorkspace.Project.GenreStyleCredits, knowledgeComments: true);
     }
 }

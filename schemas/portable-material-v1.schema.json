@@ -10,6 +10,7 @@
     "isConfidential"
   ],
   "properties": {
+    "overallComment": { "type": ["string", "null"], "maxLength": 1000 },
     "id": {
       "type": "string",
       "minLength": 1

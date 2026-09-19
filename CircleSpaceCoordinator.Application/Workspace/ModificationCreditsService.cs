@@ -37,7 +37,8 @@ public static class ModificationCreditsService
         }).Select(plan => after.CircleLayouts.FirstOrDefault(item => item.Id == plan.Id)?.DeskLayoutId).ToHashSet();
         return after with
         {
-            GenreStyleCredits = Changed(before.GenreStyles, after.GenreStyles) ? Edited(before.GenreStyleCredits) : before.GenreStyleCredits,
+            GenreStyleCredits = Changed(before.GenreStyles, after.GenreStyles) || before.GenreStyleComment != after.GenreStyleComment
+                ? Edited(before.GenreStyleCredits) : before.GenreStyleCredits,
             BlockStyleCredits = Changed(before.BlockStyles, after.BlockStyles) ? Edited(before.BlockStyleCredits) : before.BlockStyleCredits,
             CircleLayouts = after.CircleLayouts.Select(item =>
             {

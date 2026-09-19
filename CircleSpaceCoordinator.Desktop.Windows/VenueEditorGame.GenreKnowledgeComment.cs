@@ -8,6 +8,25 @@ using StationeryUI.MonoGame.Controls.ActionBadge;
 
 public sealed partial class VenueEditorGame
 {
+    private ScreenRectangle MappingOverallCommentBounds => MappingBounds(20, 62, 960, 36);
+
+    private void OpenMappingOverallComment()
+    {
+        if (mappingDraft is not { } draft) return;
+        SetMappingTextFocus(false);
+        OpenUnderlineInput("全体コメント", draft.OverallComment ?? "", value =>
+        {
+            draft.SetOverallComment(value);
+            mappingWidth = -1;
+        }, "対応表全体の傾向や補足を1000文字以内で入力してください。\n空欄で確定すると削除します。キャンセルすると元のコメントを残します。",
+            maxLength: int.MaxValue, allowEmpty: true, validate: ValidateGenreComment);
+    }
+
+    private static string? ValidateGenreComment(string value)
+    {
+        try { GenreStyleDefinition.NormalizeKnowledgeComment(value); return null; }
+        catch (ArgumentException ex) { return ex.Message; }
+    }
     private void OpenGenreKnowledgeComment(int row)
     {
         if (mappingDraft is not { } draft || row < 0 || row >= draft.Rows.Count) return;
@@ -21,14 +40,10 @@ public sealed partial class VenueEditorGame
             draft.SetKnowledgeComment(row, value);
             mappingWidth = -1;
         }, "ジャンルの範囲や補足を1000文字以内で入力してください。例：アクションRPGを含む\n空欄で確定するとコメントを削除します。キャンセルすると元のコメントを残します。",
-            maxLength: int.MaxValue, allowEmpty: true, validate: value =>
-            {
-                try { GenreStyleDefinition.NormalizeKnowledgeComment(value); return null; }
-                catch (ArgumentException ex) { return ex.Message; }
-            });
+            maxLength: int.MaxValue, allowEmpty: true, validate: ValidateGenreComment);
     }
 
-    private void DrawGenreKnowledgeComment(string? comment, ScreenRectangle bounds)
+    private void DrawGenreKnowledgeComment(string? comment, ScreenRectangle bounds, string placeholder = "コメントを入力")
     {
         var size = Math.Max(10, (int)(14 * MappingEditorScale));
         var badge = ActionBadgeComponent.Create("EDIT", new Rectangle(0, 0,
@@ -36,9 +51,9 @@ public sealed partial class VenueEditorGame
         var mouse = Mouse.GetState();
         var hovered = mappingPickerColumn == 0 && CanShowEditorHover && Contains(bounds, new(mouse.X, mouse.Y));
         if (hovered) badge.Show();
-        var value = string.IsNullOrEmpty(comment) ? "コメントを入力" : comment;
+        var value = string.IsNullOrEmpty(comment) ? placeholder : comment;
         var available = Math.Max(1, badge.Bounds.X * MappingEditorScale - 12);
-        var suffix = (textRenderer?.Measure(value, size).X ?? 0) > available ? "…" : "";
+        var suffix = (textRenderer?.Measure(value, size).X ?? 0) > available ? "［］" : "";
         // Truncate the preview, never the stored text or a Unicode text element.
         var boundaries = System.Globalization.StringInfo.ParseCombiningCharacters(value).Append(value.Length).ToArray();
         var lo = 0;

@@ -75,7 +75,8 @@ public static class EditorOperationHandler
         PlanCatalogServiceDuplicatePlan op => PlanCatalogService.DuplicatePlan(project, op.sourcePlanId, op.newPlanId, op.newPlanName),
         PlanCatalogServiceAddOptimizedPlan op => PlanCatalogService.AddOptimizedPlan(project, op.optimizedPlan, op.newPlanId, op.newPlanName),
         PlanCatalogServiceCopyDeskLayout op => PlanCatalogService.CopyDeskLayout(project, op.sourcePlanId, op.destinationPlanId),
-        SetGenreStyles op => project with { GenreStyles = op.styles },
+        SetGenreStyles op => project with { GenreStyles = op.styles,
+            GenreStyleComment = op.UpdateOverallComment ? GenreStyleDefinition.NormalizeKnowledgeComment(op.OverallComment) : project.GenreStyleComment },
         SetBlockStyles op => project with { BlockStyles = op.styles },
         SwapNumberAddresses op => AddressSwapEditor.Swap(project, op.planId, op.channel, op.source, op.destination, op.width, op.height, op.sourceFrameIds),
         SetExportPlan op => op.planId is null || project.Plans.Any(plan => plan.Id == op.planId)

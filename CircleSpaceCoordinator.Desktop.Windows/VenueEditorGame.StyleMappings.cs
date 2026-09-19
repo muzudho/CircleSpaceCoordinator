@@ -20,6 +20,7 @@ public sealed partial class VenueEditorGame
     private bool mappingExitConfirmationOpen;
     private PersonCredits? mappingPreviousCredits;
     private StyleMappingEntry[] mappingAppliedStyles = [];
+    private string? mappingAppliedOverallComment;
     private readonly List<MappingEditorButton> mappingEditorButtons = [];
     private IconButtonModel? pressedMappingButton;
     private int mappingRow;
@@ -58,6 +59,7 @@ public sealed partial class VenueEditorGame
         mappingTextSuppressExit = false;
         mappingTextRange = (0, 0);
         mappingAppliedStyles = draft.Build();
+        mappingAppliedOverallComment = draft.OverallComment;
         mappingRow = mappingScroll = mappingPickerColumn = 0;
         mappingColumn = 1;
         mappingFocus = -1;
@@ -127,18 +129,20 @@ public sealed partial class VenueEditorGame
         SetMappingTextFocus(false);
         var applied = false;
         var previousStyles = mappingAppliedStyles;
+        var previousOverallComment = mappingAppliedOverallComment;
         try
         {
             var styles = mappingDraft.Build();
-            if (!styles.SequenceEqual(mappingAppliedStyles))
+            if (!styles.SequenceEqual(mappingAppliedStyles) || mappingDraft.OverallComment != mappingAppliedOverallComment)
             {
                 applyStyleMapping(styles, changeLog!, Handle, WorkDate);
                 mappingAppliedStyles = styles;
+                mappingAppliedOverallComment = mappingDraft.OverallComment;
                 applied = true;
             }
             if (!FlushAutoSave())
             {
-                if (applied) { workspace!.Undo(); mappingAppliedStyles = previousStyles; }
+                if (applied) { workspace!.Undo(); mappingAppliedStyles = previousStyles; mappingAppliedOverallComment = previousOverallComment; }
                 mappingChangeTag.SaveFailed("保存できませんでした。入力を保持しています。閉じるで再試行してください。");
                 return false;
             }
@@ -252,6 +256,12 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not { } draft) return;
         BuildMappingEditorButtons();
+        if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
+            previousMouse.LeftButton == ButtonState.Released && Contains(MappingOverallCommentBounds, new(mouse.X, mouse.Y)))
+        {
+            OpenMappingOverallComment();
+            return;
+        }
         if (mappingPickerColumn == 0 && UpdateMappingChangeTag(keyboard, mouse)) return;
         if (IsPressed(keyboard, Keys.Escape))
         {
@@ -326,9 +336,11 @@ public sealed partial class VenueEditorGame
         void Text(string text, ScreenRectangle bounds, int size = 17, Color? color = null) =>
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
         Text($"{mappingKeyLabel}と色・網掛けパターンの紐づけ", MappingBounds(20, 18, 960, 38), 26);
+        if (mappingKnowledgeComments) DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
         var headers = mappingKnowledgeComments
             ? new[] { "ジャンル", "主色", "副色", "網掛け", "見本", "コメント" }
             : new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
+        DrawRectangle(MappingBounds(20, 102, 960, 34), new Color(48, 65, 77));
         for (var column = 0; column < headers.Length; column++)
             Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
         for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
@@ -416,6 +428,8 @@ public sealed partial class VenueEditorGame
         var focused = !mappingTextFocused && mappingFocus >= 0 && mappingFocus < mappingEditorButtons.Count
             ? mappingEditorButtons[mappingFocus] : null;
         var tooltip = hovered?.Tooltip;
+        if (mappingKnowledgeComments && mappingPickerColumn == 0 && CanShowEditorHover && Contains(MappingOverallCommentBounds, new(mouse.X, mouse.Y)))
+            tooltip = "全体コメントをクリックして編集します。1000文字以内、空欄で削除できます。";
         if (mappingPickerColumn > 0)
             tooltip ??= "見本をクリックして選択　Tab・矢印：移動　Enter：決定　Esc：キャンセル";
         else if (tooltip is null && mappingDraft is { } draft)

@@ -10,6 +10,8 @@ public sealed record PortableMaterial(
     [property: JsonRequired] bool IsConfidential)
 {
     public PersonCredits? Credits { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OverallComment { get; init; }
     public SpaceDefinitionCatalog? Definitions { get; init; }
     public KnowledgeVenue? Venue { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -20,6 +22,11 @@ public sealed record PortableMaterial(
     public void Validate()
     {
         Credits?.Validate();
+        if (OverallComment is not null)
+        {
+            if (Kind != "genre-styles") throw new InvalidDataException("全体コメントはジャンル対応表の項目です。");
+            GenreStyleDefinition.NormalizeKnowledgeComment(OverallComment);
+        }
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name))
             throw new InvalidDataException("素材のIDと名前が必要です。");
         if (Kind is "genre-styles" or "block-styles")
