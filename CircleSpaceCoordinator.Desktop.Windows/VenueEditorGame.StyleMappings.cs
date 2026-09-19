@@ -9,7 +9,8 @@ using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
-    private sealed record MappingEditorButton(IconButtonModel Button, Action Execute, string? ColorId = null, string? PatternId = null);
+    private sealed record MappingEditorButton(IconButtonModel Button, Action Execute, string? ColorId = null, string? PatternId = null, string? Tooltip = null);
+    private bool mappingButtonsHaveChanges;
     private StyleMappingDraft? mappingDraft;
     private string mappingKeyLabel = "";
     private string mappingEmptyMessage = "";
@@ -77,6 +78,12 @@ public sealed partial class VenueEditorGame
         TryFinishStyleMapping();
     }
 
+    private void DiscardStyleMapping()
+    {
+        mappingDraft?.RestoreOpeningSnapshot();
+        CloseStyleMappingEditor();
+    }
+
     private bool TryExitStyleMapping()
     {
         if (mappingExitConfirmationOpen) return false;
@@ -95,8 +102,7 @@ public sealed partial class VenueEditorGame
             if (action != ModalDialogAction.Accept) return;
             // Draft edits never touch the project before confirmation. Restore its
             // page-opening copy, then discard the input without creating a new tag.
-            mappingDraft?.RestoreOpeningSnapshot();
-            CloseStyleMappingEditor();
+            DiscardStyleMapping();
             Exit();
         }, [("終了する", ModalDialogAction.Accept), ("キャンセル", ModalDialogAction.Cancel)]);
         return false;
@@ -169,15 +175,17 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not { } draft) return;
         SyncMappingChangeTag();
-        if (mappingPickerColumn == 0 && mappingEditorButtons.LastOrDefault() is { } close)
+        if (mappingPickerColumn == 0 && mappingEditorButtons.FirstOrDefault(item => item.Button.AccessibleName == "閉じる") is { } close)
             close.Button.IsEnabled = mappingChangeTag?.CanClose == true && mappingComposition.Length == 0;
-        if (mappingWidth == GraphicsDevice.Viewport.Width && mappingHeight == GraphicsDevice.Viewport.Height) return;
+        if (mappingWidth == GraphicsDevice.Viewport.Width && mappingHeight == GraphicsDevice.Viewport.Height &&
+            (mappingPickerColumn > 0 || mappingButtonsHaveChanges == draft.HasChanges)) return;
+        mappingButtonsHaveChanges = draft.HasChanges;
         mappingWidth = GraphicsDevice.Viewport.Width;
         mappingHeight = GraphicsDevice.Viewport.Height;
         mappingEditorButtons.Clear();
         pressedMappingButton = null;
-        void Add(string label, ScreenRectangle bounds, Action action, bool enabled = true, string? color = null, string? pattern = null) =>
-            mappingEditorButtons.Add(new(new IconButtonModel(bounds, label) { IsEnabled = enabled }, action, color, pattern));
+        void Add(string label, ScreenRectangle bounds, Action action, bool enabled = true, string? color = null, string? pattern = null, string? tooltip = null) =>
+            mappingEditorButtons.Add(new(new IconButtonModel(bounds, label) { IsEnabled = enabled }, action, color, pattern, tooltip));
         if (mappingPickerColumn > 0)
         {
             var column = mappingPickerColumn;
@@ -213,7 +221,11 @@ public sealed partial class VenueEditorGame
         {
             Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollMappingRows(-MappingVisibleRows), mappingScroll > 0);
             Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollMappingRows(MappingVisibleRows), mappingScroll + MappingVisibleRows < draft.Rows.Count);
-            Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true);
+            Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
+                tooltip: draft.HasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
+            if (draft.HasChanges)
+                Add("破棄", MappingDiscardBounds, DiscardStyleMapping,
+                    tooltip: "変更を元に戻して、前のページに戻ります。");
         }
         if (mappingFocus >= mappingEditorButtons.Count) mappingFocus = -1;
     }
@@ -375,6 +387,22 @@ public sealed partial class VenueEditorGame
             }
             if (mappingFocus == index && button.IsEnabled) DrawOutline(bounds, 2, OperationTargetColor);
         }
+        DrawMappingButtonTooltip();
+    }
+
+    private void DrawMappingButtonTooltip()
+    {
+        if (mappingPickerColumn > 0 || !CanShowEditorHover) return;
+        var mouse = Mouse.GetState();
+        var hovered = mappingEditorButtons.FirstOrDefault(item => Contains(item.Button.Bounds, new(mouse.X, mouse.Y)));
+        var focused = !mappingTextFocused && mappingFocus >= 0 && mappingFocus < mappingEditorButtons.Count
+            ? mappingEditorButtons[mappingFocus] : null;
+        var tooltip = (hovered ?? focused)?.Tooltip;
+        if (tooltip is null) return;
+        var width = GraphicsDevice.Viewport.Width;
+        var top = GraphicsDevice.Viewport.Height - 36;
+        DrawRectangle(new(0, top, width, 36), new Color(20, 32, 42));
+        textRenderer?.Draw(tooltip, new Rectangle(16, top + 6, Math.Max(1, width - 32), 24), new Color(220, 233, 239), 14);
     }
 
     private static Color MappingColorText(Color color) => color.R * 0.299 + color.G * 0.587 + color.B * 0.114 < 145 ? Color.White : Color.Black;

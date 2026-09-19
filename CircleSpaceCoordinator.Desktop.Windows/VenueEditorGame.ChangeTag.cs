@@ -18,6 +18,7 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle MappingLogBounds => MappingBounds(36, 536, 680, 36);
     private ScreenRectangle MappingBadgeBounds => MappingBounds(608, 544, 100, 26);
     private ScreenRectangle MappingCloseBounds => MappingBounds(728, 536, 100, 36);
+    private ScreenRectangle MappingDiscardBounds => MappingBounds(840, 536, 100, 36);
 
     private string? ValidateMappingChangeLog(string value)
     {
@@ -88,13 +89,14 @@ public sealed partial class VenueEditorGame
         if (IsPressed(keyboard, Keys.Tab))
         {
             var reverse = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
+            var closeIndex = mappingEditorButtons.FindIndex(item => item.Button.AccessibleName == "閉じる");
             if (mappingTextFocused)
             {
                 SetMappingTextFocus(false);
-                mappingFocus = mappingEditorButtons.Count - (reverse ? 2 : 1);
+                mappingFocus = closeIndex - (reverse ? 1 : 0);
                 return true;
             }
-            if (tag.HasChanges && mappingFocus == mappingEditorButtons.Count - (reverse ? 1 : 2))
+            if (tag.HasChanges && mappingFocus == closeIndex - (reverse ? 0 : 1))
             {
                 SetMappingTextFocus(true);
                 return true;
@@ -145,14 +147,15 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(value, ToRectangle(bounds), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)));
         var size = Math.Max(10, (int)(ChangeTagEditorView.InputFontSize * MappingEditorScale));
         var mouse = Mouse.GetState();
-        mappingTagView.Draw(tag, MappingBounds(20, 502, 824, 98), MappingEditorScale,
+        mappingTagView.Draw(tag, MappingBounds(20, 502, tag.HasChanges ? 936 : 824, 98), MappingEditorScale,
             mappingTextFocused, Contains(MappingLogBounds, new(mouse.X, mouse.Y)),
             draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate),
             mappingComposition,
             value => textRenderer?.Measure(value, size).X ?? 0,
             (value, area, fontSize, ink) => Text(value, area, fontSize, MappingInk(ink)),
             (area, ink) => DrawRectangle(area, MappingInk(ink)),
-            _ => DrawMappingActionBadge(), previousLog: mappingPreviousCredits?.ChangeLog);
+            _ => DrawMappingActionBadge(), previousLog: mappingPreviousCredits?.ChangeLog,
+            actionAreaWidth: tag.HasChanges ? 240 : 128);
         mappingTextRange = mappingTagView.VisibleRange;
         if (mappingTextFocused) textInputService?.SetInputArea(mappingTagView.CaretBounds);
     }

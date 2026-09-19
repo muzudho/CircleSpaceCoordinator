@@ -23,7 +23,7 @@ public sealed class ChangeTagEditorView
         Func<string, double> measure,
         Action<string, ScreenRectangle, int, ChangeTagInk> text,
         Action<ScreenRectangle, ChangeTagInk> fill,
-        Action<ScreenRectangle>? badge = null, string? previousLog = null)
+        Action<ScreenRectangle>? badge = null, string? previousLog = null, double actionAreaWidth = 128)
     {
         ScreenRectangle Area(double x, double y, double width, double height) =>
             new(bounds.X + x * scale, bounds.Y + y * scale, width * scale, height * scale);
@@ -31,7 +31,7 @@ public sealed class ChangeTagEditorView
         fill(new(bounds.X + 5 * scale, bounds.Y + 5 * scale, bounds.Width, bounds.Height), ChangeTagInk.Shadow);
         fill(bounds, ChangeTagInk.Paper);
         // About forty full-width characters at 14px, plus the existing action badge.
-        var inputWidth = Math.Max(1, width - 144);
+        var inputWidth = Math.Max(1, width - actionAreaWidth - 16);
         InputBounds = Area(16, 34, inputWidth, 36);
         BadgeBounds = Area(16 + inputWidth - 108, 42, 100, 26);
         text(attribution, Area(16, 8, width - 32, 22), 14, ChangeTagInk.Text);
