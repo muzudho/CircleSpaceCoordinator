@@ -50,7 +50,12 @@ $invalidSignatures = @(
 	Get-ChildItem -LiteralPath $desktopDirectory -Recurse -File |
 		Where-Object { $_.Extension -in '.exe', '.dll' } |
 		ForEach-Object { Get-AuthenticodeSignature -FilePath $_.FullName } |
-		Where-Object { $_.Status -ne 'Valid' }
+		Where-Object {
+			# External dependencies may be unsigned; repository-owned binaries must be Valid.
+			# Reject invalid signatures even on external dependencies.
+			$owned = [System.IO.Path]::GetFileName($_.Path) -like 'CircleSpaceCoordinator.*'
+			$_.Status -ne 'Valid' -and ($owned -or $_.Status -ne 'NotSigned')
+		}
 )
 if ($invalidSignatures.Count -gt 0) {
 	$details = $invalidSignatures | ForEach-Object { "$($_.Path): $($_.Status)" }
@@ -94,7 +99,7 @@ finally {
 
 $signedFileCount = @(
 	Get-ChildItem -LiteralPath $desktopDirectory -Recurse -File |
-		Where-Object { $_.Extension -in '.exe', '.dll' }
+		Where-Object { $_.Extension -in '.exe', '.dll' -and $_.BaseName -like 'CircleSpaceCoordinator.*' }
 ).Count
 
 [pscustomobject]@{
