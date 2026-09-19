@@ -15,9 +15,9 @@ public sealed partial class VenueEditorGame
     private bool mappingTextSuppressExit;
     private string mappingComposition = "";
     private (int Start, int End) mappingTextRange;
-    private ScreenRectangle MappingLogBounds => MappingBounds(36, 564, 680, 36);
-    private ScreenRectangle MappingBadgeBounds => MappingBounds(608, 572, 100, 26);
-    private ScreenRectangle MappingCloseBounds => MappingBounds(728, 564, 100, 36);
+    private ScreenRectangle MappingLogBounds => MappingBounds(36, 536, 680, 36);
+    private ScreenRectangle MappingBadgeBounds => MappingBounds(608, 544, 100, 26);
+    private ScreenRectangle MappingCloseBounds => MappingBounds(728, 536, 100, 36);
 
     private string? ValidateMappingChangeLog(string value)
     {
@@ -145,10 +145,10 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(value, ToRectangle(bounds), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)));
         var size = Math.Max(10, (int)(ChangeTagEditorView.InputFontSize * MappingEditorScale));
         var mouse = Mouse.GetState();
-        mappingTagView.Draw(tag, MappingBounds(20, 502, 824, 152), MappingEditorScale,
+        mappingTagView.Draw(tag, MappingBounds(20, 502, 824, 98), MappingEditorScale,
             mappingTextFocused, Contains(MappingLogBounds, new(mouse.X, mouse.Y)),
             draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate),
-            "前回：" + (mappingPreviousCredits?.ChangeLog ?? "チェンジログ未記録"), mappingComposition,
+            mappingComposition,
             value => textRenderer?.Measure(value, size).X ?? 0,
             (value, area, fontSize, ink) => Text(value, area, fontSize, MappingInk(ink)),
             (area, ink) => DrawRectangle(area, MappingInk(ink)),
@@ -165,7 +165,7 @@ public sealed partial class VenueEditorGame
         badge.Show();
         if (!badge.IsVisible) return;
         var local = badge.Bounds;
-        var bounds = MappingBounds(36 + local.X, 564 + local.Y, local.Width, local.Height);
+        var bounds = MappingBounds(36 + local.X, 536 + local.Y, local.Width, local.Height);
         var rectangle = ToRectangle(bounds);
         var radius = Math.Max(1, Math.Min((int)Math.Round(6 * MappingEditorScale), rectangle.Height / 2));
         // Scanlines provide the same six-pixel rounded silhouette on the host canvas.

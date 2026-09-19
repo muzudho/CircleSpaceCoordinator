@@ -45,18 +45,25 @@ internal static partial class Program
         input.Editor.SelectAll(); input.Insert("  色を青に変更  ");
         var view = new ChangeTagEditorView();
         var drawn = new List<(string Text, StationeryUI.Canvas.ScreenRectangle Bounds)>();
-        view.Draw(input, new(20, 502, 790, 151), 1, true, false, "by test since 2001-02-03", "previous", "",
+        view.Draw(input, new(20, 502, 790, 151), 1, true, false, "by test since 2001-02-03", "",
             text => text.Length * 10, (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { });
         AssertEqual(true, drawn.Any(item => item.Text == "(change)"));
         AssertEqual(true, view.CaretBounds.X < view.BadgeBounds.X);
         AssertEqual(true, drawn.Any(item => item.Text.Contains("/ 1000", StringComparison.Ordinal)));
+        var empty = new ChangeTagEditor(Validate) { HasChanges = true };
+        drawn.Clear();
+        view.Draw(empty, new(20, 502, 824, 98), 1, true, false, "author", "",
+            text => text.Length * 10, (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { });
+        AssertEqual(false, empty.CanClose);
+        AssertEqual(1, drawn.Count(item => item.Text.Contains("入力してください", StringComparison.Ordinal)));
+        AssertEqual(true, drawn.All(item => item.Bounds.Y < view.InputBounds.Y + view.InputBounds.Height));
         // A preedit replaces the selected span visually, at the insertion point;
         // it must not change the committed log or appear in the help row.
         var ime = new ChangeTagEditor(Validate) { HasChanges = true };
         ime.Insert("前の色です");
         ime.Editor.MoveTo(1); ime.Editor.MoveTo(3, extend: true);
         drawn.Clear();
-        view.Draw(ime, new(20, 502, 824, 152), 1, true, false, "author", "previous", "新しい色",
+        view.Draw(ime, new(20, 502, 824, 152), 1, true, false, "author", "新しい色",
             text => text.EnumerateRunes().Count() * 14, (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { });
         AssertEqual("前の色です", ime.Editor.Text);
         AssertEqual(true, drawn.Any(item => item.Text == "前新しい色です" && item.Bounds.Y == view.InputBounds.Y));
@@ -67,7 +74,7 @@ internal static partial class Program
         // Preedit scrolling stays within the field and preserves supplementary characters.
         ime.Editor.SelectAll(); ime.Insert(new string('a', 1000));
         drawn.Clear();
-        view.Draw(ime, new(20, 502, 824, 152), 1, true, false, "author", "previous", "😀漢字",
+        view.Draw(ime, new(20, 502, 824, 152), 1, true, false, "author", "😀漢字",
             text => text.EnumerateRunes().Count() * 14, (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { });
         AssertEqual(1000, ime.Editor.Text.Length);
         AssertEqual(true, drawn.Any(item => item.Text.EndsWith("😀漢字", StringComparison.Ordinal) && item.Bounds.Y == view.InputBounds.Y));

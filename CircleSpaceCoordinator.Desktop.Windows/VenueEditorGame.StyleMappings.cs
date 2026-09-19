@@ -15,6 +15,7 @@ public sealed partial class VenueEditorGame
     private string mappingEmptyMessage = "";
     private Action<StyleMappingEntry[], string, string, DateOnly>? applyStyleMapping;
     private ChangeTagEditor? mappingChangeTag;
+    private bool mappingExitConfirmationOpen;
     private PersonCredits? mappingPreviousCredits;
     private StyleMappingEntry[] mappingAppliedStyles = [];
     private readonly List<MappingEditorButton> mappingEditorButtons = [];
@@ -74,6 +75,31 @@ public sealed partial class VenueEditorGame
     private void SaveStyleMapping()
     {
         TryFinishStyleMapping();
+    }
+
+    private bool TryExitStyleMapping()
+    {
+        if (mappingExitConfirmationOpen) return false;
+        SyncMappingChangeTag();
+        if (mappingDraft?.HasChanges != true ||
+            mappingChangeTag?.CanClose == true && mappingComposition.Length == 0)
+            return TryFinishStyleMapping();
+
+        // Cancel the OS close request now; resume Exit only after an explicit choice.
+        mappingExitConfirmationOpen = true;
+        SetMappingTextFocus(false);
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "終了の確認",
+            "変更を破棄してアプリケーションを終了しますか"), action =>
+        {
+            mappingExitConfirmationOpen = false;
+            if (action != ModalDialogAction.Accept) return;
+            // Draft edits never touch the project before confirmation. Restore its
+            // page-opening copy, then discard the input without creating a new tag.
+            mappingDraft?.RestoreOpeningSnapshot();
+            CloseStyleMappingEditor();
+            Exit();
+        }, [("終了する", ModalDialogAction.Accept), ("キャンセル", ModalDialogAction.Cancel)]);
+        return false;
     }
 
     private bool TryFinishStyleMapping()

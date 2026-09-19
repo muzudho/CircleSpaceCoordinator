@@ -19,7 +19,7 @@ public sealed class ChangeTagEditorView
     public const int InputFontSize = 14;
 
     public void Draw(ChangeTagEditor model, ScreenRectangle bounds, double scale, bool focused, bool hovered,
-        string attribution, string previousLog, string composition,
+        string attribution, string composition,
         Func<string, double> measure,
         Action<string, ScreenRectangle, int, ChangeTagInk> text,
         Action<ScreenRectangle, ChangeTagInk> fill,
@@ -32,15 +32,10 @@ public sealed class ChangeTagEditorView
         fill(bounds, ChangeTagInk.Paper);
         // About forty full-width characters at 14px, plus the existing action badge.
         var inputWidth = Math.Max(1, width - 144);
-        InputBounds = Area(16, 62, inputWidth, 36);
-        BadgeBounds = Area(16 + inputWidth - 108, 70, 100, 26);
+        InputBounds = Area(16, 34, inputWidth, 36);
+        BadgeBounds = Area(16 + inputWidth - 108, 42, 100, 26);
         text(attribution, Area(16, 8, width - 32, 22), 14, ChangeTagInk.Text);
-        text(previousLog, Area(16, 34, width - 32, 22), 13, ChangeTagInk.Muted);
-        if (!model.HasChanges)
-        {
-            text("変更なし — チェンジログの入力は不要です", InputBounds, 16, ChangeTagInk.Muted);
-            return;
-        }
+        if (!model.HasChanges) return;
         var editor = model.Editor;
         var insertion = composition.Length > 0 ? editor.SelectionStart : editor.Caret;
         var display = composition.Length > 0
@@ -71,9 +66,11 @@ public sealed class ChangeTagEditorView
                 text(ActionLabel, BadgeBounds, 16, ChangeTagInk.BadgeText);
             }
         }
-        text($"{Label}　{model.CharacterCount} / {MaximumLength}", Area(16, 102, width - 32, 23), 13, ChangeTagInk.Text);
-        var error = model.SaveError ?? model.ValidationError;
-        text(error ?? "閉じる・Esc：変更タグと内容を自動保存",
-            Area(16, 126, width - 32, 23), 12, error is null ? ChangeTagInk.Muted : ChangeTagInk.Error);
+        if (model.Text.Length > 0)
+            text($"{model.CharacterCount} / {MaximumLength}", Area(width - 128, 74, 112, 18), 12, ChangeTagInk.Muted);
+        // The placeholder already explains required input; show only actionable errors.
+        var error = model.SaveError ?? model.InputError ?? (model.Text.Length > 0 ? model.ValidationError : null);
+        if (error is not null)
+            text(error, Area(16, 74, width - 160, 18), 12, ChangeTagInk.Error);
     }
 }

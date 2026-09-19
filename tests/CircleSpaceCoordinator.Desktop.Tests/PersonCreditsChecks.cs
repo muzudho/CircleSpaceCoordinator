@@ -130,9 +130,16 @@ internal static partial class Program
         AssertEqual("by 一郎 since 2026-09-18", mapping.AttributionSummary(oldCredits, "二郎", today));
         mapping.SetColor(0, true, "blue");
         AssertEqual(true, mapping.HasChanges);
-        AssertEqual("(by 一郎 since 2026-09-18)  (by 二郎 since 2026-09-19)", mapping.AttributionSummary(oldCredits, "二郎", today));
+        AssertEqual("by 二郎 since 2026-09-19（旧： 一郎 since 2026-09-18）", mapping.AttributionSummary(oldCredits, "二郎", today));
         mapping.SetColor(0, true, "red");
         AssertEqual(false, mapping.HasChanges);
+        AssertEqual("by 一郎 since 2026-09-18", mapping.AttributionSummary(oldCredits, "二郎", today));
+        var opening = mapping.Build();
+        mapping.SetColor(0, true, "blue");
+        mapping.SetPattern(0, "grid");
+        mapping.RestoreOpeningSnapshot();
+        AssertEqual(false, mapping.HasChanges);
+        AssertEqual(true, opening.SequenceEqual(mapping.Build()));
         AssertEqual("by 一郎 since 2026-09-18", mapping.AttributionSummary(oldCredits, "二郎", today));
     }
 }

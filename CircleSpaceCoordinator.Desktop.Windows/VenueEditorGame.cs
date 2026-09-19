@@ -137,7 +137,7 @@ public sealed partial class VenueEditorGame : Game
         Window.Title = ApplicationIdentity.Title;
         Window.AllowUserResizing = true;
         IsMouseVisible = true;
-        Exiting += (_, args) => { if (!TryFinishStyleMapping() || !FlushAutoSave()) { args.Cancel = true; return; } PersistWorkingState(); };
+        Exiting += (_, args) => { if (!TryExitStyleMapping() || !FlushAutoSave()) { args.Cancel = true; return; } PersistWorkingState(); };
         CreateToolbar();
         Log("application_start", success: true, detail: workspace is null ? "empty_grid" : "project_loaded");
     }

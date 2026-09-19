@@ -24,12 +24,18 @@ public sealed class StyleMappingDraft
     private readonly List<StyleMappingEntry> rows;
     private readonly StyleMappingEntry[] initialRows;
     public bool HasChanges => !rows.SequenceEqual(initialRows);
+    /// <summary>Restore the immutable copy captured when the page was opened.</summary>
+    public void RestoreOpeningSnapshot()
+    {
+        rows.Clear();
+        rows.AddRange(initialRows);
+    }
     public string AttributionSummary(PersonCredits? previous, string handle, DateOnly workDate)
     {
         var oldText = (previous ?? new PersonCredits()).AttributionText;
         if (!HasChanges) return oldText;
         var current = new PersonCredits(Modifier: string.IsNullOrWhiteSpace(handle) ? null : handle) { ModifiedOn = workDate };
-        return $"({oldText})  ({current.AttributionText})";
+        return $"{current.AttributionText}（旧： {oldText[3..]}）";
     }
     private readonly StyleMappingEntry[] otherStyles;
     public IReadOnlyList<StyleMappingEntry> Rows { get; }
