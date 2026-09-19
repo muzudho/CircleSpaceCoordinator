@@ -35,7 +35,7 @@ public sealed partial class VenueEditorGame
     private int mappingHeight = -1;
     private const int MappingVisibleRows = 6;
     private static readonly double[] DefaultMappingColumnEdges = [20, 290, 450, 610, 810, 980];
-    private static readonly double[] GenreMappingColumnEdges = [20, 250, 310, 390, 470, 550, 630, 980];
+    private double[] GenreMappingColumnEdges => [20, 20 + Math.Max(48, Math.Max(mappingDraft?.Rows.Count ?? 1, mappingGenreCodeOrder.Length).ToString().Length * 16 + 16), 250, 330, 410, 490, 570, 980];
     private double[] MappingColumnEdges => mappingKnowledgeComments ? GenreMappingColumnEdges : DefaultMappingColumnEdges;
     private double MappingCanvasHeight => 660d;
     private bool GenreChartVisible => mappingKnowledgeComments && genrePageTab > 0;
@@ -180,10 +180,10 @@ public sealed partial class VenueEditorGame
             OpenGenreKnowledgeComment(row);
             return;
         }
-        if (mappingKnowledgeComments && column == 1) { OpenGenreCodeOrderEditor(); return; }
+        if (mappingKnowledgeComments && column == 0) { OpenGenreCodeOrderEditor(); return; }
         if (mappingDraft is null || row < 0 || row >= mappingDraft.Rows.Count ||
             (mappingKnowledgeComments ? column is < 2 or > 4 : column is < 1 or > 3)) return;
-        if (mappingKnowledgeComments && column == 3 && mappingDraft.Rows[row].Pattern == "solid") return;
+        if (mappingKnowledgeComments && column == 4 && mappingDraft.Rows[row].Pattern == "solid") return;
         if (mappingKnowledgeComments) column--;
         mappingRow = row;
         mappingColumn = column;
@@ -237,6 +237,11 @@ public sealed partial class VenueEditorGame
                 Add(choice.Label, MappingBounds(80 + index % columns * (width + 12), 180 + index / columns * (height + 12), width, height), () =>
                 {
                     if (column == 3) draft.SetPattern(row, choice.Id);
+                    else if (column == 2 && draft.Rows[row].Pattern == "solid")
+                    {
+                        CloseMappingPicker();
+                        return;
+                    }
                     else draft.SetColor(row, column == 1, choice.Id);
                     CloseMappingPicker();
                 }, color: column == 3 ? null : choice.Id, pattern: column == 3 ? choice.Id : null,
@@ -325,10 +330,10 @@ public sealed partial class VenueEditorGame
         else if (mappingFocus < 0 && !GenreChartVisible)
         {
             if (IsPressed(keyboard, Keys.Left)) mappingColumn = mappingKnowledgeComments
-                ? mappingColumn switch { 6 => 4, 4 => 3, 3 => 2, _ => 1 }
+                ? mappingColumn switch { 6 => 4, 4 => 3, 3 => 2, 2 => 1, _ => 0 }
                 : mappingColumn == 5 ? 3 : Math.Max(1, mappingColumn - 1);
             if (IsPressed(keyboard, Keys.Right)) mappingColumn = mappingKnowledgeComments
-                ? mappingColumn switch { 1 => 2, 2 => 3, 3 => 4, 4 => 6, _ => 6 }
+                ? mappingColumn switch { 0 => 2, 2 => 3, 3 => 4, 4 => 6, _ => 6 }
                 : mappingColumn >= 3 ? 3 : mappingColumn + 1;
             if (IsPressed(keyboard, Keys.Up)) mappingRow = Math.Max(0, mappingRow - 1);
             if (IsPressed(keyboard, Keys.Down)) mappingRow = Math.Min(Math.Max(0, draft.Rows.Count - 1), mappingRow + 1);
@@ -370,7 +375,7 @@ public sealed partial class VenueEditorGame
                 }
                 else if (genrePageTab == 0)
                     for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
-                        if (Contains(MappingCell(row, 0), pointer))
+                        if (Contains(MappingCell(row, 1), pointer))
                         {
                             SelectGenreTarget(draft.Rows[mappingScroll + row].Key);
                             return;
@@ -380,7 +385,7 @@ public sealed partial class VenueEditorGame
             if (pressedMappingButton is not null) mappingFocus = mappingEditorButtons.FindIndex(item => item.Button == pressedMappingButton);
             else if (mappingPickerColumn == 0 && !GenreChartVisible)
                 for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
-                for (var column = 1; column <= (mappingKnowledgeComments ? 6 : 3); column++)
+                for (var column = mappingKnowledgeComments ? 0 : 1; column <= (mappingKnowledgeComments ? 6 : 3); column++)
                     if (column != (mappingKnowledgeComments ? 5 : 4))
                     if (Contains(MappingCell(row, column), pointer)) { OpenMappingPicker(mappingScroll + row, column); return; }
         }
@@ -421,14 +426,17 @@ public sealed partial class VenueEditorGame
                     var bounds = MappingCell(row, column);
                     if (mappingKnowledgeComments && column == 3 && style.Pattern == "solid")
                         continue;
-                    var plainCell = mappingKnowledgeComments && column is 0 or 6;
+                    var plainCell = mappingKnowledgeComments && column is 1 or 6;
                     if (!plainCell) DrawRectangle(bounds, new Color(35, 43, 54));
-                    if (column == 0) Text(style.Key, bounds);
-                    else if (column == 1)
+                    if (column == 0)
                     {
                         var orderIndex = Array.IndexOf(mappingGenreCodeOrder, style.Key);
-                        Text((orderIndex >= 0 ? orderIndex + 1 : mappingScroll + row + 1).ToString(), bounds);
+                        var value = (orderIndex >= 0 ? orderIndex + 1 : mappingScroll + row + 1).ToString();
+                        var size = Math.Max(10, (int)(17 * MappingEditorScale));
+                        var measured = textRenderer?.Measure(value, size).X ?? 0;
+                        textRenderer?.Draw(value, ToRectangle(new(bounds.X + bounds.Width - measured - 8, bounds.Y, measured + 4, bounds.Height), 3), Color.White, size, true);
                     }
+                    else if (column == 1) Text(style.Key, bounds);
                     else if (column == 6) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds);
                     else if (column is 2 or 3)
                     {
