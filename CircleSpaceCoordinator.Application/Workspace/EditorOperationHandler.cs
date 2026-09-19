@@ -76,6 +76,7 @@ public static class EditorOperationHandler
         PlanCatalogServiceAddOptimizedPlan op => PlanCatalogService.AddOptimizedPlan(project, op.optimizedPlan, op.newPlanId, op.newPlanName),
         PlanCatalogServiceCopyDeskLayout op => PlanCatalogService.CopyDeskLayout(project, op.sourcePlanId, op.destinationPlanId),
         SetGenreStyles op => project with { GenreStyles = op.styles,
+            IsConfidential = project.IsConfidential || op.MarkConfidential,
             GenreCodeTableName = op.GenreCodeTableName is null ? project.GenreCodeTableName : GenreStyleDefinition.NormalizeTableName(op.GenreCodeTableName),
             GenreCodeOrder = op.GenreCodeOrder ?? project.GenreCodeOrder,
             GenreCodeOrderComment = op.UpdateGenreCodeOrder ? GenreStyleDefinition.NormalizeKnowledgeComment(op.GenreCodeOrderComment) : project.GenreCodeOrderComment,

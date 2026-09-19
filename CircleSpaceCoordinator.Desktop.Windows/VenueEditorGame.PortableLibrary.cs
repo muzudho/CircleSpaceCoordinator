@@ -110,7 +110,7 @@ public sealed partial class VenueEditorGame
                 editor.Controls.AddRange([save, cancel]); editor.CancelButton = cancel;
                 if (ShowEditorDialog(editor, form) == Forms.DialogResult.OK) Reload();
             };
-            import.Click += (_, _) => { if (Selected() is { Package: not null } entry) { form.Close(); ImportPortable(entry.Json); } };
+            import.Click += (_, _) => { if (Selected() is { Package: not null } entry) { form.Close(); ImportPortable(entry.Json, sourcePath: entry.Path); } };
             form.Controls.AddRange([folder, browse, search, refresh, undo, grid, preview, detail, status, edit, import, close]);
             form.CancelButton = close;
             Reload(); ShowEditorDialog(form);

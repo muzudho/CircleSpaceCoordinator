@@ -22,6 +22,26 @@ public sealed record PortableDocument(
 
 public static class ProjectPortableSerializer
 {
+    public static string UpdateGenreTable(string json, PortableMaterial table, string handle, DateOnly date, string changeLog)
+    {
+        var loaded = Load(json).Document;
+        var previous = loaded.Materials?.SingleOrDefault(item => item.Id == table.Id && item.Kind == "genre-styles")
+            ?? throw new InvalidDataException("パッケージに対象のジャンルコード表がありません。");
+        if (table.Kind != "genre-styles") throw new InvalidDataException("ジャンルコード表だけを更新できます。");
+        var updated = table with { IsConfidential = table.IsConfidential || previous.IsConfidential || loaded.IsConfidential,
+            Credits = (previous.Credits ?? new()).WrittenBy(handle, date, PersonCredits.NormalizeChangeLog(changeLog)) };
+        updated.Validate();
+        // Replace only this material. Unselected tables, layouts, knowledge and metadata retain their JSON content.
+        var root = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        var materials = root["materials"]!.AsArray();
+        var index = Array.FindIndex(loaded.Materials!, item => item.Id == table.Id);
+        materials[index] = JsonSerializer.SerializeToNode(updated, Options);
+        root["isConfidential"] = loaded.IsConfidential || updated.IsConfidential;
+        var result = root.ToJsonString(Options) + Environment.NewLine;
+        Load(result);
+        return result;
+    }
+
     public const string Kind = "circle-space-project-portable";
     public const int MaximumBytes = 16 * 1024 * 1024;
     public const int MaximumItems = 100;

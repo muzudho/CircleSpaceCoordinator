@@ -45,6 +45,11 @@ public sealed partial class EditorService
                     loaded.Projects, loaded.Document.Knowledge, loaded.Document.Materials,
                     loaded.Document.Items.Where(item => item.Kind == "frame-fragment").Select(item => item.Id).ToHashSet());
                 break;
+            case "genre-table":
+                var tableEdit = WireJson.Read<PortableGenreTableUpdate>(request.Json);
+                result = ProjectPortableSerializer.UpdateGenreTable(tableEdit.Json, tableEdit.Table,
+                    tableEdit.Handle, tableEdit.WorkDate, tableEdit.ChangeLog);
+                break;
             case "preview":
                 var preview = WireJson.Read<PortablePreviewRequest>(request.Json);
                 var candidate = PortableSelectionService.Apply(preview.Project, preview.Package, preview.Selection);
