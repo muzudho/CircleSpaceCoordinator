@@ -8,6 +8,9 @@ using StationeryUI.Controls;
 public sealed partial class VenueEditorGame
 {
     private bool projectMenuOpen;
+    private bool genreMenuOpen;
+    private string[] CurrentMenuLabels => genreMenuOpen ? [.. GenrePageTabs, "\u00d7"] : ProjectMenuLabels;
+    private int MenuCloseIndex => CurrentMenuLabels.Length - 1;
     private int projectToolbarWidth;
     private bool projectMenuDrain;
     private readonly List<IconButtonModel> projectMenuButtons = [];
@@ -19,9 +22,9 @@ public sealed partial class VenueEditorGame
     private bool IsCurrentProjectSaved => workspace is not null && savedProjectState is { } saved &&
         ReferenceEquals(saved.Workspace, workspace) && saved.Revision == workspace.Revision && saved.Path == projectSavePath &&
         saved.Zoom == viewport.Zoom && saved.X == viewport.Origin.X && saved.Y == viewport.Origin.Y;
-    private string ProjectMenuDescription(int index) => index == 1 && autoSaveError is not null ? "保存失敗：" + autoSaveError : index == 1 && IsCurrentProjectSaved
+    private string ProjectMenuDescription(int index) => genreMenuOpen ? CurrentMenuLabels[index] : index == 1 && autoSaveError is not null ? "保存失敗：" + autoSaveError : !genreMenuOpen && index == 1 && IsCurrentProjectSaved
         ? "現在の変更は保存できています。変更すると再び保存できます。" : ProjectMenuDescriptions[index];
-    private bool IsProjectMenuEntryEnabled(int index) => index == 6 || workspace is not null && optimizationTask is null &&
+    private bool IsProjectMenuEntryEnabled(int index) => genreMenuOpen ? workspace is not null : index == 6 || workspace is not null && optimizationTask is null &&
         (index != 1 || projectSavePath is not null && !IsCurrentProjectSaved);
     private static readonly string[] ProjectMenuLabels =
         ["開く…（イベント一覧から選択）", "すぐ保存", "一部を書き出す…", "一部を取り込む…", "閉じる（イベント一覧へ）", "セーブポイント…", "×"];
@@ -36,8 +39,9 @@ public sealed partial class VenueEditorGame
         "メニューを閉じて作業に戻ります。",
     ];
 
-    private void OpenProjectMenu()
+    private void OpenProjectMenu(bool genre = false)
     {
+        genreMenuOpen = genre;
         CancelInProgressPointerInteraction();
         projectMenuOpen = projectMenuDrain = true;
         projectMenuFocus = 0;
@@ -50,16 +54,16 @@ public sealed partial class VenueEditorGame
     {
         var width = Math.Min(420d, Math.Max(1, GraphicsDevice.Viewport.Width - 24d));
         var height = Math.Min(416d, Math.Max(1, GraphicsDevice.Viewport.Height - StatusBarHeight - 64d));
-        var bounds = new ScreenRectangle(12, 54, width, height);
+        var bounds = new ScreenRectangle(genreMenuOpen ? Math.Min(164, Math.Max(12, GraphicsDevice.Viewport.Width - width - 12)) : 12, 54 + WorkerBarHeight, width, height);
         if (bounds == projectMenuBounds && projectMenuButtons.Count > 0) return;
         pressedProjectMenuButton?.CancelPress();
         pressedProjectMenuButton = null;
         projectMenuBounds = bounds;
         projectMenuButtons.Clear();
-        var rowHeight = (height - 76) / 6;
-        for (var i = 0; i < 6; i++)
+        var rowHeight = (height - 76) / MenuCloseIndex;
+        for (var i = 0; i < MenuCloseIndex; i++)
             projectMenuButtons.Add(new(new ScreenRectangle(bounds.X + 10, bounds.Y + 54 + i * rowHeight,
-                width - 20, rowHeight - 6), ProjectMenuLabels[i]));
+                width - 20, rowHeight - 6), CurrentMenuLabels[i]));
         projectMenuButtons.Add(new(new ScreenRectangle(bounds.X + width - 46, bounds.Y + 8, 36, 34), "メニューを閉じる"));
     }
 
@@ -75,7 +79,7 @@ public sealed partial class VenueEditorGame
         if (!projectMenuOpen) return;
         EnsureProjectMenuButtons();
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
-        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.S))
+        if (!genreMenuOpen && IsControlDown(keyboard) && IsPressed(keyboard, Keys.S))
         {
             ActivateProjectMenu(1);
             return;
@@ -87,8 +91,8 @@ public sealed partial class VenueEditorGame
         }
         // Outside clicks, Escape, and focus changes never dismiss this menu.
         if (IsPressed(keyboard, Keys.Tab) || IsPressed(keyboard, Keys.Down))
-            projectMenuFocus = (projectMenuFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? 6 : 1)) % 7;
-        if (IsPressed(keyboard, Keys.Up)) projectMenuFocus = (projectMenuFocus + 6) % 7;
+            projectMenuFocus = (projectMenuFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? MenuCloseIndex : 1)) % CurrentMenuLabels.Length;
+        if (IsPressed(keyboard, Keys.Up)) projectMenuFocus = (projectMenuFocus + MenuCloseIndex) % CurrentMenuLabels.Length;
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
             ActivateProjectMenu(projectMenuFocus);
@@ -113,7 +117,14 @@ public sealed partial class VenueEditorGame
         pressedProjectMenuButton?.CancelPress();
         pressedProjectMenuButton = null;
         projectMenuDrain = true;
-        if (index == 6) { projectMenuOpen = false; return; }
+        if (index == MenuCloseIndex) { projectMenuOpen = false; return; }
+        if (genreMenuOpen)
+        {
+            projectMenuOpen = false;
+            OpenGenreStyleEditor();
+            genrePageTab = index;
+            return;
+        }
         try
         {
             switch (index)
@@ -138,7 +149,7 @@ public sealed partial class VenueEditorGame
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 165));
         DrawRectangle(projectMenuBounds, new Color(28, 34, 44));
         DrawOutline(projectMenuBounds, 1, new Color(130, 145, 165));
-        textRenderer?.Draw("プロジェクト", ToRectangle(new ScreenRectangle(projectMenuBounds.X + 16, projectMenuBounds.Y + 10,
+        textRenderer?.Draw(genreMenuOpen ? "ジャンル" : "プロジェクト", ToRectangle(new ScreenRectangle(projectMenuBounds.X + 16, projectMenuBounds.Y + 10,
             projectMenuBounds.Width - 70, 32), 0), Color.White, 20, true);
         for (var i = 0; i < projectMenuButtons.Count; i++)
         {
@@ -150,10 +161,10 @@ public sealed partial class VenueEditorGame
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
                 (area, color) =>
                 {
-                    var labelArea = index == 1 ? new ScreenRectangle(area.X, area.Y, Math.Max(1, area.Width - 90), area.Height) : area;
-                    textRenderer?.Draw(index == 1 && IsCurrentProjectSaved ? "保存できています" : ProjectMenuLabels[index],
+                    var labelArea = !genreMenuOpen && index == 1 ? new ScreenRectangle(area.X, area.Y, Math.Max(1, area.Width - 90), area.Height) : area;
+                    textRenderer?.Draw(!genreMenuOpen && index == 1 && IsCurrentProjectSaved ? "保存できています" : CurrentMenuLabels[index],
                         ToRectangle(labelArea, 8), ToButtonColor(color), 18, true);
-                    if (index == 1)
+                    if (!genreMenuOpen && index == 1)
                         textRenderer?.Draw("Ctrl+S", ToRectangle(new ScreenRectangle(area.X + area.Width - 90, area.Y, 90, area.Height), 8),
                             ToButtonColor(color), 16);
                 });

@@ -34,12 +34,14 @@ public sealed partial class VenueEditorGame
     private static readonly double[] DefaultMappingColumnEdges = [20, 290, 450, 610, 810, 980];
     private static readonly double[] GenreMappingColumnEdges = [20, 290, 370, 450, 530, 610, 980];
     private double[] MappingColumnEdges => mappingKnowledgeComments ? GenreMappingColumnEdges : DefaultMappingColumnEdges;
-    private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight) / 660d));
+    private double MappingCanvasHeight => mappingKnowledgeComments ? 704d : 660d;
+    private bool GenreChartVisible => mappingKnowledgeComments && genrePageTab > 0;
+    private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight) / MappingCanvasHeight));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
     {
         var scale = MappingEditorScale;
         return new((GraphicsDevice.Viewport.Width - 1000 * scale) / 2 + x * scale,
-            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight - 660 * scale) / 2 + y * scale, width * scale, height * scale);
+            WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight - MappingCanvasHeight * scale) / 2 + (y + (mappingKnowledgeComments ? 44 : 0)) * scale, width * scale, height * scale);
     }
     private ScreenRectangle MappingCell(int visibleRow, int column) =>
         MappingBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46);
@@ -51,6 +53,7 @@ public sealed partial class VenueEditorGame
         CancelInProgressPointerInteraction();
         mappingDraft = draft;
         mappingKnowledgeComments = knowledgeComments;
+        genrePageTab = genrePreviewScroll = 0;
         mappingKeyLabel = keyLabel;
         mappingEmptyMessage = emptyMessage;
         applyStyleMapping = apply;
@@ -232,9 +235,10 @@ public sealed partial class VenueEditorGame
         }
         else
         {
-            Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollMappingRows(-MappingVisibleRows), mappingScroll > 0,
+            if (mappingKnowledgeComments) AddGenreTabs();
+            Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
                 tooltip: "前のページの行を表示します。PageUpでも移動できます。");
-            Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollMappingRows(MappingVisibleRows), mappingScroll + MappingVisibleRows < draft.Rows.Count,
+            Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollGenreOrMapping(MappingVisibleRows), GenreChartVisible ? genrePreviewScroll + GenrePreviewPageSize < BuildGenrePreviewGroups().Count : mappingScroll + MappingVisibleRows < draft.Rows.Count,
                 tooltip: "次のページの行を表示します。PageDownでも移動できます。");
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
                 tooltip: draft.HasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
@@ -269,6 +273,11 @@ public sealed partial class VenueEditorGame
             return;
         }
         if (mappingPickerColumn == 0 && IsControlDown(keyboard) && IsPressed(keyboard, Keys.S)) { SaveStyleMapping(); return; }
+        if (GenreChartVisible && !mappingTextFocused)
+        {
+            if (IsPressed(keyboard, Keys.PageUp)) ScrollGenreOrMapping(-1);
+            if (IsPressed(keyboard, Keys.PageDown)) ScrollGenreOrMapping(1);
+        }
         if (IsPressed(keyboard, Keys.Tab))
         {
             var backwards = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
@@ -284,7 +293,7 @@ public sealed partial class VenueEditorGame
                 : IsPressed(keyboard, Keys.Down) ? columns : IsPressed(keyboard, Keys.Up) ? -columns : 0;
             mappingFocus = Math.Clamp(mappingFocus + offset, 0, mappingEditorButtons.Count - 1);
         }
-        else if (mappingFocus < 0)
+        else if (mappingFocus < 0 && !GenreChartVisible)
         {
             if (IsPressed(keyboard, Keys.Left)) mappingColumn = mappingColumn == 5 ? 3 : Math.Max(1, mappingColumn - 1);
             if (IsPressed(keyboard, Keys.Right)) mappingColumn = mappingKnowledgeComments && mappingColumn >= 3 ? 5 : Math.Min(3, mappingColumn + 1);
@@ -300,13 +309,13 @@ public sealed partial class VenueEditorGame
         }
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
-            if (mappingFocus < 0) OpenMappingPicker(mappingRow, mappingColumn);
-            else if (mappingEditorButtons[mappingFocus].Button.IsEnabled) mappingEditorButtons[mappingFocus].Execute();
+            if (mappingFocus < 0 && !GenreChartVisible) OpenMappingPicker(mappingRow, mappingColumn);
+            else if (mappingFocus >= 0 && mappingEditorButtons[mappingFocus].Button.IsEnabled) mappingEditorButtons[mappingFocus].Execute();
             return;
         }
         if (mappingPickerColumn == 0 && mouse.ScrollWheelValue != previousMouse.ScrollWheelValue)
         {
-            ScrollMappingRows(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue) * 3);
+            ScrollGenreOrMapping(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue) * 3);
             BuildMappingEditorButtons();
         }
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
@@ -315,7 +324,7 @@ public sealed partial class VenueEditorGame
         {
             pressedMappingButton = mappingEditorButtons.Select(item => item.Button).FirstOrDefault(button => button.Press(pointer));
             if (pressedMappingButton is not null) mappingFocus = mappingEditorButtons.FindIndex(item => item.Button == pressedMappingButton);
-            else if (mappingPickerColumn == 0)
+            else if (mappingPickerColumn == 0 && !GenreChartVisible)
                 for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
                 for (var column = 1; column <= (mappingKnowledgeComments ? 5 : 3); column++)
                     if (column != 4)
@@ -337,52 +346,56 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
         Text($"{mappingKeyLabel}と色・網掛けパターンの紐づけ", MappingBounds(20, 18, 960, 38), 26);
         if (mappingKnowledgeComments) DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
-        var headers = mappingKnowledgeComments
-            ? new[] { "ジャンル", "主色", "副色", "網掛け", "見本", "コメント" }
-            : new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
-        DrawRectangle(MappingBounds(20, 102, 960, 34), new Color(48, 65, 77));
-        for (var column = 0; column < headers.Length; column++)
-            Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
-        for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
+        if (GenreChartVisible) DrawGenrePreview();
+        else
         {
-            var style = draft.Rows[mappingScroll + row];
+            var headers = mappingKnowledgeComments
+                ? new[] { "ジャンル", "主色", "副色", "網掛け", "見本", "コメント" }
+                : new[] { mappingKeyLabel, "主色", "副色", "網掛け（白黒見本）", "配色の見本" };
+            DrawRectangle(MappingBounds(20, 102, 960, 34), new Color(48, 65, 77));
             for (var column = 0; column < headers.Length; column++)
+                Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
+            for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
             {
-                var bounds = MappingCell(row, column);
-                var plainCell = mappingKnowledgeComments && column is 0 or 5;
-                if (!plainCell) DrawRectangle(bounds, new Color(35, 43, 54));
-                if (column == 0) Text(style.Key, bounds);
-                else if (column == 5) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds);
-                else if (column is 1 or 2)
+                var style = draft.Rows[mappingScroll + row];
+                for (var column = 0; column < headers.Length; column++)
                 {
-                    if (column == 2 && style.Pattern == "solid") Text(mappingKnowledgeComments ? "未使用" : "単色では未使用", bounds, 14, Color.Gray);
+                    var bounds = MappingCell(row, column);
+                    var plainCell = mappingKnowledgeComments && column is 0 or 5;
+                    if (!plainCell) DrawRectangle(bounds, new Color(35, 43, 54));
+                    if (column == 0) Text(style.Key, bounds);
+                    else if (column == 5) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds);
+                    else if (column is 1 or 2)
+                    {
+                        if (column == 2 && style.Pattern == "solid") Text(mappingKnowledgeComments ? "未使用" : "単色では未使用", bounds, 14, Color.Gray);
+                        else
+                        {
+                            var id = column == 1 ? style.PrimaryColor : style.SecondaryColor;
+                            var color = GenreColorFromId(id, Color.Gray);
+                            DrawRectangle(bounds, color);
+                            Text(StyleMappingDraft.Colors.FirstOrDefault(choice => choice.Id == id).Label ?? id, bounds, 17, MappingColorText(color));
+                        }
+                    }
                     else
                     {
-                        var id = column == 1 ? style.PrimaryColor : style.SecondaryColor;
-                        var color = GenreColorFromId(id, Color.Gray);
-                        DrawRectangle(bounds, color);
-                        Text(StyleMappingDraft.Colors.FirstOrDefault(choice => choice.Id == id).Label ?? id, bounds, 17, MappingColorText(color));
+                        var swatch = new ScreenRectangle(bounds.X + 4, bounds.Y + 3, bounds.Width - 8,
+                            column == 3 && !mappingKnowledgeComments ? bounds.Height * 0.54 : bounds.Height - 6);
+                        DrawRectangle(swatch, column == 3 ? Color.Black : GenreColorFromId(style.PrimaryColor, Color.Gray));
+                        DrawGenrePattern(swatch, GenrePatternFromId(style.Pattern), column == 3 ? Color.White : GenreColorFromId(style.SecondaryColor, Color.White), column == 3 ? (byte)255 : (byte)180);
+                        if (column == 3 && !mappingKnowledgeComments) Text(StyleMappingDraft.Patterns.FirstOrDefault(choice => choice.Id == style.Pattern).Label ?? style.Pattern,
+                            new(bounds.X, bounds.Y + bounds.Height * 0.58, bounds.Width, bounds.Height * 0.4), 12);
+                    }
+                    if (!plainCell) DrawOutline(bounds, 1, new Color(100, 119, 130));
+                    if (mappingPickerColumn == 0 && mappingFocus < 0 && mappingRow == mappingScroll + row && mappingColumn == column)
+                    {
+                        if (plainCell)
+                            DrawLine(new(bounds.X + 6, bounds.Y + bounds.Height - 7), new(bounds.X + bounds.Width - 6, bounds.Y + bounds.Height - 7), 2, OperationTargetColor);
+                        else DrawOutline(bounds, 2, OperationTargetColor);
                     }
                 }
-                else
-                {
-                    var swatch = new ScreenRectangle(bounds.X + 4, bounds.Y + 3, bounds.Width - 8,
-                        column == 3 && !mappingKnowledgeComments ? bounds.Height * 0.54 : bounds.Height - 6);
-                    DrawRectangle(swatch, column == 3 ? Color.Black : GenreColorFromId(style.PrimaryColor, Color.Gray));
-                    DrawGenrePattern(swatch, GenrePatternFromId(style.Pattern), column == 3 ? Color.White : GenreColorFromId(style.SecondaryColor, Color.White), column == 3 ? (byte)255 : (byte)180);
-                    if (column == 3 && !mappingKnowledgeComments) Text(StyleMappingDraft.Patterns.FirstOrDefault(choice => choice.Id == style.Pattern).Label ?? style.Pattern,
-                        new(bounds.X, bounds.Y + bounds.Height * 0.58, bounds.Width, bounds.Height * 0.4), 12);
-                }
-                if (!plainCell) DrawOutline(bounds, 1, new Color(100, 119, 130));
-                if (mappingPickerColumn == 0 && mappingFocus < 0 && mappingRow == mappingScroll + row && mappingColumn == column)
-                {
-                    if (plainCell)
-                        DrawLine(new(bounds.X + 6, bounds.Y + bounds.Height - 7), new(bounds.X + bounds.Width - 6, bounds.Y + bounds.Height - 7), 2, OperationTargetColor);
-                    else DrawOutline(bounds, 2, OperationTargetColor);
-                }
             }
+            if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
         }
-        if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
         DrawMappingChangeTag();
         if (mappingPickerColumn > 0)
         {
@@ -430,6 +443,7 @@ public sealed partial class VenueEditorGame
         var tooltip = hovered?.Tooltip;
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && CanShowEditorHover && Contains(MappingOverallCommentBounds, new(mouse.X, mouse.Y)))
             tooltip = "全体コメントをクリックして編集します。1000文字以内、空欄で削除できます。";
+        if (GenreChartVisible) tooltip ??= GenrePreviewTooltip(new(mouse.X, mouse.Y));
         if (mappingPickerColumn > 0)
             tooltip ??= "見本をクリックして選択　Tab・矢印：移動　Enter：決定　Esc：キャンセル";
         else if (tooltip is null && mappingDraft is { } draft)

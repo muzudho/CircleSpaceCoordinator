@@ -2059,6 +2059,9 @@ public sealed partial class VenueEditorGame : Game
     {
         if (string.IsNullOrWhiteSpace(genreId))
             return new GenreVisualStyle(new Color(104, 112, 124), Color.White, 1);
+        if (mappingKnowledgeComments && mappingDraft?.Rows.FirstOrDefault(item => item.Key == genreId) is { } preview)
+            return new GenreVisualStyle(GenreColorFromId(preview.PrimaryColor, Color.Gray),
+                GenreColorFromId(preview.SecondaryColor, Color.White), GenrePatternFromId(preview.Pattern));
         var genreIds = workspace?.Project.Participants
             .Select(item => item.GenreId)
             .Where(item => !string.IsNullOrWhiteSpace(item))
@@ -2467,7 +2470,6 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.IslandDefinitionMode,
             ToolbarAction.GenrePlacementMode,
             ToolbarAction.CirclePlacementMode,
-            ToolbarAction.GenreDataMode,
             ToolbarAction.CirclePlacementDecisionMode,
         };
         var commonStart = new[]
@@ -2522,10 +2524,12 @@ public sealed partial class VenueEditorGame : Game
         var visibleModeCount = modeActions.Length - (frameModesCollapsed ? 2 : 0) - (circleModesCollapsed ? 2 : 0);
         var toolbarWidth = Window.ClientBounds.Width > 0 ? Window.ClientBounds.Width : graphics.PreferredBackBufferWidth;
         projectToolbarWidth = toolbarWidth;
-        var modeWidth = Math.Min(158d, Math.Max(44d, (toolbarWidth - 362d) / visibleModeCount));
+        var modeWidth = Math.Min(158d, Math.Max(44d, (toolbarWidth - 492d) / visibleModeCount));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.ProjectMenu,
             new IconButtonModel(new ScreenRectangle(12, 7 + WorkerBarHeight, 142, 40), GetAccessibleName(ToolbarAction.ProjectMenu))));
-        var modeX = 164d;
+        toolbarButtons.Add(new ToolbarButton(ToolbarAction.GenreMenu,
+            new IconButtonModel(new ScreenRectangle(164, 7 + WorkerBarHeight, 120, 40), GetAccessibleName(ToolbarAction.GenreMenu))));
+        var modeX = 294d;
         for (var index = 0; index < modeActions.Length; index++)
         {
             var action = modeActions[index];
@@ -2608,7 +2612,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.ToggleCircleStoneTransparency => ShowCircleHeatmap,
                 ToolbarAction.FillVacantSeats => workspace?.HasSelectedCircleLayout == true && optimizationTask is null && backgroundOperation is null,
                 ToolbarAction.ToggleFrameModes or ToolbarAction.ToggleCircleModes => true,
-                ToolbarAction.ProjectMenu => workspace is not null && optimizationTask is null,
+                ToolbarAction.ProjectMenu or ToolbarAction.GenreMenu => workspace is not null && optimizationTask is null,
                 ToolbarAction.SpaceDefinitionsMode => true,
                 ToolbarAction.DeskMenu or ToolbarAction.PillarMenu or ToolbarAction.VenueSizeMenu => workspace is not null,
                 ToolbarAction.PreviousPlan or ToolbarAction.NextPlan => GetDisplayedPlans().Count > 1,
@@ -2754,8 +2758,11 @@ public sealed partial class VenueEditorGame : Game
             return ChangeEditorMode(EditorMode.GenrePlacement);
         if (action == ToolbarAction.CirclePlacementMode)
             return ChangeEditorMode(EditorMode.CirclePlacement);
-        if (action == ToolbarAction.GenreDataMode)
-            return ChangeEditorMode(EditorMode.GenreData);
+        if (action == ToolbarAction.GenreMenu || action == ToolbarAction.GenreDataMode)
+        {
+            OpenGenreMenu();
+            return (true, "dialog_opened");
+        }
         if (action == ToolbarAction.ImportParticipants)
         {
             OpenParticipantImport();
@@ -3064,6 +3071,8 @@ public sealed partial class VenueEditorGame : Game
                     var foreground = ToButtonColor(color);
                     if (button.Action == ToolbarAction.ProjectMenu)
                         textRenderer?.Draw("プロジェクト ▼", ToRectangle(bounds, 5), foreground, 17, true);
+                    else if (button.Action == ToolbarAction.GenreMenu)
+                        textRenderer?.Draw("ジャンル ▼", ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
                         textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action is ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
@@ -3385,6 +3394,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static string GetAccessibleName(ToolbarAction action) => action switch
     {
+        ToolbarAction.GenreMenu => "ジャンル：色・網掛けとジャンルデータを表示する",
         ToolbarAction.ToggleCircleStoneTransparency => "数値チャンネルで石の塗りを半透明にし、下地の重みを見る（再クリックで戻す）",
         ToolbarAction.FillVacantSeats => "未配置・仮置きのサークル石を、合体ルールを守って空いている配置可能セルへ一括配置する",
         ToolbarAction.ExportFrameLayout => "フレーム配置案を選び、会場・定義と一緒に部分書出しする",
@@ -3997,6 +4007,7 @@ public sealed partial class VenueEditorGame : Game
 internal enum ToolbarAction
 {
     ProjectMenu,
+    GenreMenu,
     ToggleCircleStoneTransparency,
     FillVacantSeats,
     ToggleFrameModes,
