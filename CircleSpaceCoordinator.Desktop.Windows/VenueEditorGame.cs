@@ -1352,7 +1352,9 @@ public sealed partial class VenueEditorGame : Game
         IReadOnlyList<(string GenreId, int Count)> groups,
         int total)
     {
-        var sampleSize = radius > 120d ? 4 : 2;
+        var styles = groups.Select(group => group.GenreId).Distinct(StringComparer.Ordinal)
+            .ToDictionary(id => id, id => GetGenreStyle(id == "（未設定）" ? null : id), StringComparer.Ordinal);
+        var sampleSize = styles.Values.Any(style => DiagonalPattern.IsDiagonal(style.Pattern)) ? 1 : radius > 120d ? 4 : 2;
         for (var offsetY = -(int)radius; offsetY < radius; offsetY += sampleSize)
         for (var offsetX = -(int)radius; offsetX < radius; offsetX += sampleSize)
         {
@@ -1373,7 +1375,7 @@ public sealed partial class VenueEditorGame : Game
                     break;
                 }
             }
-            var style = GetGenreStyle(slice.GenreId == "（未設定）" ? null : slice.GenreId);
+            var style = styles[slice.GenreId];
             if (!GenrePatternUsesSecondary(style.Pattern, offsetX + (int)radius, offsetY + (int)radius))
                 continue;
             var secondary = new Color(style.Secondary.R, style.Secondary.G, style.Secondary.B, (byte)190);
@@ -1383,6 +1385,7 @@ public sealed partial class VenueEditorGame : Game
 
     private static bool GenrePatternUsesSecondary(int pattern, int x, int y)
     {
+        if (DiagonalPattern.IsDiagonal(pattern)) return DiagonalPattern.UsesSecondary(pattern, x, y);
         const int spacing = 10;
         return pattern switch
         {
@@ -2113,6 +2116,24 @@ public sealed partial class VenueEditorGame : Game
             if (right > left && bottom > top)
                 DrawRectangle(new ScreenRectangle(left, top, right - left, bottom - top), color);
         }
+        if (DiagonalPattern.IsDiagonal(pattern))
+        {
+            for (var y = 0; y < bounds.Height; y++)
+            {
+                var start = -1;
+                for (var x = 0; x <= Math.Ceiling(bounds.Width); x++)
+                {
+                    var filled = x < bounds.Width && DiagonalPattern.UsesSecondary(pattern, x, y);
+                    if (filled && start < 0) start = x;
+                    if (!filled && start >= 0)
+                    {
+                        FillPattern(new(bounds.X + start, bounds.Y + y, x - start, 1), mark);
+                        start = -1;
+                    }
+                }
+            }
+            return;
+        }
         if (type is 0 or 3)
         {
             for (var y = bounds.Y + spacing / 2d; y < bounds.Y + bounds.Height; y += spacing)
@@ -2186,7 +2207,7 @@ public sealed partial class VenueEditorGame : Game
         "uniform-horizontal" => 5,
         "dots" => 6,
         "checkerboard" => 7,
-        _ => 0,
+        _ => DiagonalPattern.FromId(id),
     };
 
     private void DrawOffscreenParticipants()

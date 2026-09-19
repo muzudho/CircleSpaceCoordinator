@@ -24,6 +24,7 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Diagonal patterns preserve orientation, widths, diamonds and persisted identifiers", DiagonalPatterns),
             ("Genre knowledge comments preserve Unicode, enforce limits and restore opening drafts", GenreKnowledgeComments),
             ("Change tag input validates Unicode, prevents empty exits, scrolls and retains failed saves", ChangeTagEditing),
             ("Change tags and appearance packages survive gRPC, JSON, providers, imports and undo", ChangeTagPackageRoundTrip),

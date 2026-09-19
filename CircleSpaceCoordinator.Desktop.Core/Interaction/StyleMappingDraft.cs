@@ -23,6 +23,10 @@ public sealed class StyleMappingDraft
         ("solid", "単色"), ("horizontal", "（太細）横縞"), ("vertical", "（太細）縦縞"),
         ("thick-grid", "（太細）格子"), ("checkerboard", "市松模様"), ("grid", "格子"),
         ("uniform-horizontal", "（均等）横縞"), ("dots", "水玉"),
+        ("diagonal-up", "（太細）右肩上がり"), ("uniform-diagonal-up", "（等幅）右肩上がり"),
+        ("diagonal-down", "（太細）右肩下がり"), ("uniform-diagonal-down", "（等幅）右肩下がり"),
+        ("diagonal-grid", "（太細）斜め格子"), ("uniform-diagonal-grid", "（等幅）斜め格子"),
+        ("diamond", "ダイヤ"),
     });
     private readonly List<StyleMappingEntry> rows;
     private readonly StyleMappingEntry[] initialRows;

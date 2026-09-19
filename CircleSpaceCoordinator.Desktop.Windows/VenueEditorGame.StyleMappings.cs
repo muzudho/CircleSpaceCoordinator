@@ -214,7 +214,7 @@ public sealed partial class VenueEditorGame
             var choices = column == 3 ? StyleMappingDraft.Patterns : StyleMappingDraft.Colors;
             var columns = column == 3 ? 4 : 5;
             var width = (840d - (columns - 1) * 12) / columns;
-            var height = column == 3 ? 130 : 76;
+            var height = column == 3 ? (308d - 12 * ((choices.Count + columns - 1) / columns - 1)) / ((choices.Count + columns - 1) / columns) : 76;
             for (var index = 0; index < choices.Count; index++)
             {
                 var choice = choices[index];
@@ -223,7 +223,9 @@ public sealed partial class VenueEditorGame
                     if (column == 3) draft.SetPattern(row, choice.Id);
                     else draft.SetColor(row, column == 1, choice.Id);
                     CloseMappingPicker();
-                }, color: column == 3 ? null : choice.Id, pattern: column == 3 ? choice.Id : null);
+                }, color: column == 3 ? null : choice.Id, pattern: column == 3 ? choice.Id : null,
+                    tooltip: choice.Id.Contains("diagonal-up", StringComparison.Ordinal) ? "／ 右肩上がり斜線（バロック・ダイアゴナル）"
+                        : choice.Id.Contains("diagonal-down", StringComparison.Ordinal) ? "＼ 右肩下がり斜線（シニスター・ダイアゴナル）" : null);
             }
             if (column != 3)
                 Add("任意の色（#RRGGBB）", MappingBounds(80, 500, 340, 40), () =>
