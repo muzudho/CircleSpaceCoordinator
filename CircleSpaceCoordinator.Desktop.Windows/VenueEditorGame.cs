@@ -61,6 +61,7 @@ public sealed partial class VenueEditorGame : Game
     private ParticipantPlacementController? participantController;
     private readonly IOperationLogger operationLogger;
     private readonly PerformanceRecorder? performance;
+    private StartupTiming? startupTiming;
     private long screenshotRequestedAt;
     private ApplicationSettingsService? settings;
     private string? projectSavePath;
@@ -163,15 +164,24 @@ public sealed partial class VenueEditorGame : Game
         base.Initialize();
         if (startEngines)
         {
-            RunBackground("エンジンの起動", () => ownedEngineRuntime = EngineRuntime.StartAsync(AppContext.BaseDirectory).GetAwaiter().GetResult(), runtime =>
+            if (performance is not null) startupTiming = new StartupTiming(performance);
+            RunBackground("エンジンの起動", () => ownedEngineRuntime = EngineRuntime.StartAsync(AppContext.BaseDirectory,
+                startupTiming: (name, milliseconds) => startupTiming?.Record(name, milliseconds)).GetAwaiter().GetResult(), runtime =>
             {
+                var readyStarted = System.Diagnostics.Stopwatch.GetTimestamp();
                 EditorConnection.Current = runtime.Connection;
                 RefreshEventProjects(this.settings?.Current.LastProjectPath);
                 modalDialog = null;
                 modalButtons.Clear();
                 modalInputDrain = true;
                 if (projectSavePath is { } path) { projectSavePath = null; OpenEventProject(path); }
-            }, exception => OpenModal(new ModalDialogModel(ModalDialogKind.Message, "エンジンの起動に失敗しました", exception.Message), _ => Exit()), eventStartupOverlay: true);
+                startupTiming?.Record("ui_ready", System.Diagnostics.Stopwatch.GetElapsedTime(readyStarted).TotalMilliseconds);
+            }, exception =>
+            {
+                startupTiming?.Complete(false);
+                startupTiming = null;
+                OpenModal(new ModalDialogModel(ModalDialogKind.Message, "エンジンの起動に失敗しました", exception.Message), _ => Exit());
+            }, eventStartupOverlay: true);
         }
     }
 
@@ -881,6 +891,11 @@ public sealed partial class VenueEditorGame : Game
         DrawWorkerBar();
         using (performance?.Measure("draw_submit")) spriteBatch.End();
         RecordTextFrameSubmitted();
+        if (startupTiming is { } startup)
+        {
+            if (eventStartupLoading) startup.SpinnerFrameSubmitted();
+            else { startup.Complete(true); startupTiming = null; }
+        }
 
         if (screenshotRequested)
         {

@@ -12,25 +12,34 @@ public sealed class EngineRuntime : IDisposable
     private readonly string readyDirectory = Path.Combine(Path.GetTempPath(), $"circle-space-{Guid.NewGuid():N}");
     public EditorConnection Connection { get; private set; } = null!;
 
-    public static async Task<EngineRuntime> StartAsync(string baseDirectory, string? stateDirectory = null)
+    public static async Task<EngineRuntime> StartAsync(string baseDirectory, string? stateDirectory = null,
+        Action<string, double>? startupTiming = null)
     {
         var runtime = new EngineRuntime();
         Directory.CreateDirectory(runtime.readyDirectory);
         try
         {
+            var stage = Stopwatch.GetTimestamp();
             var thinkingAddress = await runtime.StartEngine(baseDirectory, "thinking", "CircleSpaceCoordinator.ThinkingEngine", []);
+            startupTiming?.Invoke("thinking_process_ready", Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
+            stage = Stopwatch.GetTimestamp();
             using (var channel = GrpcChannel.ForAddress(thinkingAddress))
             {
                 var info = await new Thinking.ThinkingClient(channel).DescribeAsync(new Empty(), EditorConnection.Deadline());
                 if (info.ApiMajor != 1) throw new InvalidOperationException("Unsupported thinking API version.");
             }
+            startupTiming?.Invoke("thinking_rpc_handshake", Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
+            stage = Stopwatch.GetTimestamp();
             stateDirectory ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "CircleSpaceCoordinator", "EngineSessions");
             var address = await runtime.StartEngine(baseDirectory, "editor", "CircleSpaceCoordinator.EditorEngine",
                 ["--thinking-address", thinkingAddress, "--state-directory", stateDirectory]);
+            startupTiming?.Invoke("editor_process_ready", Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
+            stage = Stopwatch.GetTimestamp();
             runtime.Connection = new EditorConnection(address);
             var editor = await runtime.Connection.Client.DescribeAsync(new Empty(), EditorConnection.Deadline());
             if (editor.ApiMajor != 1) throw new InvalidOperationException("Unsupported editor API version.");
+            startupTiming?.Invoke("editor_rpc_handshake", Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
             return runtime;
         }
         catch { runtime.Dispose(); throw; }

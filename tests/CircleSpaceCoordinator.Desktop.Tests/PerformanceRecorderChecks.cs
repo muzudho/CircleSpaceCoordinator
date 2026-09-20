@@ -5,6 +5,34 @@ using CircleSpaceCoordinator.Desktop.Core.Logging;
 
 internal static partial class Program
 {
+    private static void StartupRecording()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "csc-startup-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "startup.jsonl");
+        try
+        {
+            using (var recorder = new PerformanceRecorder(path))
+            {
+                var startup = new StartupTiming(recorder);
+                startup.SpinnerFrameSubmitted();
+                var stage = System.Diagnostics.Stopwatch.GetTimestamp();
+                startup.Record("thinking_process_ready", System.Diagnostics.Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
+                startup.Complete(true);
+                startup.Complete(true);
+            }
+            var summaries = File.ReadAllLines(path).Where(line => line.Contains("\"kind\":\"startup_summary\"", StringComparison.Ordinal)).ToArray();
+            AssertEqual(1, summaries.Length);
+            using var doc = JsonDocument.Parse(summaries.Single());
+            var root = doc.RootElement;
+            AssertEqual(true, root.GetProperty("success").GetBoolean());
+            var stages = root.GetProperty("stages").EnumerateArray().ToArray();
+            AssertEqual(true, Math.Abs(stages.Sum(item => item.GetProperty("percent").GetDouble()) - 100) < .001);
+            AssertEqual(true, Math.Abs(stages.Sum(item => item.GetProperty("milliseconds").GetDouble()) - root.GetProperty("totalMs").GetDouble()) < .001);
+            AssertEqual(true, root.GetProperty("firstSpinnerFrameMs").GetDouble() <= root.GetProperty("totalMs").GetDouble());
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+    }
+
     private static void PerformanceRecording()
     {
         var directory = Path.Combine(Path.GetTempPath(), "csc-performance-" + Guid.NewGuid().ToString("N"));

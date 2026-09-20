@@ -56,6 +56,11 @@ public sealed class PerformanceRecorder : IDisposable
         }
     }
 
+    public void WriteStartupEntry(object entry)
+    {
+        if (!queue.Writer.TryWrite(entry)) Interlocked.Increment(ref dropped);
+    }
+
     public readonly struct Scope(PerformanceRecorder owner, string name, long start, string previous, long previousStart) : IDisposable
     {
         public void Dispose()
