@@ -50,7 +50,7 @@ public sealed partial class VenueEditorGame
             WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight - MappingCanvasHeight * scale) / 2 + y * scale, width * scale, height * scale);
     }
     private ScreenRectangle MappingCell(int visibleRow, int column) =>
-        MappingBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46);
+        MappingGridBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46);
 
     /// <summary>Opens the shared editor; the caller owns persistence and undo.</summary>
     private void OpenStyleMappingEditor(StyleMappingDraft draft, string keyLabel, string emptyMessage,
@@ -60,6 +60,7 @@ public sealed partial class VenueEditorGame
         mappingDraft = draft;
         mappingKnowledgeComments = knowledgeComments;
         genrePageTab = genrePreviewScroll = 0;
+        genreGridLayoutMode = GenreGridLayoutMode.FullWidth;
         selectedGenreKey = null;
         genrePieExpanded = false;
         mappingKeyLabel = keyLabel;
@@ -281,6 +282,7 @@ public sealed partial class VenueEditorGame
         else
         {
             if (mappingKnowledgeComments) AddGenreTabs();
+            AddGenreGridLayoutButton();
             if (mappingKnowledgeComments)
             {
                 Add("表を書き出し", MappingBounds(20, 606, 200, 34), () =>
@@ -298,10 +300,17 @@ public sealed partial class VenueEditorGame
             }
             if (!mappingKnowledgeComments || genrePageTab != 1)
             {
-                Add("前のページ", MappingBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
+                Add(GenreGridSplit ? "前へ" : "前のページ", MappingGridBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
                     tooltip: "前のページの行を表示します。PageUpでも移動できます。");
-                Add("次のページ", MappingBounds(192, 460, 160, 32), () => ScrollGenreOrMapping(MappingVisibleRows), GenreChartVisible ? genrePreviewScroll + GenrePreviewPageSize < BuildGenrePreviewGroups().Count : mappingScroll + MappingVisibleRows < draft.Rows.Count,
+                Add(GenreGridSplit ? "次へ" : "次のページ", MappingGridBounds(192, 460, 160, 32), () => ScrollGenreOrMapping(MappingVisibleRows), GenreChartVisible ? genrePreviewScroll + GenrePreviewPageSize < BuildGenrePreviewGroups().Count : mappingScroll + MappingVisibleRows < draft.Rows.Count,
                     tooltip: "次のページの行を表示します。PageDownでも移動できます。");
+            }
+            if (GenreGridSplit)
+            {
+                Add("前へ", MappingGridBounds(20, 460, 160, 32, right: true), () => { }, enabled: false,
+                    tooltip: "パッケージのジャンルコード表は未選択です。");
+                Add("次へ", MappingGridBounds(192, 460, 160, 32, right: true), () => { }, enabled: false,
+                    tooltip: "パッケージのジャンルコード表は未選択です。");
             }
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
@@ -397,7 +406,8 @@ public sealed partial class VenueEditorGame
             else if (mappingFocus >= 0 && mappingEditorButtons[mappingFocus].Button.IsEnabled) mappingEditorButtons[mappingFocus].Execute();
             return;
         }
-        if (mappingPickerColumn == 0 && mouse.ScrollWheelValue != previousMouse.ScrollWheelValue)
+        if (mappingPickerColumn == 0 && mouse.ScrollWheelValue != previousMouse.ScrollWheelValue &&
+            (!GenreGridSplit || Contains(MappingGridBounds(20, 102, 960, 390), new(mouse.X, mouse.Y))))
         {
             ScrollGenreOrMapping(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue) * 3);
             BuildMappingEditorButtons();
@@ -463,11 +473,11 @@ public sealed partial class VenueEditorGame
         else
         {
             var headers = mappingKnowledgeComments
-                ? new[] { "並び順", "ジャンル", "太線色", "細線色", "網掛け", "見本", "コメント" }
+                ? new[] { GenreGridSplit ? "順" : "並び順", "ジャンル", "太線色", "細線色", "網掛け", "見本", "コメント" }
                 : new[] { mappingKeyLabel, "太線色", "細線色", "網掛け（白黒見本）", "配色の見本" };
-            DrawRectangle(MappingBounds(20, 102, 960, 34), new Color(48, 65, 77));
+            DrawRectangle(MappingGridBounds(20, 102, 960, 34), new Color(48, 65, 77));
             for (var column = 0; column < headers.Length; column++)
-                Text(headers[column], MappingBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30));
+                Text(headers[column], MappingGridBounds(MappingColumnEdges[column], 104, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 30), GenreGridSplit ? 13 : 17);
             for (var row = 0; row < MappingVisibleRows && mappingScroll + row < draft.Rows.Count; row++)
             {
                 var style = draft.Rows[mappingScroll + row];
@@ -518,9 +528,10 @@ public sealed partial class VenueEditorGame
                     }
                 }
                 if (mappingKnowledgeComments && style.Key == selectedGenreKey)
-                    DrawOutline(MappingBounds(20, 142 + row * 52, 960, 46), 2 * MappingEditorScale, OperationTargetColor);
+                    DrawOutline(MappingGridBounds(20, 142 + row * 52, 960, 46), 2 * MappingEditorScale, OperationTargetColor);
             }
-            if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingBounds(20, 142, 960, 46));
+            if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingGridBounds(20, 142, 960, 46));
+            if (GenreGridSplit) DrawEmptyPackageGenreGrid();
         }
         DrawMappingChangeTag();
         if (mappingPickerColumn > 0)
@@ -538,7 +549,11 @@ public sealed partial class VenueEditorGame
             OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),
-                (area, color) => { if (item.ColorId is null && item.PatternId is null) Text(button.AccessibleName, area, 17, ToButtonColor(color)); });
+                (area, color) =>
+                {
+                    if (button.AccessibleName == GenreGridLayoutButtonName) DrawGenreGridShip(area, ToButtonColor(color));
+                    else if (item.ColorId is null && item.PatternId is null) Text(button.AccessibleName, area, 17, ToButtonColor(color));
+                });
             var bounds = button.Bounds;
             if (item.ColorId is { } colorId)
             {
