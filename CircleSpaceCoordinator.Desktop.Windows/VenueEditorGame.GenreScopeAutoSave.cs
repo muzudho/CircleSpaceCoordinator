@@ -219,7 +219,7 @@ public sealed partial class VenueEditorGame
         mappingWidth = -1;
         mappingFocus = -1;
         SyncMappingChangeTag();
-        genreCloseAfterDiscard = !GenreScopeChanged;
+        genreCloseAfterDiscard = project && !GenreScopeChanged;
     }
 
     private void DrawGenreScopeAutoSave(int width, int top)

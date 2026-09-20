@@ -320,18 +320,12 @@ public sealed partial class VenueEditorGame
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
             if (mappingKnowledgeComments)
             {
-                if (packageChangeTag?.HasChanges == true)
-                    Add("入力・編集", GenreTagButtonBounds(right: true, edit: true), OpenPackageChangeComment,
-                        tooltip: "パッケージへの変更コメントを入力・編集します。");
-                if (mappingChangeTag?.HasChanges == true)
-                    Add("入力・編集", GenreTagButtonBounds(right: false, edit: true), OpenProjectChangeComment,
-                        tooltip: "プロジェクトへの変更コメントを入力・編集します。");
                 if (GenreProjectChanged)
                     Add("プロジェクトへの変更を破棄", GenreTagButtonBounds(right: false), () => DiscardGenreSide(project: true),
                         tooltip: "プロジェクトを編集開始時点へ戻し、自動保存します。パッケージの変更は残します。");
                 if (GenrePackageChanged)
                     Add("パッケージへの変更を破棄", GenreTagButtonBounds(right: true), () => DiscardGenreSide(project: false),
-                        tooltip: "読み込み時点のパッケージへ戻し、自動保存します。プロジェクトの変更は残します。");
+                        tooltip: "読み込み時点のパッケージへ戻し、自動保存します。この画面で作業を続けられます。");
             }
             else if (hasChanges)
                 Add("破棄", MappingDiscardBounds, DiscardStyleMapping,

@@ -25,12 +25,12 @@ public sealed partial class VenueEditorGame
         var width = GenreTagsSplit ? (total - gap) / 2 : total;
         return new(margin + (right ? width + gap : 0), vertical.Y, width, vertical.Height);
     }
-    private ScreenRectangle GenreTagButtonBounds(bool right, bool edit = false)
+    private ScreenRectangle GenreTagButtonBounds(bool right)
     {
         var tag = GenreTagBounds(right);
         var scale = MappingEditorScale;
-        var width = Math.Min((edit ? 140 : 310) * scale, tag.Width * (edit ? .28 : .68));
-        return new(edit ? tag.X + tag.Width - width : tag.X, MappingBounds(20, 644, 960, 30).Y, width, 30 * scale);
+        var width = Math.Min(310 * scale, tag.Width * .68);
+        return new(tag.X, MappingBounds(20, 644, 960, 30).Y, width, 30 * scale);
     }
     private ScreenRectangle PackageLogBounds => ChangeTagEditorView.GetInputBounds(GenreTagBounds(true), MappingEditorScale, 16);
     private bool MappingCommentsCanClose => mappingChangeTag?.CanClose == true &&
