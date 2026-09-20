@@ -24,6 +24,7 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Genre autosave restores package bytes, rejects stale writes and finalizes project credits", GenreAutoSaveRestoration),
             ("Genre copies preserve all fields, reject collisions and invalid overwrites, and discard cleanly", GenreCopyRows),
             ("Package reader filters files, lists genre tables and clears stale selections on errors", PackageReaderSelection),
             ("Genre table diff trades both sides atomically, preserves package items and rejects stale saves", GenreTableDiffTradesAndPersistence),

@@ -74,4 +74,5 @@ public sealed class ChangeTagEditor(Func<string, string?> validate)
         return true;
     }
     public void SaveFailed(string message) { IsSaving = false; SaveError = message; }
+    public void SaveSucceeded() { IsSaving = false; SaveError = null; }
 }

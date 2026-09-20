@@ -29,6 +29,7 @@ public sealed partial class VenueEditorGame
 
     private void UpdateAutoSave()
     {
+        UpdateGenreScopeAutoSave();
         if (workspace is null || projectSavePath is null) return;
         if (!ReferenceEquals(autoSaveOwner, workspace)) InitializeAutoSave();
         var state = (workspace.Revision, viewport.Zoom, viewport.Origin.X, viewport.Origin.Y);
@@ -45,6 +46,7 @@ public sealed partial class VenueEditorGame
     private void DrawAutoSaveStatus(int width, int top)
     {
         if (workspace is null) return;
+        if (mappingKnowledgeComments && mappingDraft is not null) { DrawGenreScopeAutoSave(width, top); return; }
         textRenderer?.Draw(AutoSaveLabel, new Rectangle(Math.Max(0, width - 260), top + 5, 246, 23),
             autoSaveError is null ? new Color(160, 220, 195) : Color.OrangeRed, 14, true);
     }

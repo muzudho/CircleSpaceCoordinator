@@ -23,6 +23,8 @@ public sealed partial class VenueEditorGame
                 new GenreStyleDefinition(style.Key, style.PrimaryColor, style.SecondaryColor, style.Pattern)
                     { KnowledgeComment = style.KnowledgeComment }).ToArray())
                 { ChangeLog = log, ActorHandle = handle, WorkDate = date,
+                    UpdateCredits = true,
+                    Credits = GenreProjectChanged ? (mappingPreviousCredits ?? new PersonCredits()).WrittenBy(handle, date, log) : mappingPreviousCredits,
                     GenreCodeTableName = mappingGenreCodeTableName,
                     UpdateOverallComment = true, OverallComment = draft.Mapping.OverallComment,
                     GenreCodeOrder = mappingGenreCodeOrder,

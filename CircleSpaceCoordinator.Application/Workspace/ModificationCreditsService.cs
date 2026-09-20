@@ -9,6 +9,11 @@ public static class ModificationCreditsService
 {
     public static CircleSpaceProject Apply(CircleSpaceProject before, CircleSpaceProject after, EditorOperation operation)
     {
+        if (operation is SetGenreStyles { UpdateCredits: true } genre)
+        {
+            genre.Credits?.Validate();
+            return after with { GenreStyleCredits = genre.Credits };
+        }
         if (string.IsNullOrWhiteSpace(operation.ActorHandle) || operation is ImportPortableSelection or ImportFrameLayout or RecordPortableProviders)
             return after;
         return Apply(before, after, operation.ActorHandle, operation.WorkDate, operation.ChangeLog);

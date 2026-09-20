@@ -139,6 +139,8 @@ public sealed record PlanCatalogServiceAddOptimizedPlan(Plan optimizedPlan, stri
 public sealed record PlanCatalogServiceCopyDeskLayout(string sourcePlanId, string destinationPlanId) : EditorOperation;
 public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) : EditorOperation
 {
+    public bool UpdateCredits { get; init; }
+    public PersonCredits? Credits { get; init; }
     public bool MarkConfidential { get; init; }
     public string? GenreCodeTableName { get; init; }
     public IReadOnlyList<string>? GenreCodeOrder { get; init; }

@@ -71,6 +71,7 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release --no-buil
 | [申込スペース・フレーム定義](設計/申込スペース/README.md) | 型・割当区画・申込区分、モード構成の案と未決定事項の引継ぎ |
 | [素材](素材/) | 開発に関する素材 |
 | [Architecture](architecture.md) | アプリケーションの構成と責務 |
+| [オートセーブの仕組み](設計/オートセーブの仕組み.md) | プロジェクト・パッケージの保存タイマー、変更タグ、左右別破棄と復元 |
 | [ヘッドレスエンジンと gRPC](設計/ヘッドレスエンジンとgRPC.md) | ３つの責務、API、起動例、GUI の移行計画 |
 | [情報点検と残作業](public-release-review.md) | 公開に向けた点検記録 |
 

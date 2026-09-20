@@ -19,11 +19,27 @@ public sealed partial class VenueEditorGame
 
     private void OpenPackageReadDialog()
     {
+        genreCloseAfterDiscard = false;
+        if (GenrePackageChanged)
+        {
+            SyncMappingChangeTag();
+            if (mappingChangeTag?.CanClose != true)
+            {
+                ShowInAppMessage("パッケージの変更が残っています", "変更コメントを書いてから別の表を読み込むか、［パッケージへの変更を破棄］で元に戻してください。");
+                return;
+            }
+            if (!SaveGenreScope()) return;
+        }
+        if (GenreSavePending && !SaveGenreScope()) return;
         SetMappingTextFocus(false);
         OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "パッケージ読込", ""), action =>
         {
-            if (action == ModalDialogAction.Accept && packageReadDialog is { CanRead: true } selection)
+            if (action == ModalDialogAction.Accept && packageReadDialog is { CanRead: true, SelectedJson: not null, SelectedPackage: not null } selection)
+            {
                 ShowPackageGenreTable(selection.Tables[selection.TableIndex]);
+                AttachPackageGenreSaveSession(selection.Files[selection.FileIndex], selection.SelectedJson,
+                    selection.SelectedPackage, selection.Tables[selection.TableIndex]);
+            }
             packageReadDialog = null;
         }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
         packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json));

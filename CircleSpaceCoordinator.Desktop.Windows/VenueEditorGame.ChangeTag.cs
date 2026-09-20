@@ -33,7 +33,7 @@ public sealed partial class VenueEditorGame
 
     private void SyncMappingChangeTag()
     {
-        if (mappingChangeTag is not null) mappingChangeTag.HasChanges = mappingDraft?.HasChanges == true || mappingOrderChanged || MappingTableNameChanged;
+        if (mappingChangeTag is not null) mappingChangeTag.HasChanges = mappingKnowledgeComments ? GenreScopeChanged : mappingDraft?.HasChanges == true || mappingOrderChanged || MappingTableNameChanged;
     }
 
     private void SetMappingTextFocus(bool focused)

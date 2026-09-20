@@ -40,7 +40,7 @@ public sealed partial class VenueEditorGame
     private static readonly double[] DefaultMappingColumnEdges = [20, 290, 450, 610, 810, 980];
     private double[] GenreMappingColumnEdges => [20, 20 + Math.Max(48, Math.Max(mappingDraft?.Rows.Count ?? 1, mappingGenreCodeOrder.Length).ToString().Length * 16 + 16), 250, 330, 410, 490, 570, 980];
     private double[] MappingColumnEdges => mappingKnowledgeComments ? GenreMappingColumnEdges : DefaultMappingColumnEdges;
-    private double MappingCanvasHeight => 660d;
+    private double MappingCanvasHeight => mappingKnowledgeComments ? 690d : 660d;
     private bool GenreChartVisible => mappingKnowledgeComments && genrePageTab > 0;
     private double MappingEditorScale => Math.Max(0.1, Math.Min(GraphicsDevice.Viewport.Width / 1000d, (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight) / MappingCanvasHeight));
     private ScreenRectangle MappingBounds(double x, double y, double width, double height)
@@ -80,6 +80,7 @@ public sealed partial class VenueEditorGame
         mappingAppliedGenreOrderComment = mappingGenreCodeOrderComment;
         mappingOrderChanged = false;
         mappingRow = mappingScroll = mappingPickerColumn = 0;
+        if (knowledgeComments) InitializeGenreScopeAutoSave();
         mappingColumn = knowledgeComments ? 2 : 1;
         mappingFocus = -1;
         mappingWidth = -1;
@@ -117,6 +118,13 @@ public sealed partial class VenueEditorGame
 
     private bool TryExitStyleMapping()
     {
+        if (mappingDraft is not null && mappingKnowledgeComments)
+        {
+            SyncMappingChangeTag();
+            if (mappingComposition.Length == 0 && mappingChangeTag?.CanClose == true) return FinishGenreScope();
+            SetMappingTextFocus(true);
+            return false;
+        }
         if (mappingExitConfirmationOpen) return false;
         SyncMappingChangeTag();
         if (mappingDraft?.HasChanges != true && !mappingOrderChanged && !MappingTableNameChanged ||
@@ -142,6 +150,7 @@ public sealed partial class VenueEditorGame
     private bool TryFinishStyleMapping()
     {
         if (mappingDraft is null || applyStyleMapping is null) return true;
+        if (mappingKnowledgeComments) return FinishGenreScope();
         if (mappingComposition.Length > 0) return false;
         SyncMappingChangeTag();
         if (mappingChangeTag is null) return false;
@@ -232,11 +241,14 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not { } draft) return;
         SyncMappingChangeTag();
-        var hasChanges = draft.HasChanges || mappingOrderChanged || MappingTableNameChanged;
+        var hasChanges = mappingKnowledgeComments ? GenreScopeChanged : draft.HasChanges || mappingOrderChanged || MappingTableNameChanged;
         if (mappingPickerColumn == 0 && mappingEditorButtons.FirstOrDefault(item => item.Button.AccessibleName == "閉じる") is { } close)
             close.Button.IsEnabled = mappingChangeTag?.CanClose == true && mappingComposition.Length == 0;
         if (mappingWidth == GraphicsDevice.Viewport.Width && mappingHeight == GraphicsDevice.Viewport.Height &&
-            (mappingPickerColumn > 0 || mappingButtonsHaveChanges == hasChanges)) return;
+            (mappingPickerColumn > 0 || mappingButtonsHaveChanges == hasChanges &&
+                (!mappingKnowledgeComments || genreButtonsProjectChanged == GenreProjectChanged && genreButtonsPackageChanged == GenrePackageChanged))) return;
+        genreButtonsProjectChanged = GenreProjectChanged;
+        genreButtonsPackageChanged = GenrePackageChanged;
         mappingButtonsHaveChanges = hasChanges;
         mappingWidth = GraphicsDevice.Viewport.Width;
         mappingHeight = GraphicsDevice.Viewport.Height;
@@ -320,7 +332,16 @@ public sealed partial class VenueEditorGame
             }
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
-            if (hasChanges)
+            if (mappingKnowledgeComments)
+            {
+                if (GenreProjectChanged)
+                    Add("プロジェクトへの変更を破棄", MappingBounds(20, 644, 310, 30), () => DiscardGenreSide(project: true),
+                        tooltip: "プロジェクトを編集開始時点へ戻し、自動保存します。パッケージの変更は残します。");
+                if (GenrePackageChanged)
+                    Add("パッケージへの変更を破棄", MappingBounds(342, 644, 310, 30), () => DiscardGenreSide(project: false),
+                        tooltip: "読み込み時点のパッケージへ戻し、自動保存します。プロジェクトの変更は残します。");
+            }
+            else if (hasChanges)
                 Add("破棄", MappingDiscardBounds, DiscardStyleMapping,
                     tooltip: "変更を元に戻して、前のページに戻ります。");
         }
