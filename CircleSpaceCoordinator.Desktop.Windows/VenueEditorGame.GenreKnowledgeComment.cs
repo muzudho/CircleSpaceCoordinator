@@ -34,9 +34,9 @@ public sealed partial class VenueEditorGame
         void Label(string text, ScreenRectangle area) => textRenderer?.Draw(text,
             ToRectangle(new(area.X, area.Y + 3, area.Width, area.Height - 9)), Color.White, size);
         Label("表名：", bounds.NameLabel);
-        DrawGenreKnowledgeComment(name, bounds.Name, "表名", editable);
+        DrawGenreKnowledgeComment(name, bounds.Name, "表名", editable, truncationMarker: "");
         Label("コメント：", bounds.CommentLabel);
-        DrawGenreKnowledgeComment(comment, bounds.Comment, "コメント", editable);
+        DrawGenreKnowledgeComment(comment, bounds.Comment, "コメント", editable, truncationMarker: "");
     }
 
     private void OpenMappingOverallComment()
@@ -72,7 +72,8 @@ public sealed partial class VenueEditorGame
             maxLength: int.MaxValue, allowEmpty: true, validate: ValidateGenreComment);
     }
 
-    private void DrawGenreKnowledgeComment(string? comment, ScreenRectangle bounds, string placeholder = "コメントを入力", bool editable = true)
+    private void DrawGenreKnowledgeComment(string? comment, ScreenRectangle bounds, string placeholder = "コメントを入力", bool editable = true,
+        string truncationMarker = "［］")
     {
         var size = Math.Max(10, (int)(14 * MappingEditorScale));
         var badge = ActionBadgeComponent.Create("EDIT", new Rectangle(0, 0,
@@ -82,7 +83,7 @@ public sealed partial class VenueEditorGame
         if (hovered) badge.Show();
         var value = string.IsNullOrEmpty(comment) ? placeholder : comment;
         var available = Math.Max(1, badge.Bounds.X * MappingEditorScale - 12);
-        var suffix = (textRenderer?.Measure(value, size).X ?? 0) > available ? "［］" : "";
+        var suffix = (textRenderer?.Measure(value, size).X ?? 0) > available ? truncationMarker : "";
         // Truncate the preview, never the stored text or a Unicode text element.
         var boundaries = System.Globalization.StringInfo.ParseCombiningCharacters(value).Append(value.Length).ToArray();
         var lo = 0;
