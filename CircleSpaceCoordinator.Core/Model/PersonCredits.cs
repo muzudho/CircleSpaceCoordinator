@@ -13,19 +13,26 @@ public sealed record PersonCredits(string? Author = null, string? Modifier = nul
 
     public static string NormalizeChangeLog(string value)
     {
+        if (GetChangeLogValidationError(value) is { } error) throw new ArgumentException(error);
+        return value.Trim();
+    }
+
+    /// <summary>Validate incomplete editor input without throwing on each UI frame.</summary>
+    public static string? GetChangeLogValidationError(string value)
+    {
         // Validate before trimming so pasted newlines are not silently accepted.
         var remaining = value.AsSpan();
         while (!remaining.IsEmpty)
         {
             if (System.Text.Rune.DecodeFromUtf16(remaining, out var rune, out var used) != System.Buffers.OperationStatus.Done ||
                 System.Text.Rune.IsControl(rune) || rune.Value is 0x2028 or 0x2029)
-                throw new ArgumentException("改行・制御文字を含まない１行で入力してください。");
+                return "改行・制御文字を含まない１行で入力してください。";
             remaining = remaining[used..];
         }
         value = value.Trim();
         if (value.Length == 0 || value.EnumerateRunes().Count() > MaximumChangeLogLength)
-            throw new ArgumentException("変更内容を1〜1000文字で入力してください。");
-        return value;
+            return "変更内容を1〜1000文字で入力してください。";
+        return null;
     }
     public const int MaximumHandleLength = 16;
 

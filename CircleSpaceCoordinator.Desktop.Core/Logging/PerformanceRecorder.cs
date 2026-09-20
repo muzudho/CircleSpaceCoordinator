@@ -83,6 +83,7 @@ public sealed class PerformanceRecorder : IDisposable
             var sample = new
             {
                 timestampUtc = DateTimeOffset.UtcNow,
+                debuggerAttached = Debugger.IsAttached,
                 context = Volatile.Read(ref context), phase = activePhase,
                 phaseMs = activePhase == "idle" ? 0 : Stopwatch.GetElapsedTime(Interlocked.Read(ref phaseStarted)).TotalMilliseconds,
                 uiHeartbeatAgeMs = Stopwatch.GetElapsedTime(Interlocked.Read(ref heartbeat)).TotalMilliseconds,

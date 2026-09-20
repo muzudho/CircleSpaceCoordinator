@@ -22,9 +22,9 @@ public sealed partial class VenueEditorGame
 
     private string? ValidateMappingChangeLog(string value)
     {
+        if (PersonCredits.GetChangeLogValidationError(value) is { } error) return error;
         try
         {
-            PersonCredits.NormalizeChangeLog(value);
             if (PersonCredits.NormalizeHandle(Handle).Length == 0) return "画面上部で作業者を設定してください。";
             return null;
         }

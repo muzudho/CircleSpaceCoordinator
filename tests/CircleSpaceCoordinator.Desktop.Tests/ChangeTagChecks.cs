@@ -11,11 +11,27 @@ internal static partial class Program
 {
     private static void ChangeTagEditing()
     {
-        string? Validate(string value)
+        string? Validate(string value) => PersonCredits.GetChangeLogValidationError(value);
+        var validationExceptions = 0;
+        var ownerThread = Environment.CurrentManagedThreadId;
+        void OnException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs args)
         {
-            try { PersonCredits.NormalizeChangeLog(value); return null; }
-            catch (ArgumentException ex) { return ex.Message; }
+            if (Environment.CurrentManagedThreadId == ownerThread) validationExceptions++;
         }
+        AppDomain.CurrentDomain.FirstChanceException += OnException;
+        try
+        {
+            for (var i = 0; i < 1000; i++)
+            {
+                AssertEqual(true, Validate("") is not null);
+                AssertEqual(true, Validate("　 ") is not null);
+                AssertEqual(true, Validate("\n") is not null);
+                AssertEqual(true, Validate("\uD800") is not null);
+                AssertEqual(true, Validate("し") is null);
+            }
+        }
+        finally { AppDomain.CurrentDomain.FirstChanceException -= OnException; }
+        AssertEqual(0, validationExceptions);
         var input = new ChangeTagEditor(Validate);
         AssertEqual(true, input.CanClose);
         input.HasChanges = true;
