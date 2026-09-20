@@ -46,18 +46,39 @@ public sealed partial class VenueEditorGame
         packageReadFolderError = null;
         try
         {
-            using var picker = new Forms.FolderBrowserDialog
+            using var picker = new Forms.OpenFileDialog
             {
-                Description = "パッケージのフォルダーを選んでください",
-                UseDescriptionForTitle = true,
-                SelectedPath = model.DirectoryPath,
+                Title = "パッケージを選択、またはファイル名を変えずに［開く］で現在のフォルダーを選択",
+                Filter = "パッケージ (*.package-csc.json)|*.package-csc.json",
+                InitialDirectory = model.DirectoryPath,
+                // A non-file placeholder also permits choosing an empty folder.
+                FileName = "このフォルダーを選択",
+                CheckFileExists = false,
+                CheckPathExists = true,
+                AddExtension = false,
+                Multiselect = false,
+                RestoreDirectory = true,
             };
             // DesktopGL's Window.Handle is an SDL_Window*, not a Windows HWND.
             // Match the existing native file pickers: let WinForms resolve the owner.
             if (picker.ShowDialog() != Forms.DialogResult.OK) return;
-            packageReadDirectory = picker.SelectedPath;
-            model.SetDirectory(picker.SelectedPath);
+            // Preview a chosen package after opening its directory; do not import it.
+            var selectedPath = Path.GetFullPath(picker.FileName);
+            var directory = Directory.Exists(selectedPath) ? selectedPath : Path.GetDirectoryName(selectedPath);
+            if (directory is null || !Directory.Exists(directory))
+                throw new DirectoryNotFoundException("選択したフォルダーが見つかりません。");
+            packageReadDirectory = directory;
+            model.SetDirectory(directory);
             Array.Clear(packageReadScroll);
+            var selectedIndex = Array.FindIndex(model.Files,
+                path => string.Equals(Path.GetFullPath(path), selectedPath, StringComparison.OrdinalIgnoreCase));
+            if (selectedIndex >= 0)
+            {
+                SelectPackageReadRow(0, selectedIndex);
+                packageReadScroll[0] = Math.Min(selectedIndex, Math.Max(0, model.Files.Length - PackageReadPageSize));
+                packageReadFocus = 4;
+                modalFocus = -1;
+            }
         }
         catch (Exception ex)
         {
