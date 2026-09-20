@@ -140,7 +140,7 @@ public sealed partial class VenueEditorGame
         if (mappingComposition.Length > 0) return false;
         if (!MappingCommentsCanClose)
         {
-            if (mappingChangeTag?.CanClose != true) SetMappingTextFocus(true);
+            if (mappingChangeTag?.CanClose != true && modalDialog is null) OpenProjectChangeComment();
             else if (modalDialog is null) OpenPackageChangeComment();
             return false;
         }

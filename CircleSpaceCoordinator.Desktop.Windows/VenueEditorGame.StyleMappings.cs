@@ -338,6 +338,9 @@ public sealed partial class VenueEditorGame
                     Add("入力・編集", GenreTagButtonBounds(right: true, edit: true), OpenPackageChangeComment,
                         tooltip: "パッケージへの変更コメントを入力・編集します。");
                 if (GenreProjectChanged)
+                    Add("入力・編集", GenreTagButtonBounds(right: false, edit: true), OpenProjectChangeComment,
+                        tooltip: "プロジェクトへの変更コメントを入力・編集します。");
+                if (GenreProjectChanged)
                     Add("プロジェクトへの変更を破棄", GenreTagButtonBounds(right: false), () => DiscardGenreSide(project: true),
                         tooltip: "プロジェクトを編集開始時点へ戻し、自動保存します。パッケージの変更は残します。");
                 if (GenrePackageChanged)

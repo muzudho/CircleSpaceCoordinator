@@ -37,16 +37,23 @@ public sealed partial class VenueEditorGame
         (!mappingKnowledgeComments || packageChangeTag?.CanClose != false);
 
     private void OpenPackageChangeComment()
+        => OpenGenreChangeComment(project: false);
+
+    private void OpenProjectChangeComment()
+        => OpenGenreChangeComment(project: true);
+
+    private void OpenGenreChangeComment(bool project)
     {
-        if (packageChangeTag is not { HasChanges: true } tag) return;
+        if ((project ? mappingChangeTag : packageChangeTag) is not { HasChanges: true } tag) return;
         SetMappingTextFocus(false);
-        OpenUnderlineInput("パッケージへの変更コメント", tag.Text, value =>
+        OpenUnderlineInput(project ? "プロジェクトへの変更コメント" : "パッケージへの変更コメント", tag.Text, value =>
         {
             tag.Editor.SelectAll();
             tag.Editor.Delete(false);
             tag.Insert(value);
             mappingWidth = -1;
-        }, "右側のジャンルコード表に対する変更内容を入力してください。プロジェクト側のコメントとは別に保存します。", 1000,
+        }, project ? "左側のジャンルコード表に対する変更内容を入力してください。パッケージ側のコメントとは別に保存します。"
+            : "右側のジャンルコード表に対する変更内容を入力してください。プロジェクト側のコメントとは別に保存します。", 1000,
             validate: ValidateMappingChangeLog);
     }
 

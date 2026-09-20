@@ -79,6 +79,7 @@ public sealed partial class VenueEditorGame
             if (Contains(MappingLogBounds, pointer) && tag.HasChanges)
             {
                 if (mappingComposition.Length > 0) return true;
+                if (mappingKnowledgeComments) { OpenProjectChangeComment(); return true; }
                 SetMappingTextFocus(true);
                 if (!Contains(MappingBadgeBounds, pointer))
                 {
@@ -94,7 +95,7 @@ public sealed partial class VenueEditorGame
             }
             if (mappingTextFocused) SetMappingTextFocus(false);
         }
-        if (IsPressed(keyboard, Keys.Tab))
+        if (!mappingKnowledgeComments && IsPressed(keyboard, Keys.Tab))
         {
             var reverse = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
             var closeIndex = mappingEditorButtons.FindIndex(item => item.Button.AccessibleName == "閉じる");
@@ -156,7 +157,7 @@ public sealed partial class VenueEditorGame
         var size = Math.Max(10, (int)(ChangeTagEditorView.InputFontSize * MappingEditorScale));
         var mouse = Mouse.GetState();
         mappingTagView.Draw(tag, ProjectTagBounds, MappingEditorScale,
-            mappingTextFocused, Contains(MappingLogBounds, new(mouse.X, mouse.Y)),
+            mappingTextFocused, !mappingKnowledgeComments && Contains(MappingLogBounds, new(mouse.X, mouse.Y)),
             (mappingKnowledgeComments ? "プロジェクトへの変更コメント　" : "") + draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate),
             mappingComposition,
             value => textRenderer?.Measure(value, size).X ?? 0,
