@@ -314,10 +314,11 @@ public sealed partial class VenueEditorGame
                 Add("新規作成", GenreRowActionBounds(0, 120), CreateGenreRow,
                     !GenreRowActionsRight || packageGenreTable is not null,
                     tooltip: "操作対象の上に新しいジャンルコードを作り、その行を操作対象にします。");
-                Add("反対側へコピー", GenreRowActionBounds(132, 200), CopyGenreToOtherPane,
-                    GenreGridSplit && packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
-                    tooltip: "対象のジャンルを反対側の表へコピーします。右側の変更は作業中の表に保持します。");
-                Add("削除", GenreRowActionBounds(344, 100), DeleteGenreRow,
+                if (GenreGridSplit)
+                    Add("反対側へコピー", GenreRowActionBounds(132, 200), CopyGenreToOtherPane,
+                        packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
+                        tooltip: "対象のジャンルを反対側の表へコピーします。右側の変更は作業中の表に保持します。");
+                Add("削除", GenreRowActionBounds(GenreGridSplit ? 344 : 132, 100), DeleteGenreRow,
                     GenreRowActionsRight ? selectedPackageGenreKey is not null : selectedGenreKey is not null,
                     tooltip: "操作対象のジャンルを表から削除します。参加サークルのジャンル値は変更しません。");
             }
