@@ -126,6 +126,14 @@ public sealed class StyleMappingDraft
     public void SetKnowledgeComment(int index, string? value) => rows[index] = rows[index] with
     { KnowledgeComment = GenreStyleDefinition.NormalizeKnowledgeComment(value) };
 
+    public void RenameRow(int index, string key)
+    {
+        key = PersonCredits.NormalizeChangeLog(key);
+        if (rows.Where((_, i) => i != index).Concat(otherStyles).Any(row => row.Key == key))
+            throw new InvalidOperationException("同じジャンルコードが既にあります。");
+        rows[index] = rows[index] with { Key = key };
+    }
+
     public void CopyRow(StyleMappingEntry source, string key, bool overwrite)
     {
         key = PersonCredits.NormalizeChangeLog(key);

@@ -14,6 +14,24 @@ internal static partial class Program
         catch (InvalidOperationException) { rejected = true; }
         AssertEqual(true, rejected);
         AssertEqual(false, draft.HasChanges);
+        draft.RenameRow(0, " 新しい名前😀 ");
+        AssertEqual(original with { Key = "新しい名前😀" }, draft.Build().Single());
+        AssertEqual(true, draft.HasChanges);
+        draft.CopyRow(source, "重複", false);
+        var beforeRename = draft.Build();
+        rejected = false;
+        try { draft.RenameRow(0, "重複"); }
+        catch (InvalidOperationException) { rejected = true; }
+        AssertEqual(true, rejected);
+        AssertEqual(true, beforeRename.SequenceEqual(draft.Build()));
+        rejected = false;
+        try { draft.RenameRow(0, "  "); }
+        catch (ArgumentException) { rejected = true; }
+        AssertEqual(true, rejected);
+        AssertEqual(true, beforeRename.SequenceEqual(draft.Build()));
+        draft.RestoreOpeningSnapshot();
+        AssertEqual(original, draft.Build().Single());
+        AssertEqual(false, draft.HasChanges);
         draft.CopyRow(source, "RPG", true);
         AssertEqual(source, draft.Rows.Single());
         AssertEqual(true, draft.HasChanges);

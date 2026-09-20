@@ -133,7 +133,7 @@ public sealed partial class VenueEditorGame
                     Text((index >= 0 ? index + 1 : packageGenreScroll + row + 1).ToString(), bounds);
                 }
                 else if (column == 1) Text(style.GenreId, bounds);
-                else if (column == 6) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds, "", editable: false);
+                else if (column == 6) Text(style.KnowledgeComment ?? "コメントを入力", bounds);
                 else if (column is 2 or 3)
                 {
                     var id = column == 2 ? style.PrimaryColor : style.SecondaryColor;
@@ -150,7 +150,10 @@ public sealed partial class VenueEditorGame
                 if (!plain) DrawOutline(bounds, 1, new Color(100, 119, 130));
             }
             if (style.GenreId == selectedPackageGenreKey)
+            {
                 DrawOutline(MappingGridBounds(20, 142 + row * 52, 960, 46, right: true), 2 * MappingEditorScale, OperationTargetColor);
+                DrawGenreCellHover(row, style.Pattern, true);
+            }
         }
         if (packageGenreTable is not null && rows.Length == 0)
             Text("この表にジャンルはありません。", MappingGridBounds(20, 142, 960, 46, right: true));

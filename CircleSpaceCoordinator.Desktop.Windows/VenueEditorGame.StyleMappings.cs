@@ -202,6 +202,7 @@ public sealed partial class VenueEditorGame
 
     private void OpenMappingPicker(int row, int column)
     {
+        if (GenreGridVisible && column == 1) { OpenGenreNameEditor(row, false); return; }
         if (mappingKnowledgeComments && mappingDraft is { } targetDraft && row >= 0 && row < targetDraft.Rows.Count)
             SelectGenreTarget(targetDraft.Rows[row].Key);
         if (mappingKnowledgeComments && column == 6)
@@ -231,6 +232,8 @@ public sealed partial class VenueEditorGame
 
     private void CloseMappingPicker()
     {
+        if (packageCellDraft is { HasChanges: true } packageDraft) ApplyPackageCellDraft(packageDraft);
+        packageCellDraft = null;
         mappingPickerColumn = 0;
         mappingFocus = -1;
         mappingWidth = -1;
@@ -259,8 +262,9 @@ public sealed partial class VenueEditorGame
             mappingEditorButtons.Add(new(new IconButtonModel(bounds, label) { IsEnabled = enabled }, action, color, pattern, tooltip));
         if (mappingPickerColumn > 0)
         {
+            draft = packageCellDraft ?? draft;
             var column = mappingPickerColumn;
-            var row = mappingRow;
+            var row = packageCellDraft is null ? mappingRow : packageCellRow;
             var choices = column == 3 ? StyleMappingDraft.Patterns : StyleMappingDraft.Colors;
             var columns = column == 3 ? 4 : 5;
             var width = (840d - (columns - 1) * 12) / columns;
@@ -453,6 +457,7 @@ public sealed partial class VenueEditorGame
         foreach (var item in mappingEditorButtons) item.Button.UpdatePointer(pointer);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
+            if (GenreGridVisible && mappingPickerColumn == 0 && TryClickGenreGridRow(pointer)) return;
             if (mappingKnowledgeComments && mappingPickerColumn == 0)
             {
                 if (GenreGridSplit)
@@ -544,7 +549,7 @@ public sealed partial class VenueEditorGame
                         textRenderer?.Draw(value, ToRectangle(new(bounds.X + bounds.Width - measured - 8, bounds.Y, measured + 4, bounds.Height), 3), Color.White, size, true);
                     }
                     else if (column == 1) Text(style.Key, bounds);
-                    else if (column == 6) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds);
+                    else if (column == 6) Text(style.KnowledgeComment ?? "コメントを入力", bounds, 14);
                     else if (column is 2 or 3)
                     {
                         if (column == 3 && style.Pattern == "solid")
@@ -567,7 +572,7 @@ public sealed partial class VenueEditorGame
                             new(bounds.X, bounds.Y + bounds.Height * 0.58, bounds.Width, bounds.Height * 0.4), 12);
                     }
                     if (!plainCell) DrawOutline(bounds, 1, new Color(100, 119, 130));
-                    if (mappingPickerColumn == 0 && mappingFocus < 0 && selectedGenreKey is null && selectedPackageGenreKey is null && mappingRow == mappingScroll + row && mappingColumn == column)
+                    if (!GenreGridVisible && mappingPickerColumn == 0 && mappingFocus < 0 && selectedGenreKey is null && selectedPackageGenreKey is null && mappingRow == mappingScroll + row && mappingColumn == column)
                     {
                         if (plainCell)
                             DrawLine(new(bounds.X + 6, bounds.Y + bounds.Height - 7), new(bounds.X + bounds.Width - 6, bounds.Y + bounds.Height - 7), 2, OperationTargetColor);
@@ -575,7 +580,10 @@ public sealed partial class VenueEditorGame
                     }
                 }
                 if (mappingKnowledgeComments && style.Key == selectedGenreKey)
+                {
                     DrawOutline(MappingGridBounds(20, 142 + row * 52, 960, 46), 2 * MappingEditorScale, OperationTargetColor);
+                    DrawGenreCellHover(row, style.Pattern, false);
+                }
             }
             if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingGridBounds(20, 142, 960, 46));
             if (GenreGridSplit) DrawPackageGenreGrid();
