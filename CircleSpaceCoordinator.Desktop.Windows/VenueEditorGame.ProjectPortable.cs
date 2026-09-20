@@ -6,27 +6,25 @@ using Forms = System.Windows.Forms;
 
 public sealed partial class VenueEditorGame
 {
-    private void ExportPortable(bool genreTableOnly = false)
+    private void ExportPortable()
     {
         if (workspace is null || !EnsureHandle()) return;
         try
         {
             var snapshot = workspace.Project;
-            using var form = PortableForm(genreTableOnly ? "ジャンルコード表をパッケージ直下へ書き出し" : "部分書出し — 配置案・知見・素材を選択");
+            using var form = PortableForm("部分書出し — 配置案・知見・素材を選択");
             form.ClientSize = new System.Drawing.Size(740, 640);
             var rows = PortableGrid(form);
-            foreach (var layout in snapshot.DeskLayouts.Where(_ => !genreTableOnly))
+            foreach (var layout in snapshot.DeskLayouts)
                 rows.Rows.Add(false, layout.Name, layout.Description ?? "", layout.Id, "フレーム配置案");
-            foreach (var item in snapshot.ChannelKnowledge.Where(_ => !genreTableOnly))
+            foreach (var item in snapshot.ChannelKnowledge)
                 rows.Rows[rows.Rows.Add(false, item.Name, item.Purpose, item.Id, "チャンネルの知見")].Tag = "knowledge";
-            if (!genreTableOnly) rows.Rows[rows.Rows.Add(false, snapshot.Venue.Name, "会場の寸法・障害物・ゾーン", snapshot.Venue.Id, "会場")].Tag =
+            rows.Rows[rows.Rows.Add(false, snapshot.Venue.Name, "会場の寸法・障害物・ゾーン", snapshot.Venue.Id, "会場")].Tag =
                 new PortableMaterialSelection("venue", snapshot.Venue.Id);
             var sourceLayout = snapshot.DeskLayouts.FirstOrDefault(layout => layout.Id == workspace.SelectedDeskLayoutId);
-            rows.Rows[rows.Rows.Add(genreTableOnly, snapshot.GetGenreCodeTableName(), "パッケージ直下。未使用ジャンル・コメント・並び順・変更タグを含む表全体", "project", "ジャンルコード表")].Tag =
-                new PortableMaterialSelection("genre-styles", "project");
-            if (!genreTableOnly) rows.Rows[rows.Rows.Add(false, "ブロック色の対応表", "対応表全体と変更タグ", "project", "ブロック色対応表")].Tag =
+            rows.Rows[rows.Rows.Add(false, "ブロック色の対応表", "対応表全体と変更タグ", "project", "ブロック色対応表")].Tag =
                 new PortableMaterialSelection("block-styles", "project");
-            var sourceDefinitions = genreTableOnly ? new CircleSpaceCoordinator.Core.Model.SpaceDefinitionCatalog([], []) : sourceLayout?.Definitions ?? SpaceDefinitions.Current;
+            var sourceDefinitions = sourceLayout?.Definitions ?? SpaceDefinitions.Current;
             foreach (var type in sourceDefinitions.Types)
                 rows.Rows[rows.Rows.Add(false, type.Name, $"元：{sourceLayout?.Name ?? "共通カタログ"}／{type.Width}×{type.Height}", type.Id, "フレーム定義")].Tag =
                     new PortableMaterialSelection("frame-definition", type.Id, sourceLayout?.Id);
@@ -39,7 +37,7 @@ public sealed partial class VenueEditorGame
             libraryMenu.Items.Add("ファイルライブラリー", null, (_, _) => { form.Close(); ShowPortableLibrary(); });
             library.Click += (_, _) => libraryMenu.Show(library, new System.Drawing.Point(0, library.Height));
             form.Controls.Add(library);
-            var name = PortableText(form, "パッケージのタイトル", 340, genreTableOnly ? snapshot.GetGenreCodeTableName() : "配置の提案");
+            var name = PortableText(form, "パッケージのタイトル", 340, "配置の提案");
             var description = PortableText(form, "ファイル全体のメモ", 372, "");
             var tags = PortableText(form, "タグ（カンマ区切り）", 404, "");
             var secret = new Forms.CheckBox { Text = "マル秘として書き出す", Left = 16, Top = 442, Width = 300,
@@ -47,10 +45,8 @@ public sealed partial class VenueEditorGame
             form.Controls.Add(secret);
             var template = new Forms.CheckBox { Text = "知見はひな形のみ（座標を除く）", Left = 350, Top = 442, Width = 360 };
             form.Controls.Add(template);
-            template.Visible = !genreTableOnly;
-            library.Visible = !genreTableOnly;
             var frameIds = selectedFrameIds.ToArray();
-            if (!genreTableOnly && sourceLayout is not null && frameIds.Length == 0 && selectedCellRange is { } range)
+            if (sourceLayout is not null && frameIds.Length == 0 && selectedCellRange is { } range)
             {
                 var types = snapshot.DeskTypes.ToDictionary(type => type.Id);
                 frameIds = sourceLayout.DeskPlacements.Where(desk => desk.GetOccupiedCells(types[desk.DeskTypeId]).All(range.Contains)).Select(desk => desk.Id).ToArray();
@@ -58,7 +54,6 @@ public sealed partial class VenueEditorGame
             var fragment = new Forms.CheckBox { Text = $"現在の案は選択範囲のフレームだけを書き出す（{frameIds.Length} 件）",
                 Left = 16, Top = 480, Width = 700, Enabled = frameIds.Length > 0 };
             form.Controls.Add(fragment);
-            fragment.Visible = !genreTableOnly;
             var status = PortableStatus(form);
             var accept = PortableButtons(form, rows, "内容を確認");
             accept.Click += (_, _) =>
