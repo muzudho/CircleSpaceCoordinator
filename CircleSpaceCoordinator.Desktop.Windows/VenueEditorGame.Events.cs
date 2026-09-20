@@ -10,7 +10,8 @@ using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
-    private sealed record EventListEntry(EventProjectReference Project, bool Exists, bool Confidential, string? Error);
+    private sealed record EventListEntry(EventProjectReference Project, bool Exists, bool? Confidential, string? Error);
+    private readonly EventProjectMetadataCache eventMetadata = new(ProjectFileService.Load);
     private readonly List<EventListEntry> eventProjects = [];
     private readonly List<(IconButtonModel Button, Action Execute)> eventButtons = [];
     private IconButtonModel? pressedEventButton;
@@ -35,14 +36,21 @@ public sealed partial class VenueEditorGame
         eventProjects.Clear();
         foreach (var project in EventCatalog.Projects)
         {
-            var exists = File.Exists(project.Path);
-            try { eventProjects.Add(new(project, exists, exists && EventCatalog.IsConfidential(project.Path), null)); }
-            catch (Exception ex) { eventProjects.Add(new(project, exists, false, ex.Message)); }
+            var cached = eventMetadata.Peek(project.Path);
+            eventProjects.Add(new(project, cached?.Exists ?? true, cached?.Confidential, cached?.Error));
         }
         eventSelection = Math.Max(0, eventProjects.FindIndex(item => string.Equals(item.Project.Path, selectedPath, StringComparison.OrdinalIgnoreCase)));
         eventScroll = Math.Clamp(eventSelection, 0, Math.Max(0, eventProjects.Count - EventRows));
         eventWidth = -1;
         pressedEventButton = null;
+    }
+
+    private void InspectSelectedEvent()
+    {
+        if (SelectedEvent is not { } selected) return;
+        var metadata = eventMetadata.Inspect(selected.Project.Path);
+        eventProjects[eventSelection] = selected with { Exists = metadata.Exists, Confidential = metadata.Confidential, Error = metadata.Error };
+        eventWidth = -1;
     }
 
     private void EnsureEventButtons()
@@ -70,7 +78,7 @@ public sealed partial class VenueEditorGame
         Add("編集", EditEventProject, usable);
         Add("既存ファイルを登録", RegisterEventProject);
         Add("複製", DuplicateEventProject, usable);
-        Add("マル秘に設定", MarkEventConfidential, usable && selected?.Confidential == false);
+        Add("マル秘に設定", MarkEventConfidential, usable && selected?.Confidential != true);
         Add("上へ", () => MoveEvent(-1), eventSelection > 0);
         Add("下へ", () => MoveEvent(1), eventSelection < eventProjects.Count - 1);
         Add("一覧から除外", RemoveEvent, selected is not null);
@@ -100,6 +108,7 @@ public sealed partial class VenueEditorGame
             if (next != eventSelection)
             {
                 eventSelection = next;
+                InspectSelectedEvent();
                 eventScroll = Math.Clamp(eventScroll, Math.Max(0, next - EventRows + 1), next);
                 eventWidth = -1;
                 EnsureEventButtons();
@@ -120,6 +129,7 @@ public sealed partial class VenueEditorGame
                 if (Contains(EventRowBounds(row), pointer))
                 {
                     eventSelection = eventScroll + row;
+                    InspectSelectedEvent();
                     var doubleClick = lastEventClick == eventSelection && (DateTime.UtcNow - lastEventClickAt).TotalSeconds < 0.5;
                     lastEventClick = eventSelection;
                     lastEventClickAt = DateTime.UtcNow;
@@ -159,8 +169,8 @@ public sealed partial class VenueEditorGame
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)), (_, _) => { });
             if (eventFocus < 0 && index == eventSelection) DrawOutline(bounds, 2, OperationTargetColor);
-            Text((item.Confidential ? "（秘） " : "") + item.Project.DisplayName, new(bounds.X + 10, bounds.Y + 5, bounds.Width - 20, 24), 19, true);
-            var detail = !item.Exists ? "ファイルが見つかりません：" + item.Project.Path : item.Error ?? item.Project.Path;
+            Text((item.Confidential == true ? "（秘） " : "") + item.Project.DisplayName, new(bounds.X + 10, bounds.Y + 5, bounds.Width - 20, 24), 19, true);
+            var detail = !item.Exists ? "ファイルが見つかりません：" + item.Project.Path : item.Error ?? (item.Confidential is null ? "未確認：" : "") + item.Project.Path;
             var maxCharacters = Math.Max(12, (int)((bounds.Width - 20) / 8));
             if (detail.Length > maxCharacters)
             {
@@ -257,6 +267,7 @@ public sealed partial class VenueEditorGame
         commandController = null;
         participantController = null;
         var closedPath = projectSavePath;
+        if (closedPath is not null) eventMetadata.Invalidate(closedPath);
         projectSavePath = null;
         CancelInProgressPointerInteraction();
         toolRingOpen = spaceCatalogOpen = false;
@@ -326,6 +337,7 @@ public sealed partial class VenueEditorGame
         OpenUnderlineInput("イベントを編集：会場名", project.Venue.Name, name =>
         {
             EventCatalog.EditVenueName(selected.Project.Path, name);
+            eventMetadata.Invalidate(selected.Project.Path);
             RefreshEventProjects(selected.Project.Path);
         }, "会場名を保存します。フレーム配置データの書出しにもこの名前を使います。", 32767);
     }
@@ -343,7 +355,7 @@ public sealed partial class VenueEditorGame
         OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "一覧から除外",
             $"「{selected.Project.DisplayName}」を一覧から除外しますか？\nプロジェクトファイルは削除されません。"), action =>
         {
-            if (action == ModalDialogAction.Accept) RunEventAction(() => { EventCatalog.Remove(selected.Project.Path); RefreshEventProjects(); });
+            if (action == ModalDialogAction.Accept) RunEventAction(() => { EventCatalog.Remove(selected.Project.Path); eventMetadata.Invalidate(selected.Project.Path); RefreshEventProjects(); });
         }, [("除外する", ModalDialogAction.Accept), ("キャンセル", ModalDialogAction.Cancel)]);
     }
 
@@ -353,7 +365,7 @@ public sealed partial class VenueEditorGame
         OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "マル秘に設定",
             $"「{selected.Project.DisplayName}」をマル秘にしますか？\n設定後、アプリからは解除できません。"), action =>
         {
-            if (action == ModalDialogAction.Accept) RunEventAction(() => { EventCatalog.MarkConfidential(selected.Project.Path); RefreshEventProjects(selected.Project.Path); });
+            if (action == ModalDialogAction.Accept) RunEventAction(() => { EventCatalog.MarkConfidential(selected.Project.Path); eventMetadata.Invalidate(selected.Project.Path); RefreshEventProjects(selected.Project.Path); InspectSelectedEvent(); });
         }, [("マル秘にする", ModalDialogAction.Accept), ("キャンセル", ModalDialogAction.Cancel)]);
     }
 }

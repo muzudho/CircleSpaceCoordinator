@@ -51,11 +51,13 @@ public sealed class ApplicationSettingsService
     };
     private readonly string settingsPath;
     private readonly string defaultProjectsDirectory;
+    private readonly bool deferProjectMetadata;
 
-    public ApplicationSettingsService(string settingsPath, string? defaultProjectsDirectory = null)
+    public ApplicationSettingsService(string settingsPath, string? defaultProjectsDirectory = null, bool deferProjectMetadata = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(settingsPath);
         this.settingsPath = Path.GetFullPath(settingsPath);
+        this.deferProjectMetadata = deferProjectMetadata;
         this.defaultProjectsDirectory = defaultProjectsDirectory ?? ProjectFileService.GetDefaultProjectsDirectory();
         Current = LoadOrDefault();
         TrySave();
@@ -203,13 +205,15 @@ public sealed class ApplicationSettingsService
                 projects.Add(new EventProjectReference(fullPath, displayName));
             }
             if (lastPath is not null && projects.All(item => !PathsEqual(item.Path, lastPath)))
-                projects.Add(new EventProjectReference(lastPath, TryReadProjectName(lastPath) ?? Path.GetFileNameWithoutExtension(lastPath)));
+                projects.Add(new EventProjectReference(lastPath, (deferProjectMetadata ? null : TryReadProjectName(lastPath)) ?? Path.GetFileNameWithoutExtension(lastPath)));
             if (projects.Count == 0 && Directory.Exists(directory))
             {
                 foreach (var projectPath in Directory.EnumerateFiles(directory, "*.json", SearchOption.TopDirectoryOnly)
                              .Order(StringComparer.OrdinalIgnoreCase))
                 {
-                    var projectName = TryReadProjectName(projectPath);
+                    var projectName = deferProjectMetadata
+                        ? projectPath.EndsWith(".event-project-csc.json", StringComparison.OrdinalIgnoreCase) ? Path.GetFileNameWithoutExtension(projectPath) : null
+                        : TryReadProjectName(projectPath);
                     if (projectName is not null)
                         projects.Add(new EventProjectReference(Path.GetFullPath(projectPath), projectName));
                 }
