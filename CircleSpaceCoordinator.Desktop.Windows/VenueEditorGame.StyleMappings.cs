@@ -212,10 +212,11 @@ public sealed partial class VenueEditorGame
         if (mappingKnowledgeComments && column == 0) { OpenGenreCodeOrderEditor(); return; }
         if (mappingDraft is null || row < 0 || row >= mappingDraft.Rows.Count ||
             (mappingKnowledgeComments ? column is < 2 or > 4 : column is < 1 or > 3)) return;
-        if (mappingKnowledgeComments && column == 4 && mappingDraft.Rows[row].Pattern == "solid") return;
-        if (mappingKnowledgeComments) column--;
+        if (mappingKnowledgeComments && column == 3 && mappingDraft.Rows[row].Pattern == "solid") return;
         mappingRow = row;
         mappingColumn = column;
+        // Keep the grid column for focus; normalize the picker column exactly once.
+        if (mappingKnowledgeComments) column--;
         mappingPickerColumn = column;
         SetMappingTextFocus(false);
         var style = mappingDraft.Rows[row];
@@ -258,7 +259,7 @@ public sealed partial class VenueEditorGame
             mappingEditorButtons.Add(new(new IconButtonModel(bounds, label) { IsEnabled = enabled }, action, color, pattern, tooltip));
         if (mappingPickerColumn > 0)
         {
-            var column = mappingKnowledgeComments ? mappingPickerColumn - 1 : mappingPickerColumn;
+            var column = mappingPickerColumn;
             var row = mappingRow;
             var choices = column == 3 ? StyleMappingDraft.Patterns : StyleMappingDraft.Colors;
             var columns = column == 3 ? 4 : 5;
@@ -403,7 +404,7 @@ public sealed partial class VenueEditorGame
         }
         if (mappingPickerColumn > 0)
         {
-            var columns = mappingPickerColumn == 4 ? 4 : 5;
+            var columns = mappingPickerColumn == 3 ? 4 : 5;
             var offset = IsPressed(keyboard, Keys.Right) ? 1 : IsPressed(keyboard, Keys.Left) ? -1
                 : IsPressed(keyboard, Keys.Down) ? columns : IsPressed(keyboard, Keys.Up) ? -columns : 0;
             mappingFocus = Math.Clamp(mappingFocus + offset, 0, mappingEditorButtons.Count - 1);
@@ -596,7 +597,7 @@ public sealed partial class VenueEditorGame
             var panel = MappingBounds(60, 90, 880, 470);
             DrawRectangle(panel, new Color(24, 29, 36));
             DrawOutline(panel, 2, Color.LightSlateGray);
-            Text(mappingPickerColumn is 3 or 4 ? "網掛けを選択 — 黒が太線色、白が細線色" : mappingPickerColumn == 1 ? "太線色を選択" : "細線色を選択", MappingBounds(80, 108, 840, 38), 23);
+            Text(mappingPickerColumn == 3 ? "網掛けを選択 — 黒が太線色、白が細線色" : mappingPickerColumn == 1 ? "太線色を選択" : "細線色を選択", MappingBounds(80, 108, 840, 38), 23);
         }
         for (var index = 0; index < mappingEditorButtons.Count; index++)
         {
