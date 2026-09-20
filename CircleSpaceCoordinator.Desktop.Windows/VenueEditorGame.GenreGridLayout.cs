@@ -154,9 +154,6 @@ public sealed partial class VenueEditorGame
         }
         if (packageGenreTable is not null && rows.Length == 0)
             Text("この表にジャンルはありません。", MappingGridBounds(20, 142, 960, 46, right: true));
-        if (packageGenreTable is not null)
-            Text($"{(rows.Length == 0 ? 0 : packageGenreScroll + 1)}–{Math.Min(rows.Length, packageGenreScroll + MappingVisibleRows)} / {rows.Length} 件",
-                MappingGridBounds(380, 460, 600, 32, right: true));
         var divider = MappingGridBounds(20, 102, 960, 390);
         var x = GraphicsDevice.Viewport.Width / 2d;
         DrawLine(new(x, divider.Y), new(x, divider.Y + divider.Height), 1, new Color(100, 119, 130));

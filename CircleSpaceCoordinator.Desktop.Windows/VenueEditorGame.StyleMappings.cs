@@ -308,7 +308,7 @@ public sealed partial class VenueEditorGame
             }
             if (GenreGridSplit)
             {
-                Add("反対側へコピー", MappingBounds(444, 606, 220, 34), CopyGenreToOtherPane,
+                Add("反対側へコピー", MappingGridBounds(380, 460, 360, 32, right: true), CopyGenreToOtherPane,
                     packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
                     tooltip: "対象のジャンルを反対側の表へコピーします。右側の変更は作業中の表に保持します。");
             }
@@ -631,6 +631,16 @@ public sealed partial class VenueEditorGame
         var focused = !mappingTextFocused && mappingFocus >= 0 && mappingFocus < mappingEditorButtons.Count
             ? mappingEditorButtons[mappingFocus] : null;
         var tooltip = hovered?.Tooltip;
+        if (GenreGridVisible && mappingPickerColumn == 0 && CanShowEditorHover)
+            for (var side = 0; side < (GenreGridSplit ? 2 : 1); side++)
+            {
+                var right = side == 1;
+                if (!Contains(GenreScrollTrack(right), new(mouse.X, mouse.Y))) continue;
+                var count = GenreScrollCount(right);
+                var start = right ? packageGenreScroll : mappingScroll;
+                tooltip = $"{(right ? "パッケージ" : "プロジェクト")}：{(count == 0 ? 0 : start + 1)} - {Math.Min(count, start + MappingVisibleRows)} / {count} 件";
+                break;
+            }
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && CanShowEditorHover && Contains(MappingOverallCommentBounds, new(mouse.X, mouse.Y)))
             tooltip = "全体コメントをクリックして編集します。1000文字以内、空欄で削除できます。";
         if (GenreChartVisible) tooltip ??= GenrePreviewTooltip(new(mouse.X, mouse.Y));
