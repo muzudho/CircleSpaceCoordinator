@@ -12,6 +12,7 @@ public sealed class PackageGenreSaveSession(string path, string openingJson, Por
     public PortableMaterial OpeningTable { get; } = openingTable;
     public string CurrentJson { get; private set; } = openingJson;
     private PortablePackage currentPackage = openingPackage;
+    public PortableMaterial CurrentTable => currentPackage.Materials.Single(item => item.Id == OpeningTable.Id);
 
     public void Save(PortableMaterial table, string handle, DateOnly date, string log, bool restore,
         Func<PortableGenreTableUpdate, string> update, Func<string, PortablePackage> parse)

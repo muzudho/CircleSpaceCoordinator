@@ -108,7 +108,7 @@ internal static partial class Program
         var confidentialJson = connection.UpdatePortableGenreTable(new(json, secret.Right, "担当", new(2026, 9, 19), "マル秘の知見を追加"));
         AssertEqual(true, connection.ParsePortable(confidentialJson).IsConfidential);
         RejectPortable(() => connection.UpdatePortableGenreTable(new(json, draft.Right with { Id = "missing" }, "担当", new(2026, 9, 19), "変更")));
-        RejectPortable(() => connection.UpdatePortableGenreTable(new(json, draft.Right, "担当", new(2026, 9, 19), "")));
+        RejectPortable(() => connection.UpdatePortableGenreTable(new(json, draft.Right, "担当", new(2026, 9, 19), "改行\n禁止")));
 
         var directory = Path.Combine(Path.GetTempPath(), "csc-diff-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);

@@ -29,7 +29,7 @@ public static class ProjectPortableSerializer
             ?? throw new InvalidDataException("パッケージに対象のジャンルコード表がありません。");
         if (table.Kind != "genre-styles") throw new InvalidDataException("ジャンルコード表だけを更新できます。");
         var updated = table with { IsConfidential = table.IsConfidential || previous.IsConfidential || loaded.IsConfidential,
-            Credits = (previous.Credits ?? new()).WrittenBy(handle, date, PersonCredits.NormalizeChangeLog(changeLog)) };
+            Credits = (previous.Credits ?? new()).WrittenBy(handle, date, changeLog.Length == 0 ? null : changeLog) with { ModifiedAt = DateTimeOffset.Now } };
         updated.Validate();
         // Replace only this material. Unselected tables, layouts, knowledge and metadata retain their JSON content.
         var root = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();

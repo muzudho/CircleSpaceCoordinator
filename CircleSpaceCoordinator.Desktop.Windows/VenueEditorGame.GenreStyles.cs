@@ -24,7 +24,8 @@ public sealed partial class VenueEditorGame
                     { KnowledgeComment = style.KnowledgeComment }).ToArray())
                 { ChangeLog = log, ActorHandle = handle, WorkDate = date,
                     UpdateCredits = true,
-                    Credits = GenreProjectChanged ? (mappingPreviousCredits ?? new PersonCredits()).WrittenBy(handle, date, log) : mappingPreviousCredits,
+                    Credits = GenreProjectChanged || genreProjectRequiresComment
+                        ? (mappingPreviousCredits ?? new PersonCredits()).WrittenBy(handle, date, log.Length == 0 ? null : log) with { ModifiedAt = DateTimeOffset.Now } : mappingPreviousCredits,
                     GenreCodeTableName = mappingGenreCodeTableName,
                     UpdateOverallComment = true, OverallComment = draft.Mapping.OverallComment,
                     GenreCodeOrder = mappingGenreCodeOrder,

@@ -9,6 +9,11 @@ public sealed partial class VenueEditorGame
 {
     private StyleMappingDraft? packageCellDraft;
     private int packageCellRow;
+    private ScreenRectangle GenreTargetRowBounds(int row, bool right = false)
+    {
+        var bounds = MappingGridBounds(20, 142 + row * 52, 960, 46, right);
+        return new(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, bounds.Height + 10);
+    }
 
     private static bool GenreCellEditable(int column, string pattern, bool right) =>
         column is 1 or 2 or 4 or 6 || column == 3 && pattern != "solid" || column == 0 && !right;

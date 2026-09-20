@@ -33,8 +33,8 @@ public sealed partial class VenueEditorGame
 
     private void SyncMappingChangeTag()
     {
-        if (mappingChangeTag is not null) mappingChangeTag.HasChanges = mappingKnowledgeComments ? GenreProjectChanged : mappingDraft?.HasChanges == true || mappingOrderChanged || MappingTableNameChanged;
-        if (packageChangeTag is not null) packageChangeTag.HasChanges = GenrePackageChanged;
+        if (mappingChangeTag is not null) mappingChangeTag.HasChanges = mappingKnowledgeComments ? GenreProjectChanged || genreProjectRequiresComment : mappingDraft?.HasChanges == true || mappingOrderChanged || MappingTableNameChanged;
+        if (packageChangeTag is not null) packageChangeTag.HasChanges = GenrePackageChanged || genrePackageRequiresComment;
     }
 
     private void SetMappingTextFocus(bool focused)
@@ -158,12 +158,12 @@ public sealed partial class VenueEditorGame
         var mouse = Mouse.GetState();
         mappingTagView.Draw(tag, ProjectTagBounds, MappingEditorScale,
             mappingTextFocused, !mappingKnowledgeComments && Contains(MappingLogBounds, new(mouse.X, mouse.Y)),
-            (mappingKnowledgeComments ? "プロジェクトへの変更コメント　" : "") + draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate),
+            mappingKnowledgeComments ? "プロジェクトへの変更コメント　" + (workspace?.Project.GenreStyleCredits?.AttributionText ?? "変更者・日時不明") : draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate),
             mappingComposition,
             value => textRenderer?.Measure(value, size).X ?? 0,
             (value, area, fontSize, ink) => Text(value, area, fontSize, MappingInk(ink)),
             (area, ink) => DrawRectangle(area, MappingInk(ink)),
-            _ => DrawMappingActionBadge(), previousLog: mappingPreviousCredits?.ChangeLog,
+            _ => DrawMappingActionBadge(), previousLog: mappingKnowledgeComments ? workspace?.Project.GenreStyleCredits?.ChangeLog : mappingPreviousCredits?.ChangeLog,
             actionAreaWidth: ProjectTagActionWidth);
         mappingTextRange = mappingTagView.VisibleRange;
         if (mappingTextFocused) textInputService?.SetInputArea(mappingTagView.CaretBounds);

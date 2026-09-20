@@ -25,12 +25,19 @@ internal static partial class Program
             var session = new PackageGenreSaveSession(path, json, package, original);
             var edited = original with { GenreStyles = [.. original.GenreStyles!, new("B", "blue", "white", "grid")] };
             var date = new DateOnly(2026, 9, 20);
-            session.Save(edited, "test", date, "編集中", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+            session.Save(edited, "test", date, "", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
             var saved = connection.ParsePortable(File.ReadAllText(path));
             AssertEqual(2, saved.Materials.Single().GenreStyles!.Length);
             AssertEqual("メモ", saved.Description);
+            AssertEqual(true, saved.Materials.Single().Credits!.ChangeLog is null);
+            AssertEqual("test", session.CurrentTable.Credits!.Modifier!);
+            AssertEqual(date, session.CurrentTable.Credits!.ModifiedOn!.Value);
+            AssertEqual(true, session.CurrentTable.Credits!.ModifiedAt is not null);
             session.Save(edited, "test", date, "ジャンルを追加", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
             AssertEqual("ジャンルを追加", connection.ParsePortable(File.ReadAllText(path)).Materials.Single().Credits!.ChangeLog!);
+            session.Save(edited with { OverallComment = "再編集" }, "second", date, "", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+            AssertEqual(true, session.CurrentTable.Credits!.ChangeLog is null);
+            AssertEqual("second", session.CurrentTable.Credits!.Modifier!);
             session.Save(original, "test", date, "unused", true, connection.UpdatePortableGenreTable, connection.ParsePortable);
             AssertEqual(json, File.ReadAllText(path));
             AssertEqual(json, session.CurrentJson);
@@ -45,8 +52,10 @@ internal static partial class Program
 
             using var workspace = connection.Open(ProjectJsonSerializer.Save(project));
             var openingCredits = workspace.Project.GenreStyleCredits;
-            var draftCredits = new PersonCredits().WrittenBy("test", date, "編集中");
+            var draftCredits = new PersonCredits().WrittenBy("test", date) with { ModifiedAt = DateTimeOffset.Now };
             workspace.Execute(new SetGenreStyles(edited.GenreStyles!) { UpdateCredits = true, Credits = draftCredits }, selectedPlanEdit: false);
+            AssertEqual(true, workspace.Project.GenreStyleCredits!.ChangeLog is null);
+            AssertEqual(draftCredits.ModifiedAt, workspace.Project.GenreStyleCredits!.ModifiedAt);
             workspace.Execute(new SetGenreStyles(edited.GenreStyles!)
             { UpdateCredits = true, Credits = draftCredits.WrittenBy("test", date, "確定した変更コメント") }, selectedPlanEdit: false);
             AssertEqual("確定した変更コメント", workspace.Project.GenreStyleCredits!.ChangeLog!);

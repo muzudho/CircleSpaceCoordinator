@@ -20,7 +20,8 @@ public sealed partial class VenueEditorGame
     private void OpenPackageReadDialog()
     {
         genreCloseAfterDiscard = false;
-        if (GenrePackageChanged)
+        if (GenreSavePending && !SaveGenreScope()) return;
+        if (GenrePackageChanged || genrePackageRequiresComment)
         {
             SyncMappingChangeTag();
             if (packageChangeTag?.CanClose != true)

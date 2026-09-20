@@ -6,6 +6,8 @@ public sealed record PersonCredits(string? Author = null, string? Modifier = nul
 {
     public DateOnly? ModifiedOn { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public DateTimeOffset? ModifiedAt { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? ChangeLog { get; init; }
     public const int MaximumChangeLogLength = 1000;
 
@@ -59,6 +61,7 @@ public sealed record PersonCredits(string? Author = null, string? Modifier = nul
         handle = NormalizeHandle(handle);
         if (handle.Length == 0) throw new ArgumentException("作業者のHandleを設定してください。");
         return this with { Modifier = handle, ModifiedOn = modifiedOn ?? DateOnly.FromDateTime(DateTime.Now),
+            ModifiedAt = null,
             ChangeLog = changeLog is null ? null : NormalizeChangeLog(changeLog) };
     }
 
@@ -70,5 +73,5 @@ public sealed record PersonCredits(string? Author = null, string? Modifier = nul
     }
 
     [System.Text.Json.Serialization.JsonIgnore]
-    public string AttributionText => $"by {Modifier ?? Author ?? "変更者不明"} since {ModifiedOn?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? "日付不明"}";
+    public string AttributionText => $"by {Modifier ?? Author ?? "変更者不明"} since {ModifiedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) ?? ModifiedOn?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? "日付不明"}";
 }

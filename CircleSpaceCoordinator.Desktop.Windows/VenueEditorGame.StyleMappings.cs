@@ -320,10 +320,10 @@ public sealed partial class VenueEditorGame
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
             if (mappingKnowledgeComments)
             {
-                if (GenrePackageChanged)
+                if (packageChangeTag?.HasChanges == true)
                     Add("入力・編集", GenreTagButtonBounds(right: true, edit: true), OpenPackageChangeComment,
                         tooltip: "パッケージへの変更コメントを入力・編集します。");
-                if (GenreProjectChanged)
+                if (mappingChangeTag?.HasChanges == true)
                     Add("入力・編集", GenreTagButtonBounds(right: false, edit: true), OpenProjectChangeComment,
                         tooltip: "プロジェクトへの変更コメントを入力・編集します。");
                 if (GenreProjectChanged)
@@ -581,7 +581,7 @@ public sealed partial class VenueEditorGame
                 }
                 if (mappingKnowledgeComments && style.Key == selectedGenreKey)
                 {
-                    DrawOutline(MappingGridBounds(20, 142 + row * 52, 960, 46), 2 * MappingEditorScale, OperationTargetColor);
+                    DrawOutline(GenreTargetRowBounds(row), 2 * MappingEditorScale, OperationTargetColor);
                     DrawGenreCellHover(row, style.Pattern, false);
                 }
             }

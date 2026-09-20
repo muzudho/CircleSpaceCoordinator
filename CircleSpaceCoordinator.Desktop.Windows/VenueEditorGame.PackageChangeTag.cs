@@ -44,6 +44,8 @@ public sealed partial class VenueEditorGame
 
     private void OpenGenreChangeComment(bool project)
     {
+        if (!SaveGenreScope()) return;
+        SyncMappingChangeTag();
         if ((project ? mappingChangeTag : packageChangeTag) is not { HasChanges: true } tag) return;
         SetMappingTextFocus(false);
         OpenUnderlineInput(project ? "プロジェクトへの変更コメント" : "パッケージへの変更コメント", tag.Text, value =>
@@ -62,10 +64,10 @@ public sealed partial class VenueEditorGame
         if (packageGenreTable is null || packageChangeTag is not { } tag) return;
         var size = Math.Max(10, (int)(ChangeTagEditorView.InputFontSize * MappingEditorScale));
         packageTagView.Draw(tag, GenreTagBounds(true), MappingEditorScale, false, false,
-            "パッケージへの変更コメント　" + (packageGenreSaveSession?.OpeningTable.Credits?.AttributionText ?? "変更者・日付不明"), "",
+            "パッケージへの変更コメント　" + (packageGenreSaveSession?.CurrentTable.Credits?.AttributionText ?? "変更者・日時不明"), "",
             value => textRenderer?.Measure(value, size).X ?? 0,
             (value, area, fontSize, ink) => textRenderer?.Draw(value, ToRectangle(area), MappingInk(ink), Math.Max(10, (int)(fontSize * MappingEditorScale))),
             (area, ink) => DrawRectangle(area, MappingInk(ink)),
-            previousLog: packageGenreSaveSession?.OpeningTable.Credits?.ChangeLog, actionAreaWidth: 16);
+            previousLog: packageGenreSaveSession?.CurrentTable.Credits?.ChangeLog, actionAreaWidth: 16);
     }
 }

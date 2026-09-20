@@ -151,7 +151,7 @@ public sealed partial class VenueEditorGame
             }
             if (style.GenreId == selectedPackageGenreKey)
             {
-                DrawOutline(MappingGridBounds(20, 142 + row * 52, 960, 46, right: true), 2 * MappingEditorScale, OperationTargetColor);
+                DrawOutline(GenreTargetRowBounds(row, right: true), 2 * MappingEditorScale, OperationTargetColor);
                 DrawGenreCellHover(row, style.Pattern, true);
             }
         }
