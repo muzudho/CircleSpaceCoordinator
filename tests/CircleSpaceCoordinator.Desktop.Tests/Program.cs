@@ -30,6 +30,7 @@ internal static partial class Program
             ("Genre autosave restores package bytes, rejects stale writes and finalizes project credits", GenreAutoSaveRestoration),
             ("Genre copies preserve all fields, reject collisions and invalid overwrites, and discard cleanly", GenreCopyRows),
             ("Shared shading tables preserve block metadata, legacy files, undo, packages and isolated edits", SharedShadingTablesRoundTrip),
+            ("Empty packages can be created without overwrite and deleted only with exact names and unchanged contents", PackageCreationAndConfirmedDeletion),
             ("Package reader filters files, lists genre tables and clears stale selections on errors", PackageReaderSelection),
             ("Genre table diff trades both sides atomically, preserves package items and rejects stale saves", GenreTableDiffTradesAndPersistence),
             ("Named genre tables survive project/package round trips without layouts or current participants", NamedGenreCodeTablesRoundTrip),

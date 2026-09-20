@@ -31,9 +31,13 @@ public sealed partial class VenueEditorGame
     private bool selectingUnderlineText;
     private long underlineInputReceivedAt;
     private Func<string, string?>? underlineValidation;
+    private bool underlineTrimText = true;
+    private bool underlineRequireValidInput;
+    private string underlineAcceptLabel = "確定";
 
     private void OpenUnderlineInput(string title, string initial, Action<string> accepted, string? message = null, int maxLength = 100,
-        bool allowEmpty = false, Func<string, string?>? validate = null, Action? cancelled = null, bool trim = true)
+        bool allowEmpty = false, Func<string, string?>? validate = null, Action? cancelled = null, bool trim = true,
+        string acceptLabel = "確定", bool requireValidInput = false)
     {
         var editor = new UnderlineTextEditor(initial, maxLength);
         OpenModal(new ModalDialogModel(ModalDialogKind.Text, title,
@@ -42,9 +46,12 @@ public sealed partial class VenueEditorGame
             if (action != ModalDialogAction.Accept) { cancelled?.Invoke(); return; }
             try { accepted(trim ? editor.Text.Trim() : editor.Text); }
             catch (Exception exception) { ShowNotice(title, exception.Message,
-                () => OpenUnderlineInput(title, editor.Text, accepted, message, maxLength, allowEmpty, validate, cancelled, trim)); }
+                () => OpenUnderlineInput(title, editor.Text, accepted, message, maxLength, allowEmpty, validate, cancelled, trim, acceptLabel, requireValidInput)); }
         });
         underlineEditor = editor;
+        underlineTrimText = trim;
+        underlineAcceptLabel = acceptLabel;
+        underlineRequireValidInput = requireValidInput;
         underlineInputReceivedAt = 0;
         underlineValidation = validate ?? (value => CircleSpaceCoordinator.Desktop.Core.Interaction.EditorDialogValidation.Name(value, allowEmpty));
         compositionText = "";
@@ -228,8 +235,9 @@ public sealed partial class VenueEditorGame
             EditWeightComment();
             return;
         }
-        if (action == ModalDialogAction.Accept && underlineValidation?.Invoke(underlineEditor?.Text.Trim() ?? "") is { } error)
+        if (action == ModalDialogAction.Accept && underlineValidation?.Invoke(underlineTrimText ? underlineEditor?.Text.Trim() ?? "" : underlineEditor?.Text ?? "") is { } error)
         {
+            if (underlineRequireValidInput) return;
             modalDialog!.Message = error;
             modalFocus = TextInputFocus;
             textInputService?.Start();

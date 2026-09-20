@@ -32,6 +32,8 @@ public sealed partial class VenueEditorGame
         textInputService?.Stop();
         ResetUnderlineKeyRepeat();
         underlineEditor = null;
+        underlineAcceptLabel = "確定";
+        underlineRequireValidInput = false;
         weightCommentFeatureId = null;
         selectionLabels = null;
         packageReadDialog = null;
@@ -116,6 +118,8 @@ public sealed partial class VenueEditorGame
         if (packageReadDialog is { } packageReader)
         {
             if (action == ModalDialogAction.Increase) { ChoosePackageReadDirectory(); return; }
+            if (action == ModalDialogAction.Decrease) { CreatePackageFromReader(); return; }
+            if (action == ModalDialogAction.Stop) { DeletePackageFromReader(); return; }
             if (action == ModalDialogAction.Accept && !packageReader.CanRead) return;
         }
         if (exportColumnDraft is { IsComplete: false } && action == ModalDialogAction.Accept) return;
@@ -145,7 +149,7 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle ModalBounds()
     {
         var availableHeight = GraphicsDevice.Viewport.Height - WorkerBarHeight - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
-        var large = packageReadDialog is not null || selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null || evaluationRows is not null;
+        var large = packageReadDialog is not null || selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null || evaluationRows is not null || modalDialog?.Kind == ModalDialogKind.Text && underlineRequireValidInput;
         var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
         var height = Math.Min(large ? 620d : weightCommentFeatureId is not null ? 460d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
@@ -205,7 +209,7 @@ public sealed partial class VenueEditorGame
             ModalDialogKind.Confirmation => "削除する",
             ModalDialogKind.Minutes => "開始",
             ModalDialogKind.Progress => "ストップ",
-            ModalDialogKind.Text => "確定",
+            ModalDialogKind.Text => underlineAcceptLabel,
             _ => "閉じる",
         }, modalDialog.Kind == ModalDialogKind.Progress ? ModalDialogAction.Stop : ModalDialogAction.Accept,
             right, bottom, buttonWidth);
@@ -247,6 +251,10 @@ public sealed partial class VenueEditorGame
             var button = modalButtons[index].Button;
             button.IsSelected = false;
             button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false } || packageReadDialog is { CanRead: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
+            if (packageReadDialog is { SelectedPackage: null } && modalButtons[index].Action == ModalDialogAction.Stop)
+                button.IsEnabled = false;
+            if (modalDialog.Kind == ModalDialogKind.Text && underlineRequireValidInput && modalButtons[index].Action == ModalDialogAction.Accept)
+                button.IsEnabled &= compositionText.Length == 0 && underlineValidation?.Invoke(underlineEditor?.Text ?? "") is null;
             OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),

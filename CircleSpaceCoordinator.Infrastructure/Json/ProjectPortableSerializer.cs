@@ -90,8 +90,8 @@ public static class ProjectPortableSerializer
             throw new InvalidDataException("未対応の部分読込み形式・バージョンです。");
         if (string.IsNullOrWhiteSpace(document.Name) || document.Description is null || document.Tags is null ||
             document.Tags.Any(tag => tag is null) || document.Items is null ||
-            document.Items.Length + (document.Knowledge?.Length ?? 0) + (document.Materials?.Length ?? 0) is < 1 or > MaximumItems)
-            throw new InvalidDataException("名前・説明・タグと1～100件の項目が必要です。");
+            document.Items.Length + (document.Knowledge?.Length ?? 0) + (document.Materials?.Length ?? 0) > MaximumItems)
+            throw new InvalidDataException("名前・説明・タグが必要です。項目は0～100件にしてください。");
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var projects = new List<CircleSpaceProject>();
         if (document.FormatVersion == 1 && document.Materials is not null)

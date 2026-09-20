@@ -12,6 +12,10 @@ public sealed partial class EditorService
         string result;
         switch (request.Action)
         {
+            case "create-empty":
+                var packageName = CircleSpaceCoordinator.Core.Model.PersonCredits.NormalizeChangeLog(WireJson.Read<string>(request.Json));
+                result = ProjectPortableSerializer.Save(packageName, "", [], false, []);
+                break;
             case "export":
                 var export = WireJson.Read<PortableExportRequest>(request.Json);
                 if (export.LayoutIds.Count + export.KnowledgeIds.Count + export.Materials.Count is < 1 or > ProjectPortableSerializer.MaximumItems ||

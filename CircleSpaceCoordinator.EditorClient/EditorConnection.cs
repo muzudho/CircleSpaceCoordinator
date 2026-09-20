@@ -24,6 +24,7 @@ public sealed class EditorConnection : IDisposable
     public string Encode(CircleSpaceProject project) => Invoke(() => Client.ConvertDocument(
         new DocumentRequest { ModelJson = WireJson.Write(project) }, Deadline())).ProjectJson;
     public string ExportPortable(PortableExportRequest request) => Portable("export", WireJson.Write(request));
+    public string CreateEmptyPortable(string name) => Portable("create-empty", WireJson.Write(name));
     public PortablePackage ParsePortable(string json) => WireJson.Read<PortablePackage>(Portable("parse", json));
     public PortablePreview PreviewPortable(PortablePreviewRequest request) => WireJson.Read<PortablePreview>(Portable("preview", WireJson.Write(request)));
     public SpaceDefinitionCatalog PreviewPortableCatalog(PortableCatalogRequest request) => WireJson.Read<SpaceDefinitionCatalog>(Portable("catalog-preview", WireJson.Write(request)));

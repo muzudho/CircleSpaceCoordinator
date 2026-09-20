@@ -14,9 +14,11 @@ public sealed partial class VenueEditorGame
     private PackageReadDialogModel? packageReadDialog;
     private string? packageReadDirectory;
     private string? packageReadFolderError;
+    private string? packageReadNotice;
     private readonly int[] packageReadScroll = new int[2];
     private int packageReadFocus;
     private const int PackageReadRowHeight = 32;
+    private const int PackageReadButtonCount = 5;
 
     private void OpenPackageReadDialog()
         => OpenPackageReadDialog(null, null);
@@ -67,10 +69,12 @@ public sealed partial class VenueEditorGame
                 else ReadTable();
             }
             packageReadDialog = null;
-        }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
+        }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("新規作成", ModalDialogAction.Decrease),
+            ("削除", ModalDialogAction.Stop), ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
         packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json), MappingMaterialKind);
         packageReadFocus = 0;
         packageReadFolderError = null;
+        packageReadNotice = null;
         Array.Clear(packageReadScroll);
         if (sourcePath is not null)
         {
@@ -129,7 +133,7 @@ public sealed partial class VenueEditorGame
             {
                 SelectPackageReadRow(0, selectedIndex);
                 packageReadScroll[0] = Math.Min(selectedIndex, Math.Max(0, model.Files.Length - PackageReadPageSize));
-                packageReadFocus = 4;
+                packageReadFocus = PackageReadButtonCount + 1;
                 modalFocus = -1;
             }
         }
@@ -143,11 +147,12 @@ public sealed partial class VenueEditorGame
     private bool UpdatePackageReadDialog(KeyboardState keyboard, MouseState mouse)
     {
         if (packageReadDialog is not { } model) return false;
-        // Three footer buttons followed by the file list and the table list.
+        // Footer buttons followed by the file list and the table list.
         if (IsPressed(keyboard, Keys.Tab))
         {
-            packageReadFocus = (packageReadFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? 4 : 1)) % 5;
-            modalFocus = packageReadFocus < 3 ? packageReadFocus : -1;
+            var count = PackageReadButtonCount + 2;
+            packageReadFocus = (packageReadFocus + (keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift) ? count - 1 : 1)) % count;
+            modalFocus = packageReadFocus < PackageReadButtonCount ? packageReadFocus : -1;
             return true;
         }
         if (IsPressed(keyboard, Keys.Escape)) { ApplyModalAction(ModalDialogAction.Cancel); return true; }
@@ -162,14 +167,14 @@ public sealed partial class VenueEditorGame
                 if (wheel != 0) packageReadScroll[list] = Math.Clamp(packageReadScroll[list] - Math.Sign(wheel) * 3, 0, Math.Max(0, count - PackageReadPageSize));
                 if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
                 {
-                    packageReadFocus = list + 3;
+                    packageReadFocus = list + PackageReadButtonCount;
                     modalFocus = -1;
                     var row = (int)((pointer.Y - area.Y) / PackageReadRowHeight);
                     var index = packageReadScroll[list] + row;
                     if (row < PackageReadPageSize && index < count) SelectPackageReadRow(list, index);
                 }
             }
-            if (packageReadFocus != list + 3 || count == 0) continue;
+            if (packageReadFocus != list + PackageReadButtonCount || count == 0) continue;
             var selected = list == 0 ? model.FileIndex : model.TableIndex;
             var delta = IsPressed(keyboard, Keys.Down) ? 1 : IsPressed(keyboard, Keys.Up) ? -1
                 : IsPressed(keyboard, Keys.PageDown) ? PackageReadPageSize : IsPressed(keyboard, Keys.PageUp) ? -PackageReadPageSize : 0;
@@ -183,8 +188,8 @@ public sealed partial class VenueEditorGame
         }
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
-            if (packageReadFocus < 3) ApplyModalAction(modalButtons[packageReadFocus].Action);
-            else if (packageReadFocus == 3) { packageReadFocus = 4; modalFocus = -1; }
+            if (packageReadFocus < PackageReadButtonCount) ApplyModalAction(modalButtons[packageReadFocus].Action);
+            else if (packageReadFocus == PackageReadButtonCount) { packageReadFocus = PackageReadButtonCount + 1; modalFocus = -1; }
             else ApplyModalAction(ModalDialogAction.Accept);
             return true;
         }
@@ -225,7 +230,7 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(list == 0 ? "パッケージファイル" : "網掛け対応表",
                 ToRectangle(new(area.X, area.Y - 30, area.Width, 28)), Color.White, 18, true);
             DrawRectangle(area, new Color(18, 23, 29));
-            DrawOutline(area, 1, packageReadFocus == list + 3 ? OperationTargetColor : Color.SlateGray);
+            DrawOutline(area, 1, packageReadFocus == list + PackageReadButtonCount ? OperationTargetColor : Color.SlateGray);
             for (var row = 0; row < PackageReadPageSize && packageReadScroll[list] + row < count; row++)
             {
                 var index = packageReadScroll[list] + row;
@@ -241,7 +246,7 @@ public sealed partial class VenueEditorGame
                 ToRectangle(new(area.X, area.Y + area.Height + 4, area.Width, 24)), Color.LightGray, 12, true);
         }
         var error = packageReadFolderError ?? model.Error;
-        textRenderer?.Draw(error ?? "ファイルと表を選んで［読取］を押してください。",
+        textRenderer?.Draw(error ?? packageReadNotice ?? "ファイルと表を選んで［読取］を押してください。",
             ToRectangle(new(panel.X + 20, panel.Y + panel.Height - 90, panel.Width - 40, 28)),
             error is null ? Color.LightGray : Color.Salmon, 14, true);
     }
