@@ -46,7 +46,9 @@ for ($trial = 1; $trial -le $Runs; $trial++) {
         } while (-not $summary -and [DateTime]::UtcNow -lt $deadline)
         if (-not $summary) { throw 'Startup measurement timed out.' }
         if (-not $summary.success) { throw 'Startup failed; inspect the performance log.' }
-        [pscustomobject]@{ run = $trial; processId = $appProcess.Id; log = $log.FullName; summary = $summary } | ConvertTo-Json -Depth 8 -Compress
+        $thinkingLog = Get-ChildItem -LiteralPath (Join-Path $appDirectory 'logs') -Filter "thinking-startup-*-$($appProcess.Id)-*.json" | Select-Object -First 1
+        $thinking = if ($thinkingLog) { Get-Content -Raw -LiteralPath $thinkingLog.FullName | ConvertFrom-Json } else { $null }
+        [pscustomobject]@{ run = $trial; processId = $appProcess.Id; log = $log.FullName; summary = $summary; thinking = $thinking } | ConvertTo-Json -Depth 8 -Compress
         if (-not [StartupMeasurementWindow]::Close($appProcess.Id)) { throw 'Cannot request normal application close.' }
         if (-not $appProcess.WaitForExit(10000)) { throw 'Application did not close normally.' }
         if ($appProcess.ExitCode -ne 0) { throw "Application exit code: $($appProcess.ExitCode)" }

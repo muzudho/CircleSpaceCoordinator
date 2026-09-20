@@ -59,6 +59,11 @@ public sealed class EngineRuntime : IDisposable
             RedirectStandardError = true,
         };
         if (!File.Exists(executable)) info.ArgumentList.Add(Path.Combine(directory, name + ".dll"));
+        if (folder == "thinking")
+        {
+            info.Environment["CSC_STARTUP_LOG_DIRECTORY"] = Path.Combine(baseDirectory, "logs");
+            info.Environment["CSC_STARTUP_PARENT_PID"] = Environment.ProcessId.ToString();
+        }
         var ready = Path.Combine(readyDirectory, folder + ".txt");
         foreach (var argument in new[] { "--port", "0", "--ready-file", ready, "--parent-pid", Environment.ProcessId.ToString() }.Concat(args))
             info.ArgumentList.Add(argument);
