@@ -31,7 +31,6 @@ public sealed partial class VenueEditorGame
     private void CreatePackageFromReader()
     {
         if (packageReadDialog is not { } reader) return;
-        if (!Directory.Exists(reader.DirectoryPath)) ChoosePackageReadDirectory();
         if (!Directory.Exists(reader.DirectoryPath)) return;
         var directory = reader.DirectoryPath;
         var previousPath = reader.FileIndex >= 0 ? reader.Files[reader.FileIndex] : null;

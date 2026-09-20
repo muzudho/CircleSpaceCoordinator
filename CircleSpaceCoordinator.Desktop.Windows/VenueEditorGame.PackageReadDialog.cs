@@ -253,4 +253,19 @@ public sealed partial class VenueEditorGame
             ToRectangle(new(panel.X + 20, panel.Y + panel.Height - 90, panel.Width - 40, 28)),
             error is null ? Color.LightGray : Color.Salmon, 14, true);
     }
+
+    private void DrawPackageCreateTooltip()
+    {
+        if (!IsActive || packageReadDialog is not { } reader || Directory.Exists(reader.DirectoryPath)) return;
+        var button = modalButtons.FirstOrDefault(item => item.Action == ModalDialogAction.Decrease).Button;
+        var mouse = Mouse.GetState();
+        if (button is null || !Contains(button.Bounds, new(mouse.X, mouse.Y))) return;
+        const string message = "先にフォルダーを選択してください";
+        var width = Math.Min((textRenderer?.Measure(message, 16).X ?? 280) + 20, GraphicsDevice.Viewport.Width - 8);
+        var bounds = new ScreenRectangle(Math.Clamp(mouse.X + 12d, 4, Math.Max(4, GraphicsDevice.Viewport.Width - width - 4)),
+            Math.Max(4, mouse.Y - 40), width, 32);
+        DrawRectangle(bounds, new Color(24, 29, 36));
+        DrawOutline(bounds, 1, Color.LightSlateGray);
+        textRenderer?.Draw(message, ToRectangle(bounds, 6), Color.White, 16, true);
+    }
 }
