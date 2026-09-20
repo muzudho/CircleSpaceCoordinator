@@ -110,11 +110,12 @@ public sealed partial class VenueEditorGame
                 for (var row = 0; row < MappingVisibleRows; row++)
                     DrawOutline(MappingCell(row, column, right: true), 1, new Color(48, 65, 77));
         }
-        var message = MappingGridBounds(20, 62, packageGenreTable is null ? 960 : 640, 36, right: true);
-        textRenderer?.Draw(packageGenreTable is { } table ? "パッケージ ＞ " + table.Name : "パッケージ ＞ ジャンルコード表（未選択）", ToRectangle(message, 6),
-            Color.LightGray, Math.Max(10, (int)(15 * MappingEditorScale)), true);
         if (packageGenreTable is { } loaded)
-            DrawGenreKnowledgeComment(loaded.OverallComment, MappingGridBounds(672, 62, 308, 36, right: true), "", editable: false);
+            DrawTableHeader(loaded.Name, loaded.OverallComment, right: true, editable: false);
+        else
+            textRenderer?.Draw("パッケージ ＞ ジャンルコード表（未選択）",
+                ToRectangle(MappingGridBounds(20, 62, 960, 36, right: true), 6),
+                Color.LightGray, Math.Max(10, (int)(15 * MappingEditorScale)), true);
         var rows = PackageGenreRows();
         void Text(string value, ScreenRectangle bounds, Color? color = null) =>
             textRenderer?.Draw(value, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(17 * MappingEditorScale)), true);

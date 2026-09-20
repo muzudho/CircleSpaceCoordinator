@@ -360,7 +360,7 @@ public sealed partial class VenueEditorGame
             previousMouse.LeftButton == ButtonState.Released && Contains(MappingTableNameBounds, new(mouse.X, mouse.Y)))
         {
             SetMappingTextFocus(false);
-            OpenUnderlineInput("ジャンルコード表名", mappingGenreCodeTableName, value =>
+            OpenUnderlineInput("表名", mappingGenreCodeTableName, value =>
             {
                 mappingGenreCodeTableName = GenreStyleDefinition.NormalizeTableName(value);
                 mappingWidth = -1;
@@ -518,8 +518,7 @@ public sealed partial class VenueEditorGame
             Text("スペース数順", MappingBounds(700, 18, 280, 36), 18, new Color(180, 220, 230));
         if (mappingKnowledgeComments)
         {
-            DrawGenreKnowledgeComment("ジャンルコード表名：" + mappingGenreCodeTableName, MappingTableNameBounds);
-            DrawGenreKnowledgeComment(draft.OverallComment, MappingOverallCommentBounds, "全体コメント");
+            DrawTableHeader(mappingGenreCodeTableName, draft.OverallComment);
         }
         if (GenreChartVisible) DrawGenrePreview();
         else

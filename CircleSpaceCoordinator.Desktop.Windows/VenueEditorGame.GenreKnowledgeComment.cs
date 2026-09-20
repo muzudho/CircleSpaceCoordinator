@@ -8,16 +8,42 @@ using StationeryUI.MonoGame.Controls.ActionBadge;
 
 public sealed partial class VenueEditorGame
 {
-    private ScreenRectangle MappingTableNameBounds => MappingGridBounds(20, 62, GenreGridSplit ? 640 : 460, 36);
-    private ScreenRectangle MappingOverallCommentBounds => GenreGridSplit
-        ? MappingGridBounds(672, 62, 308, 36)
-        : MappingGridBounds(492, 62, 488, 36);
+    private ScreenRectangle MappingTableNameBounds => TableHeaderBounds().Name;
+    private ScreenRectangle MappingOverallCommentBounds => TableHeaderBounds().Comment;
+
+    private (ScreenRectangle NameLabel, ScreenRectangle Name, ScreenRectangle CommentLabel, ScreenRectangle Comment)
+        TableHeaderBounds(bool right = false)
+    {
+        var row = MappingGridBounds(20, 62, 960, 36, right);
+        var size = Math.Max(10, (int)(14 * MappingEditorScale));
+        var gap = 12 * MappingEditorScale;
+        var half = (row.Width - gap) / 2;
+        var nameLabelWidth = (textRenderer?.Measure("表名：", size).X ?? size * 3) + 6;
+        var commentLabelWidth = (textRenderer?.Measure("コメント：", size).X ?? size * 5) + 6;
+        var commentX = row.X + half + gap;
+        return (new(row.X, row.Y, nameLabelWidth, row.Height),
+            new(row.X + nameLabelWidth, row.Y, Math.Max(1, half - nameLabelWidth), row.Height),
+            new(commentX, row.Y, commentLabelWidth, row.Height),
+            new(commentX + commentLabelWidth, row.Y, Math.Max(1, half - commentLabelWidth), row.Height));
+    }
+
+    private void DrawTableHeader(string name, string? comment, bool right = false, bool editable = true)
+    {
+        var bounds = TableHeaderBounds(right);
+        var size = Math.Max(10, (int)(14 * MappingEditorScale));
+        void Label(string text, ScreenRectangle area) => textRenderer?.Draw(text,
+            ToRectangle(new(area.X, area.Y + 3, area.Width, area.Height - 9)), Color.White, size);
+        Label("表名：", bounds.NameLabel);
+        DrawGenreKnowledgeComment(name, bounds.Name, "表名", editable);
+        Label("コメント：", bounds.CommentLabel);
+        DrawGenreKnowledgeComment(comment, bounds.Comment, "コメント", editable);
+    }
 
     private void OpenMappingOverallComment()
     {
         if (mappingDraft is not { } draft) return;
         SetMappingTextFocus(false);
-        OpenUnderlineInput("全体コメント", draft.OverallComment ?? "", value =>
+        OpenUnderlineInput("コメント", draft.OverallComment ?? "", value =>
         {
             draft.SetOverallComment(value);
             mappingWidth = -1;
