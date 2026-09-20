@@ -22,11 +22,16 @@ if (args is ["--runtime", var baseDirectory])
 {
     try
     {
+        var thinkingAtStart = LazyThinkingChecks.ProcessIds();
+        var editorsAtStart = LazyThinkingChecks.ProcessIds("CircleSpaceCoordinator.EditorEngine");
         using var runtime = await CircleSpaceCoordinator.EditorClient.EngineRuntime.StartAsync(Path.GetFullPath(baseDirectory),
             Path.Combine(Path.GetTempPath(), "circle-space-runtime-" + Guid.NewGuid().ToString("N")));
         using var workspace = runtime.Connection.Open(await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "sample.json")));
         workspace.Execute(new CircleSpaceCoordinator.Engine.Model.PlanCatalogServiceRenamePlan(workspace.SelectedPlanId, "Runtime smoke"));
         if (workspace.SelectedPlan.Name != "Runtime smoke") throw new Exception("Runtime editing failed.");
+        await LazyThinkingChecks.Run(runtime, workspace, thinkingAtStart);
+        var ownedEditorId = LazyThinkingChecks.ProcessIds("CircleSpaceCoordinator.EditorEngine").Except(editorsAtStart).Single();
+        await LazyThinkingChecks.CheckParentExit(runtime, workspace, thinkingAtStart, ownedEditorId);
         Console.WriteLine("PASS: packaged engine startup, API handshake, editing and shutdown.");
     }
     catch (Exception exception)

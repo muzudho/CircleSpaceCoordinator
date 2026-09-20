@@ -16,6 +16,8 @@ public sealed partial class EditorService
         public JobEvent Latest { get; set; } = new();
         public long Sequence { get; set; }
         public bool StopRequested { get; set; }
+        public CancellationTokenSource StartupStop { get; } = new();
+        public Thinking.ThinkingClient? Thinking { get; set; }
         public DateTime LastAccess { get; set; } = DateTime.UtcNow;
     }
 
@@ -51,6 +53,10 @@ public sealed partial class EditorService
     {
         try
         {
+            using var lease = await thinkingProvider.AcquireAsync(job.StartupStop.Token);
+            var thinking = lease.Client;
+            lock (gate) job.Thinking = thinking;
+            JobEvent? completed = null;
             using var stream = thinking.Run(input, deadline: DateTime.UtcNow.AddMilliseconds(input.Input.Options.TimeLimitMs + 30000));
             await foreach (var item in stream.ResponseStream.ReadAllAsync())
             {
@@ -74,22 +80,28 @@ public sealed partial class EditorService
                         }
                         item.State = Snapshot(job.Request.WorkspaceId, session);
                     }
-                    job.Latest = item;
-                    job.Sequence++;
+                    if (item.Completed) completed = item;
+                    else { job.Latest = item; job.Sequence++; }
                 }
             }
-            lock (gate)
-                if (!job.Latest.Completed) throw new InvalidOperationException("Thinking stream ended without a result.");
+            if (completed is null) throw new InvalidOperationException("Thinking stream ended without a result.");
+            lock (gate) job.Thinking = null;
+            lease.Dispose();
+            lock (gate) { job.Latest = completed; job.Sequence++; }
         }
         catch (Exception exception)
         {
             lock (gate)
             {
                 job.Latest = new JobEvent { JobId = id, Completed = true,
-                    ErrorCode = exception is RpcException rpc ? rpc.StatusCode.ToString() : "FailedPrecondition",
+                    ErrorCode = exception is OperationCanceledException ? "Cancelled" : exception is RpcException rpc ? rpc.StatusCode.ToString() : "FailedPrecondition",
                     ErrorMessage = exception is RpcException remote ? remote.Status.Detail : exception.Message };
                 job.Sequence++;
             }
+        }
+        finally
+        {
+            lock (gate) job.Thinking = null;
         }
     }
 
@@ -114,8 +126,20 @@ public sealed partial class EditorService
 
     public override async Task<Empty> StopJob(JobHandle request, ServerCallContext context)
     {
-        lock (gate) FindJob(request.JobId).StopRequested = true;
-        await thinking.StopAsync(request, deadline: DateTime.UtcNow.AddSeconds(5), cancellationToken: context.CancellationToken);
+        Thinking.ThinkingClient? thinking;
+        lock (gate)
+        {
+            var job = FindJob(request.JobId);
+            job.StopRequested = true;
+            thinking = job.Thinking;
+            if (thinking is null && !job.Latest.Completed && thinkingProvider.StartsLocalProcess) job.StartupStop.Cancel();
+        }
+        if (thinking is not null)
+        {
+            try { await thinking.StopAsync(request, deadline: DateTime.UtcNow.AddSeconds(5), cancellationToken: context.CancellationToken); }
+            catch (Exception ex) when (ex is RpcException or ObjectDisposedException)
+            { lock (gate) { var job = FindJob(request.JobId); if (!job.Latest.Completed && job.Thinking is not null) throw; } }
+        }
         return new Empty();
     }
     public override Task<Empty> ReleaseJob(JobHandle request, ServerCallContext context) => Run(() =>
@@ -123,6 +147,7 @@ public sealed partial class EditorService
         lock (gate)
         {
             if (!FindJob(request.JobId).Latest.Completed) throw new InvalidOperationException("Stop and finish the job before releasing it.");
+            FindJob(request.JobId).StartupStop.Dispose();
             jobs.Remove(request.JobId);
             return new Empty();
         }

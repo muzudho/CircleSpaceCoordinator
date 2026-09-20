@@ -20,7 +20,8 @@ public sealed partial class EditorService
                     PlanId = session.Workspace.SelectedPlanId };
             }
         });
-        var result = await thinking.FillVacantSeatsAsync(input, deadline: context.Deadline, cancellationToken: context.CancellationToken);
+        using var thinkingLease = await thinkingProvider.AcquireAsync(context.CancellationToken);
+        var result = await thinkingLease.Client.FillVacantSeatsAsync(input, deadline: context.Deadline, cancellationToken: context.CancellationToken);
         return await Run(() =>
         {
             context.CancellationToken.ThrowIfCancellationRequested();

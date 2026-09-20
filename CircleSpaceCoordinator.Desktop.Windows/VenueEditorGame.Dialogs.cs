@@ -275,7 +275,7 @@ public sealed partial class VenueEditorGame
         optimizationCancellation = new CancellationTokenSource();
         var token = optimizationCancellation.Token;
         optimizationProgress.Clear();
-        OpenModal(new ModalDialogModel(ModalDialogKind.Progress, "自動最適化", "配置案を最適化しています…"));
+        OpenModal(new ModalDialogModel(ModalDialogKind.Progress, "自動最適化", "思考エンジンを準備しています…"));
         optimizationTask = workspace.OptimizeAsync(minutes, optimizationProgress, token);
         Log("optimization_started", success: true);
     }
@@ -287,7 +287,7 @@ public sealed partial class VenueEditorGame
         {
             var progress = optimizationProgress.Value;
             if (modalDialog is not null)
-                modalDialog.Message = (modalDialog.StopRequested ? "停止しています。最高案を確定中です…" : "配置案を最適化しています…") +
+                modalDialog.Message = (modalDialog.StopRequested ? "停止しています。最高案を確定中です…" : progress is null ? "思考エンジンを準備しています…" : "配置案を最適化しています…") +
                     (progress is null ? "" : $"\n試行 {progress.Iteration:N0} 回　経過 {progress.Elapsed:mm\\:ss}\n一般 {progress.BestScore.GeneralAttendeeScore:F2}　サークル {progress.BestScore.CircleParticipantScore:F2}");
             return;
         }
@@ -311,6 +311,10 @@ public sealed partial class VenueEditorGame
                 ? $"最適化した配置案を新しく追加しました。\n開始時　一般 {result.InitialScore.GeneralAttendeeScore:F2}　サークル {result.InitialScore.CircleParticipantScore:F2}\n最高　一般 {result.BestScore.GeneralAttendeeScore:F2}　サークル {result.BestScore.CircleParticipantScore:F2}\n試行回数 {result.IterationCount:N0}"
                 : "配置案を追加できませんでした。\n" + FormatIssues(applied.Issues));
             Log("optimization_completed", success: applied.Applied);
+        }
+        catch (OperationCanceledException)
+        {
+            ShowInAppMessage("自動最適化", "自動最適化をキャンセルしました。");
         }
         catch (Exception exception)
         {

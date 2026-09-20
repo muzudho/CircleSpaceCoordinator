@@ -20,20 +20,11 @@ public sealed class EngineRuntime : IDisposable
         try
         {
             var stage = Stopwatch.GetTimestamp();
-            var thinkingAddress = await runtime.StartEngine(baseDirectory, "thinking", "CircleSpaceCoordinator.ThinkingEngine", []);
-            startupTiming?.Invoke("thinking_process_ready", Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
-            stage = Stopwatch.GetTimestamp();
-            using (var channel = GrpcChannel.ForAddress(thinkingAddress))
-            {
-                var info = await new Thinking.ThinkingClient(channel).DescribeAsync(new Empty(), EditorConnection.Deadline());
-                if (info.ApiMajor != 1) throw new InvalidOperationException("Unsupported thinking API version.");
-            }
-            startupTiming?.Invoke("thinking_rpc_handshake", Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
-            stage = Stopwatch.GetTimestamp();
             stateDirectory ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "CircleSpaceCoordinator", "EngineSessions");
             var address = await runtime.StartEngine(baseDirectory, "editor", "CircleSpaceCoordinator.EditorEngine",
-                ["--thinking-address", thinkingAddress, "--state-directory", stateDirectory]);
+                ["--thinking-directory", Path.Combine(baseDirectory, "engines", "thinking"),
+                 "--thinking-log-directory", Path.Combine(baseDirectory, "logs"), "--state-directory", stateDirectory]);
             startupTiming?.Invoke("editor_process_ready", Stopwatch.GetElapsedTime(stage).TotalMilliseconds);
             stage = Stopwatch.GetTimestamp();
             runtime.Connection = new EditorConnection(address);

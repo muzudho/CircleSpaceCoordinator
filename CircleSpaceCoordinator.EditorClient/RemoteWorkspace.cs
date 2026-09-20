@@ -82,6 +82,7 @@ public sealed class RemoteWorkspace : IEditorWorkspace, IDisposable
             {
                 if (item.ProgressJson.Length > 0) progress.Report(WireJson.Read<CirclePlacementOptimizationProgress>(item.ProgressJson));
                 if (!item.Completed) continue;
+                if (item.ErrorCode == "Cancelled" && stop.IsCancellationRequested) throw new OperationCanceledException(stop);
                 if (item.ErrorCode.Length > 0) throw new InvalidOperationException($"{item.ErrorCode}: {item.ErrorMessage}");
                 return item;
             }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 
 var entered = Stopwatch.GetTimestamp();
+CircleSpaceCoordinator.Engine.Contracts.ParentProcessLifetime.Watch(args);
 await RunAsync(args, entered);
 
 static async Task RunAsync(string[] args, long entered)
@@ -33,14 +34,5 @@ static async Task RunAsync(string[] args, long entered)
         throw;
     }
     await using var lifetime = app;
-    if (int.TryParse(app.Configuration["parent-pid"], out var parentId))
-    {
-        _ = Task.Run(async () =>
-        {
-            try { using var parent = Process.GetProcessById(parentId); await parent.WaitForExitAsync(); }
-            catch (ArgumentException) { }
-            finally { app.Lifetime.StopApplication(); }
-        });
-    }
     await app.WaitForShutdownAsync();
 }

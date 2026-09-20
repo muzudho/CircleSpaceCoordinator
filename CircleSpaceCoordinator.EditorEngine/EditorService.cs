@@ -11,7 +11,7 @@ using Grpc.Core;
 using CircleSpaceCoordinator.Engine.Model;
 using CircleSpaceCoordinator.Core.Evaluation;
 
-public sealed partial class EditorService(Thinking.ThinkingClient thinking, SessionRepository repository) : Editor.EditorBase
+public sealed partial class EditorService(ThinkingEngineProvider thinkingProvider, SessionRepository repository) : Editor.EditorBase
 {
     private static DateOnly? ReadWorkDate(string value) => string.IsNullOrEmpty(value) ? null
         : DateOnly.ParseExact(value, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
@@ -142,7 +142,8 @@ public sealed partial class EditorService(Thinking.ThinkingClient thinking, Sess
                 };
             }
         });
-        var result = await thinking.OptimizeAsync(input, deadline: context.Deadline,
+        using var thinkingLease = await thinkingProvider.AcquireAsync(context.CancellationToken);
+        var result = await thinkingLease.Client.OptimizeAsync(input, deadline: context.Deadline,
             cancellationToken: context.CancellationToken);
         return await Run(() =>
         {

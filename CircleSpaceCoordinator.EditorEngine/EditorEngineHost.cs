@@ -18,10 +18,7 @@ public static class EditorEngineHost
             options.MaxReceiveMessageSize = 32 * 1024 * 1024;
             options.MaxSendMessageSize = 32 * 1024 * 1024;
         });
-        builder.Services.AddSingleton(_ => GrpcChannel.ForAddress(
-            builder.Configuration["thinking-address"] ?? "http://127.0.0.1:5072",
-            new GrpcChannelOptions { MaxReceiveMessageSize = 32 * 1024 * 1024, MaxSendMessageSize = 32 * 1024 * 1024 }));
-        builder.Services.AddSingleton(provider => new Thinking.ThinkingClient(provider.GetRequiredService<GrpcChannel>()));
+        builder.Services.AddSingleton<ThinkingEngineProvider>();
         builder.Services.AddSingleton<EditorService>();
         builder.Services.AddSingleton<SessionRepository>();
         var app = builder.Build();
