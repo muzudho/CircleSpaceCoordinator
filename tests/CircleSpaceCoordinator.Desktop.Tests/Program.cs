@@ -29,6 +29,7 @@ internal static partial class Program
             ("Event metadata loads only selected files, caches per session and retries failures", LazyEventMetadata),
             ("Genre autosave restores package bytes, rejects stale writes and finalizes project credits", GenreAutoSaveRestoration),
             ("Genre copies preserve all fields, reject collisions and invalid overwrites, and discard cleanly", GenreCopyRows),
+            ("Shading tables select ranges on one side and copy or delete batches atomically", ShadingMultipleSelectionAndBatches),
             ("Shared shading tables preserve block metadata, legacy files, undo, packages and isolated edits", SharedShadingTablesRoundTrip),
             ("Empty packages can be created without overwrite and deleted only with exact names and unchanged contents", PackageCreationAndConfirmedDeletion),
             ("Empty shading tables can be added to packages, read and edited without replacing existing items", EmptyShadingTableCreation),

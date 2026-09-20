@@ -58,6 +58,7 @@ public sealed partial class VenueEditorGame
     {
         CancelInProgressPointerInteraction();
         mappingDraft = draft;
+        shadingSelection.Clear();
         mappingKnowledgeComments = knowledgeComments;
         genrePageTab = genrePreviewScroll = 0;
         genreGridLayoutMode = GenreGridLayoutMode.FullWidth;
@@ -90,6 +91,7 @@ public sealed partial class VenueEditorGame
 
     private void CloseStyleMappingEditor()
     {
+        shadingSelection.Clear();
         CancelInProgressPointerInteraction();
         genrePieExpanded = false;
         mappingDraft = null;
@@ -312,8 +314,8 @@ public sealed partial class VenueEditorGame
             if (GenreGridVisible)
             {
                 Add("新規作成", GenreRowActionBounds(0, 120), CreateGenreRow,
-                    !GenreRowActionsRight || packageGenreTable is not null,
-                    tooltip: $"操作対象の上に新しい{MappingRowLabel}を作り、その行を操作対象にします。");
+                    !MultipleShadingRows && (!GenreRowActionsRight || packageGenreTable is not null),
+                    tooltip: MultipleShadingRows ? "新規作成するには、行を通常クリックして単一選択に戻してください。" : $"操作対象の上に新しい{MappingRowLabel}を作り、その行を操作対象にします。");
                 if (GenreGridSplit)
                     Add("反対側へコピー", GenreRowActionBounds(132, 200), CopyGenreToOtherPane,
                         packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
@@ -356,6 +358,8 @@ public sealed partial class VenueEditorGame
         if (genreOrderDialogOpen) { UpdateGenreOrderDialog(keyboard, mouse); return; }
         if (genrePieExpanded) { UpdateExpandedGenrePie(keyboard, mouse); return; }
         BuildMappingEditorButtons();
+        if (GenreGridSplit && MultipleShadingRows && Contains(LockedShadingPaneBounds(), new(mouse.X, mouse.Y)) &&
+            (mouse.LeftButton == ButtonState.Pressed || mouse.ScrollWheelValue != previousMouse.ScrollWheelValue)) return;
         if (UpdateGenreScrollbars(mouse)) return;
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
             previousMouse.LeftButton == ButtonState.Released && Contains(MappingTableNameBounds, new(mouse.X, mouse.Y)))
@@ -407,7 +411,7 @@ public sealed partial class VenueEditorGame
             var rows = PackageGenreRows();
             var index = Array.FindIndex(rows, row => row.Key == packageKey);
             var delta = IsPressed(keyboard, Keys.Up) ? -1 : IsPressed(keyboard, Keys.Down) ? 1 : 0;
-            if (delta != 0 && rows.Length > 0) SelectPackageGenreTarget(rows[Math.Clamp(index + delta, 0, rows.Length - 1)].Key);
+            if (delta != 0 && rows.Length > 0) ClickShadingRow(true, rows[Math.Clamp(index + delta, 0, rows.Length - 1)].Key, keyboard);
             if (IsPressed(keyboard, Keys.PageUp)) ScrollPackageGenreRows(-MappingVisibleRows);
             if (IsPressed(keyboard, Keys.PageDown)) ScrollPackageGenreRows(MappingVisibleRows);
         }
@@ -425,8 +429,7 @@ public sealed partial class VenueEditorGame
             {
                 if (mappingKnowledgeComments && draft.Rows.Count > 0)
                 {
-                    selectedGenreKey = draft.Rows[mappingRow].Key;
-                    selectedPackageGenreKey = null;
+                    ClickShadingRow(false, draft.Rows[mappingRow].Key, keyboard);
                 }
                 mappingScroll = GenreGridVisible ? EnsureGenreRowVisible(mappingScroll, mappingRow, draft.Rows.Count)
                     : mappingRow / MappingVisibleRows * MappingVisibleRows;
@@ -437,7 +440,7 @@ public sealed partial class VenueEditorGame
         }
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
-            if (mappingFocus < 0 && !GenreChartVisible && selectedPackageGenreKey is null) OpenMappingPicker(mappingRow, mappingColumn);
+            if (mappingFocus < 0 && !MultipleShadingRows && !GenreChartVisible && selectedPackageGenreKey is null) OpenMappingPicker(mappingRow, mappingColumn);
             else if (mappingFocus >= 0 && mappingEditorButtons[mappingFocus].Button.IsEnabled) mappingEditorButtons[mappingFocus].Execute();
             return;
         }
@@ -457,7 +460,7 @@ public sealed partial class VenueEditorGame
         foreach (var item in mappingEditorButtons) item.Button.UpdatePointer(pointer);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
         {
-            if (GenreGridVisible && mappingPickerColumn == 0 && TryClickGenreGridRow(pointer)) return;
+            if (GenreGridVisible && mappingPickerColumn == 0 && TryClickGenreGridRow(pointer, keyboard)) return;
             if (mappingKnowledgeComments && mappingPickerColumn == 0)
             {
                 if (GenreGridSplit)
@@ -579,7 +582,7 @@ public sealed partial class VenueEditorGame
                         else DrawOutline(bounds, 2, OperationTargetColor);
                     }
                 }
-                if (mappingKnowledgeComments && style.Key == selectedGenreKey)
+                if (mappingKnowledgeComments && ShadingRowSelected(false, style.Key))
                 {
                     DrawOutline(GenreTargetRowBounds(row), 2 * MappingEditorScale, OperationTargetColor);
                     DrawGenreCellHover(row, style.Pattern, false);
@@ -588,6 +591,7 @@ public sealed partial class VenueEditorGame
             if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingGridBounds(20, 142, 960, 46));
             if (GenreGridSplit) DrawPackageGenreGrid();
             if (GenreGridVisible) DrawGenreScrollbars();
+            DrawShadingSelectionLock();
         }
         DrawMappingChangeTag();
         if (mappingKnowledgeComments) DrawPackageChangeTag();
@@ -634,6 +638,12 @@ public sealed partial class VenueEditorGame
     private void DrawMappingButtonTooltip()
     {
         if (modalDialog is not null) return;
+        if (MultipleShadingRows)
+        {
+            DrawStatusBar("Shift：範囲選択　Ctrl：追加・解除　Ctrl+Shift：範囲を追加　通常クリック：単一選択に戻す　コピー・削除は選択行すべてに適用",
+                $"{MappingRowLabel}：{shadingSelection.Keys.Count} 行を選択中");
+            return;
+        }
         var mouse = Mouse.GetState();
         var hovered = CanShowEditorHover ? mappingEditorButtons.FirstOrDefault(item => Contains(item.Button.Bounds, new(mouse.X, mouse.Y))) : null;
         var focused = !mappingTextFocused && mappingFocus >= 0 && mappingFocus < mappingEditorButtons.Count

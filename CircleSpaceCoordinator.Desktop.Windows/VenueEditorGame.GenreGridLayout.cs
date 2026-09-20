@@ -23,6 +23,7 @@ public sealed partial class VenueEditorGame
 
     private void ShowPackageGenreTable(PortableMaterial table)
     {
+        shadingSelection.Clear();
         packageGenreTable = table;
         genreRowActionsRight = false;
         selectedPackageGenreKey = null;
@@ -65,6 +66,7 @@ public sealed partial class VenueEditorGame
         {
             if (mappingComposition.Length > 0) return;
             SetMappingTextFocus(false);
+            shadingSelection.Clear();
             genreGridLayoutMode = GenreGridSplit ? GenreGridLayoutMode.FullWidth : GenreGridLayoutMode.SplitPane;
             if (!GenreGridSplit) selectedPackageGenreKey = null;
             mappingFocus = -1;
@@ -151,7 +153,7 @@ public sealed partial class VenueEditorGame
                 }
                 if (!plain) DrawOutline(bounds, 1, new Color(100, 119, 130));
             }
-            if (style.Key == selectedPackageGenreKey)
+            if (ShadingRowSelected(true, style.Key))
             {
                 DrawOutline(GenreTargetRowBounds(row, right: true), 2 * MappingEditorScale, OperationTargetColor);
                 DrawGenreCellHover(row, style.Pattern, true);

@@ -20,7 +20,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawGenreCellHover(int row, string pattern, bool right)
     {
-        if (!GenreGridVisible || mappingPickerColumn != 0 || !CanShowEditorHover) return;
+        if (!GenreGridVisible || MultipleShadingRows || mappingPickerColumn != 0 || !CanShowEditorHover) return;
         var mouse = Mouse.GetState();
         for (var column = 0; column < 7; column++)
         {
@@ -30,11 +30,12 @@ public sealed partial class VenueEditorGame
         }
     }
 
-    private bool TryClickGenreGridRow(ScreenPoint pointer)
+    private bool TryClickGenreGridRow(ScreenPoint pointer, KeyboardState keyboard)
     {
         for (var pane = 0; pane < (GenreGridSplit ? 2 : 1); pane++)
         {
             var right = pane == 1;
+            if (shadingSelection.IsLocked(right)) continue;
             var packageRows = right ? PackageGenreRows() : [];
             var count = right ? packageRows.Length : mappingDraft!.Rows.Count;
             var scroll = right ? packageGenreScroll : mappingScroll;
@@ -44,6 +45,7 @@ public sealed partial class VenueEditorGame
                 SetMappingTextFocus(false);
                 genreRowActionsRight = right;
                 selectedGenreKey = selectedPackageGenreKey = null;
+                shadingSelection.Clear();
                 mappingWidth = -1;
                 mappingFocus = -1;
                 return true;
@@ -54,9 +56,11 @@ public sealed partial class VenueEditorGame
                 var index = scroll + row;
                 var key = right ? packageRows[index].Key : mappingDraft!.Rows[index].Key;
                 var selected = key == (right ? selectedPackageGenreKey : selectedGenreKey);
+                var wasMultiple = MultipleShadingRows;
+                var modified = IsControlDown(keyboard) || keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
                 SetMappingTextFocus(false);
-                if (right) SelectPackageGenreTarget(key); else SelectGenreTarget(key);
-                if (!selected) return true;
+                ClickShadingRow(right, key, keyboard);
+                if (!selected || wasMultiple || modified || MultipleShadingRows) return true;
                 var pattern = right ? packageRows[index].Pattern : mappingDraft!.Rows[index].Pattern;
                 for (var column = 0; column < 7; column++)
                     if (GenreCellEditable(column, pattern, right) && Contains(MappingCell(row, column, right), pointer))

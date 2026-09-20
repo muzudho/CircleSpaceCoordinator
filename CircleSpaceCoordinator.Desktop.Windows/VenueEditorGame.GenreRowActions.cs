@@ -19,7 +19,7 @@ public sealed partial class VenueEditorGame
 
     private void EditGenreRows(bool create)
     {
-        if (mappingDraft is null) return;
+        if (mappingDraft is null || create && MultipleShadingRows) return;
         var right = GenreRowActionsRight;
         if (right && packageGenreTable is null) return;
         SetMappingTextFocus(false);
@@ -38,7 +38,14 @@ public sealed partial class VenueEditorGame
         else
         {
             if (index < 0) return;
-            draft.DeleteRow(index);
+            if (MultipleShadingRows)
+            {
+                var selectedKeys = shadingSelection.Keys.ToArray();
+                index = draft.Rows.ToList().FindIndex(row => selectedKeys.Contains(row.Key));
+                draft.DeleteRows(selectedKeys);
+            }
+            else draft.DeleteRow(index);
+            shadingSelection.Clear();
             next = draft.Rows.Count == 0 ? null : draft.Rows[Math.Min(index, draft.Rows.Count - 1)].Key;
         }
         // Persist the visible insertion position instead of immediately sorting the new name away.

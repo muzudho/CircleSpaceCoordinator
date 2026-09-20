@@ -8,8 +8,9 @@ public sealed partial class VenueEditorGame
 {
     private string? selectedPackageGenreKey;
 
-    private void SelectPackageGenreTarget(string key)
+    private void SelectPackageGenreTarget(string key, bool preserveSelection = false)
     {
+        if (!preserveSelection) shadingSelection.Set(true, [key]);
         genreRowActionsRight = true;
         selectedPackageGenreKey = key;
         selectedGenreKey = null;
@@ -21,6 +22,7 @@ public sealed partial class VenueEditorGame
 
     private void CopyGenreToOtherPane()
     {
+        if (MultipleShadingRows) { CopyMultipleShadingRows(); return; }
         if (mappingDraft is not { } draft || packageGenreTable is not { } package) return;
         var toLeft = selectedPackageGenreKey is not null;
         var source = toLeft

@@ -208,6 +208,7 @@ public sealed partial class VenueEditorGame
 
     private void RestoreGenreProject()
     {
+        shadingSelection.Clear();
         mappingDraft?.RestoreOpeningSnapshot();
         mappingGenreCodeTableName = mappingAppliedGenreCodeTableName;
         mappingGenreCodeOrder = mappingAppliedGenreOrder.ToArray();
@@ -220,6 +221,7 @@ public sealed partial class VenueEditorGame
 
     private void DiscardGenreSide(bool project)
     {
+        shadingSelection.Clear();
         SetMappingTextFocus(false);
         if (project)
         {

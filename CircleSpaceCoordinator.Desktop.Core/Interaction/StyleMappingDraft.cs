@@ -146,6 +146,22 @@ public sealed class StyleMappingDraft
 
     public void DeleteRow(int index) => rows.RemoveAt(index);
 
+    public void DeleteRows(IEnumerable<string> keys)
+    {
+        var selected = keys.ToHashSet(StringComparer.Ordinal);
+        if (selected.Any(key => !rows.Any(row => row.Key == key))) throw new InvalidOperationException("選択した行が見つかりません。");
+        rows.RemoveAll(row => selected.Contains(row.Key));
+    }
+
+    public void CopyRows(IEnumerable<(StyleMappingEntry Row, string Key, bool Overwrite)> copies)
+    {
+        var staged = new StyleMappingDraft(rows.Select(row => row.Key), Build(), OverallComment);
+        staged.ReorderRows(rows.Select(row => row.Key));
+        foreach (var copy in copies) staged.CopyRow(copy.Row, copy.Key, copy.Overwrite);
+        rows.Clear();
+        rows.AddRange(staged.Rows);
+    }
+
     public void CopyRow(StyleMappingEntry source, string key, bool overwrite)
     {
         key = PersonCredits.NormalizeChangeLog(key);

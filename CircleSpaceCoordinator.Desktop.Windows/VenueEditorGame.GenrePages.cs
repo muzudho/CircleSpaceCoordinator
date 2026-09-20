@@ -29,8 +29,9 @@ public sealed partial class VenueEditorGame
     private bool genreOrderCommentEditing;
     private string genreOrderCommentComposition = "";
 
-    private void SelectGenreTarget(string key, bool navigate = false)
+    private void SelectGenreTarget(string key, bool navigate = false, bool preserveSelection = false)
     {
+        if (!preserveSelection) shadingSelection.Set(false, [key]);
         genreRowActionsRight = false;
         if (mappingDraft is not { } draft) return;
         selectedGenreKey = key;
