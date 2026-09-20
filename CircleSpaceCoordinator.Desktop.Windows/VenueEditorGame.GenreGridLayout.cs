@@ -12,7 +12,7 @@ public sealed partial class VenueEditorGame
     private bool GenreGridVisible => mappingKnowledgeComments && genrePageTab == 0;
     private bool GenreGridSplit => GenreGridVisible && genreGridLayoutMode == GenreGridLayoutMode.SplitPane;
 
-    // Only the grid and pagination use viewport width; the surrounding page keeps its layout.
+    // Grid titles, cells and pagination share the same pane coordinates.
     private ScreenRectangle MappingGridBounds(double x, double y, double width, double height, bool right = false)
     {
         if (!GenreGridVisible) return MappingBounds(x, y, width, height);
@@ -75,10 +75,9 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(headers[column], ToRectangle(MappingGridBounds(MappingColumnEdges[column], 104, width, 30, right: true), 3),
                 Color.White, Math.Max(10, (int)(13 * MappingEditorScale)), true);
             for (var row = 0; row < MappingVisibleRows; row++)
-                DrawOutline(MappingGridBounds(MappingColumnEdges[column], 142 + row * 52, width, 46, right: true), 1, new Color(48, 65, 77));
+                DrawOutline(MappingCell(row, column, right: true), 1, new Color(48, 65, 77));
         }
-        var message = MappingGridBounds(20, 142, 960, 46, right: true);
-        DrawRectangle(message, new Color(24, 29, 36));
+        var message = MappingGridBounds(20, 62, 960, 36, right: true);
         textRenderer?.Draw("パッケージ ＞ ジャンルコード表（未選択）", ToRectangle(message, 6),
             Color.LightGray, Math.Max(10, (int)(15 * MappingEditorScale)), true);
         var divider = MappingGridBounds(20, 102, 960, 390);

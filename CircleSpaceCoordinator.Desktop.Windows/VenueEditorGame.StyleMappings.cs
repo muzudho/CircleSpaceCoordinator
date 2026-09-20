@@ -49,8 +49,8 @@ public sealed partial class VenueEditorGame
         return new((GraphicsDevice.Viewport.Width - 1000 * scale) / 2 + x * scale,
             WorkerBarHeight + (GraphicsDevice.Viewport.Height - WorkerBarHeight - StatusBarHeight - MappingCanvasHeight * scale) / 2 + y * scale, width * scale, height * scale);
     }
-    private ScreenRectangle MappingCell(int visibleRow, int column) =>
-        MappingGridBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46);
+    private ScreenRectangle MappingCell(int visibleRow, int column, bool right = false) =>
+        MappingGridBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46, right);
 
     /// <summary>Opens the shared editor; the caller owns persistence and undo.</summary>
     private void OpenStyleMappingEditor(StyleMappingDraft draft, string keyLabel, string emptyMessage,
