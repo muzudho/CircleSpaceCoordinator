@@ -43,6 +43,16 @@ internal static partial class Program
             reader.SelectPath(path, table.Id);
             AssertEqual(true, reader.CanRead);
             AssertEqual(table.Id, reader.Tables[reader.TableIndex].Id);
+            AssertEqual(PackageReadTarget.Table, reader.OperationTarget);
+            reader.TargetFile();
+            AssertEqual(PackageReadTarget.File, reader.OperationTarget);
+            AssertEqual(true, reader.CanRead);
+            AssertEqual(true, reader.CanOperate);
+            reader.SelectTable(reader.TableIndex);
+            AssertEqual(PackageReadTarget.Table, reader.OperationTarget);
+            reader.SelectPath(path);
+            AssertEqual(true, reader.CanRead);
+            AssertEqual(PackageReadTarget.File, reader.OperationTarget);
             var session = new PackageGenreSaveSession(path, genreJson, genre, table);
             session.Save(table.WithRows([new("追加行", "red", "white", "solid")]), "test", date, "", false,
                 connection.UpdatePortableGenreTable, connection.ParsePortable);
@@ -50,6 +60,33 @@ internal static partial class Program
             var current = File.ReadAllText(path);
             RejectPortable(() => PortableLibraryService.SaveMetadata(new(path, empty, opening, null), blockJson));
             AssertEqual(current, File.ReadAllText(path));
+
+            File.WriteAllText(path, blockJson);
+            var renamed = block with { Name = "整理済み", TableMetadata = block.Metadata() with { Name = "整理済み" } };
+            var renamedJson = connection.UpdatePortableGenreTable(new(blockJson, renamed, "test", date, "名前を変更"));
+            PortableLibraryService.SaveMetadata(new(path, blockJson, blocks, null), renamedJson);
+            var renamedPackage = connection.ParsePortable(renamedJson);
+            AssertEqual("整理済み", renamedPackage.Materials.Single(item => item.Id == block.Id).Name);
+            AssertEqual(JsonSerializer.Serialize(table), JsonSerializer.Serialize(renamedPackage.Materials.Single(item => item.Id == table.Id)));
+            RejectPortable(() => PackageFileOperations.DeleteTable(path, renamedJson, block.Id, "整理済み ", connection.ParsePortable));
+            AssertEqual(renamedJson, File.ReadAllText(path));
+            RejectPortable(() => PackageFileOperations.DeleteTable(path, blockJson, block.Id, block.Name, connection.ParsePortable));
+            AssertEqual(renamedJson, File.ReadAllText(path));
+            var remainingJson = PackageFileOperations.DeleteTable(path, renamedJson, block.Id, "整理済み", connection.ParsePortable);
+            var remaining = connection.ParsePortable(remainingJson);
+            AssertEqual(1, remaining.Materials.Count);
+            AssertEqual(JsonSerializer.Serialize(table), JsonSerializer.Serialize(remaining.Materials.Single()));
+            var clearedJson = PackageFileOperations.DeleteTable(path, remainingJson, table.Id, table.Name, connection.ParsePortable);
+            AssertEqual(0, connection.ParsePortable(clearedJson).Materials.Count);
+            AssertEqual(true, File.Exists(path));
+            reader.SelectPath(path, table.Id);
+            AssertEqual(false, reader.CanRead);
+            AssertEqual(false, reader.CanOperate);
+            AssertEqual(PackageReadTarget.None, reader.OperationTarget);
+            reader.TargetFile();
+            AssertEqual(true, reader.CanOperate);
+            reader.SetDirectory(directory);
+            AssertEqual(PackageReadTarget.None, reader.OperationTarget);
         }
         finally { Directory.Delete(directory, recursive: true); }
     }

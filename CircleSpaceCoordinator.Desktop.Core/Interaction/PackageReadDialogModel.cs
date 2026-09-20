@@ -3,6 +3,8 @@ namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 using CircleSpaceCoordinator.Engine.Model;
 using CircleSpaceCoordinator.Core.Model;
 
+public enum PackageReadTarget { None, File, Table }
+
 /// <summary>Selection state for the shared package reader; never imports or modifies a package.</summary>
 public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse, string tableKind = "genre-styles")
 {
@@ -15,12 +17,16 @@ public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse, 
     public string? SelectedJson { get; private set; }
     public PortablePackage? SelectedPackage { get; private set; }
     public bool CanRead => TableIndex >= 0 && TableIndex < Tables.Length;
+    public PackageReadTarget OperationTarget { get; private set; }
+    public bool CanOperate => SelectedPackage is not null && (OperationTarget == PackageReadTarget.File && FileIndex >= 0 ||
+        OperationTarget == PackageReadTarget.Table && CanRead);
 
     public void SetDirectory(string directory)
     {
         DirectoryPath = directory;
         Files = [];
         FileIndex = -1;
+        OperationTarget = PackageReadTarget.None;
         ClearTables();
         try
         {
@@ -43,11 +49,13 @@ public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse, 
         SelectFile(Array.FindIndex(Files, file => string.Equals(file, path, StringComparison.OrdinalIgnoreCase)));
         SelectTable(tableId is null ? (Tables.Length == 1 ? 0 : -1)
             : Array.FindIndex(Tables, table => table.Id == tableId));
+        if (tableId is null) OperationTarget = FileIndex >= 0 ? PackageReadTarget.File : PackageReadTarget.None;
     }
 
     public void SelectFile(int index)
     {
         FileIndex = index >= 0 && index < Files.Length ? index : -1;
+        OperationTarget = FileIndex >= 0 ? PackageReadTarget.File : PackageReadTarget.None;
         ClearTables();
         if (FileIndex < 0) return;
         try
@@ -69,7 +77,13 @@ public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse, 
         }
     }
 
-    public void SelectTable(int index) => TableIndex = index >= 0 && index < Tables.Length ? index : -1;
+    public void SelectTable(int index)
+    {
+        TableIndex = index >= 0 && index < Tables.Length ? index : -1;
+        OperationTarget = CanRead ? PackageReadTarget.Table : PackageReadTarget.None;
+    }
+
+    public void TargetFile() => OperationTarget = FileIndex >= 0 ? PackageReadTarget.File : PackageReadTarget.None;
 
     private void ClearTables()
     {

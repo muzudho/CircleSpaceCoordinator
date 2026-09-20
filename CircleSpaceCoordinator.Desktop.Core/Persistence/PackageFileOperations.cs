@@ -29,6 +29,23 @@ public static class PackageFileOperations
     public static bool NameMatches(string expected, string entered) =>
         !string.IsNullOrWhiteSpace(expected) && string.Equals(expected, entered, StringComparison.Ordinal);
 
+    public static string DeleteTable(string path, string expectedJson, string tableId, string enteredName,
+        Func<string, CircleSpaceCoordinator.Engine.Model.PortablePackage> parse)
+    {
+        var package = parse(expectedJson);
+        var table = package.Materials.Single(item => item.Id == tableId);
+        if (table.Kind is not ("genre-styles" or "block-styles")) throw new InvalidOperationException("網掛け表だけを削除できます。");
+        if (!NameMatches(table.Name, enteredName)) throw new InvalidOperationException("網掛け表名が一致しません。");
+        var root = System.Text.Json.Nodes.JsonNode.Parse(expectedJson)!.AsObject();
+        var materials = root["materials"]!.AsArray();
+        var item = materials.Single(node => node!["id"]!.GetValue<string>() == tableId);
+        materials.Remove(item);
+        var updated = root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine;
+        parse(updated);
+        PortableLibraryService.SaveMetadata(new(path, expectedJson, package, null), updated);
+        return updated;
+    }
+
     public static string Rename(string path, string expectedJson, string newName)
     {
         const string extension = ".package-csc.json";

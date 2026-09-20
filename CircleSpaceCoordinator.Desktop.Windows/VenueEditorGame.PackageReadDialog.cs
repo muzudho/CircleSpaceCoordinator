@@ -98,7 +98,7 @@ public sealed partial class VenueEditorGame
     {
         var panel = ModalBounds();
         var width = (panel.Width - 56) / 2;
-        return new(panel.X + 20 + list * (width + 16), panel.Y + 128, width, Math.Max(32, panel.Height - 298));
+        return new(panel.X + 20 + list * (width + 16), panel.Y + 128, width, Math.Max(32, panel.Height - 326));
     }
 
     private int PackageReadPageSize => Math.Max(1, (int)(PackageReadListArea(0).Height / PackageReadRowHeight));
@@ -203,7 +203,7 @@ public sealed partial class VenueEditorGame
                 : IsPressed(keyboard, Keys.PageDown) ? PackageReadPageSize : IsPressed(keyboard, Keys.PageUp) ? -PackageReadPageSize : 0;
             var next = IsPressed(keyboard, Keys.Home) ? 0 : IsPressed(keyboard, Keys.End) ? count - 1
                 : delta != 0 ? Math.Clamp(selected + delta, 0, count - 1) : selected;
-            if (next != selected)
+            if (next != selected || delta != 0 || IsPressed(keyboard, Keys.Home) || IsPressed(keyboard, Keys.End))
             {
                 SelectPackageReadRow(list, next);
                 packageReadScroll[list] = Math.Clamp(packageReadScroll[list], Math.Max(0, next - PackageReadPageSize + 1), Math.Max(0, next));
@@ -212,8 +212,8 @@ public sealed partial class VenueEditorGame
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
             if (packageReadFocus < PackageReadButtonCount) ApplyModalAction(modalButtons[packageReadFocus].Action);
-            else if (packageReadFocus == PackageReadButtonCount) { packageReadFocus = PackageReadButtonCount + 1; modalFocus = -1; }
-            else ApplyModalAction(ModalDialogAction.Accept);
+            else if (packageReadFocus == PackageReadButtonCount) model.TargetFile();
+            else if (model.CanRead) model.SelectTable(model.TableIndex);
             return true;
         }
         foreach (var (button, _) in modalButtons) button.UpdatePointer(pointer);
@@ -235,7 +235,11 @@ public sealed partial class VenueEditorGame
     private void SelectPackageReadRow(int list, int index)
     {
         if (packageReadDialog is not { } model) return;
-        if (list == 0) { model.SelectFile(index); packageReadScroll[1] = 0; }
+        if (list == 0)
+        {
+            if (index == model.FileIndex) model.TargetFile();
+            else { model.SelectFile(index); packageReadScroll[1] = 0; }
+        }
         else model.SelectTable(index);
     }
 
@@ -253,7 +257,7 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(list == 0 ? "パッケージファイル" : "網掛け対応表",
                 ToRectangle(new(area.X, area.Y - 30, area.Width, 28)), Color.White, 18, true);
             DrawRectangle(area, new Color(18, 23, 29));
-            DrawOutline(area, 1, packageReadFocus == list + PackageReadButtonCount ? OperationTargetColor : Color.SlateGray);
+            DrawOutline(area, 1, packageReadFocus == list + PackageReadButtonCount ? Color.White : Color.SlateGray);
             for (var row = 0; row < PackageReadPageSize && packageReadScroll[list] + row < count; row++)
             {
                 var index = packageReadScroll[list] + row;
@@ -261,6 +265,9 @@ public sealed partial class VenueEditorGame
                 if (index == (list == 0 ? model.FileIndex : model.TableIndex)) DrawRectangle(bounds, new Color(45, 95, 100));
                 textRenderer?.Draw(list == 0 ? Path.GetFileName(model.Files[index]) : model.Tables[index].Name,
                     ToRectangle(bounds, 4), Color.White, 16, true);
+                if (index == (list == 0 ? model.FileIndex : model.TableIndex) &&
+                    model.OperationTarget == (list == 0 ? PackageReadTarget.File : PackageReadTarget.Table))
+                    DrawOutline(bounds, 2, OperationTargetColor);
             }
             if (count == 0)
                 textRenderer?.Draw(list == 0 ? "対象ファイルがありません" : model.FileIndex < 0 ? "ファイルを選んでください" : "対応する網掛け対応表がありません",
@@ -269,7 +276,11 @@ public sealed partial class VenueEditorGame
                 ToRectangle(new(area.X, area.Y + area.Height + 4, area.Width, 24)), Color.LightGray, 12, true);
         }
         var error = packageReadFolderError ?? model.Error;
-        textRenderer?.Draw(error ?? packageReadNotice ?? "ファイルと表を選んで［読取］を押してください。",
+        var target = model.OperationTarget == PackageReadTarget.Table && model.CanRead ? "網掛け表：" + model.Tables[model.TableIndex].Name
+            : model.OperationTarget == PackageReadTarget.File && model.FileIndex >= 0 ? "パッケージ：" + Path.GetFileName(model.Files[model.FileIndex]) : "なし";
+        textRenderer?.Draw("背景色＝選択　水色枠＝操作対象（リネーム・削除）　" + target,
+            ToRectangle(new(panel.X + 20, panel.Y + panel.Height - 164, panel.Width - 40, 24)), OperationTargetColor, 13, true);
+        textRenderer?.Draw(error ?? packageReadNotice ?? "行をクリックして操作対象を指定。［読取］は選択中の表を読み込みます。",
             ToRectangle(new(panel.X + 20, panel.Y + panel.Height - 140, panel.Width - 40, 28)),
             error is null ? Color.LightGray : Color.Salmon, 14, true);
     }

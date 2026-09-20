@@ -266,6 +266,8 @@ public sealed partial class VenueEditorGame
             button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false } || packageReadDialog is { CanRead: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
             if (packageReadDialog is { SelectedPackage: null } && (modalButtons[index].Action == ModalDialogAction.Stop || modalButtons[index].Action == PackageRenameAction || modalButtons[index].Action == PackageCreateTableAction))
                 button.IsEnabled = false;
+            if (packageReadDialog is { CanOperate: false } && (modalButtons[index].Action == ModalDialogAction.Stop || modalButtons[index].Action == PackageRenameAction))
+                button.IsEnabled = false;
             if (packageReadDialog is { } reader && modalButtons[index].Action == ModalDialogAction.Decrease && !Directory.Exists(reader.DirectoryPath))
                 button.IsEnabled = false;
             if (modalDialog.Kind == ModalDialogKind.Text && underlineRequireValidInput && modalButtons[index].Action == ModalDialogAction.Accept)
