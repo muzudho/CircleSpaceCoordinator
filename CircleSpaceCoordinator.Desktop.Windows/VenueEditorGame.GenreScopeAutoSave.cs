@@ -92,6 +92,7 @@ public sealed partial class VenueEditorGame
     private void UpdateGenreScopeAutoSave()
     {
         if (!mappingKnowledgeComments || mappingDraft is null) return;
+        using var timing = performance?.Measure("genre_autosave_check");
         SyncMappingChangeTag();
         var observed = GenreProjectStamp + GenrePackageStamp;
         if (observed != genreObservedStamp)
@@ -112,6 +113,7 @@ public sealed partial class VenueEditorGame
 
     private bool SaveGenreScope(Action? afterSave = null, bool automatic = false)
     {
+        using var timing = performance?.Measure("genre_save");
         if (mappingDraft is null || applyStyleMapping is null) return true;
         if (string.IsNullOrWhiteSpace(Handle) && (GenreScopeChanged || genreProjectRequiresComment || genrePackageRequiresComment))
         {

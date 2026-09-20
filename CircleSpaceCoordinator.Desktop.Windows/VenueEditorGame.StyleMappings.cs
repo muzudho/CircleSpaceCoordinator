@@ -505,6 +505,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawStyleMappingEditor()
     {
+        using var timing = performance?.Measure("genre_draw");
         if (mappingDraft is not { } draft) return;
         if (genreOrderDialogOpen) { DrawGenreOrderDialog(); return; }
         if (genrePieExpanded) { DrawExpandedGenrePie(); return; }

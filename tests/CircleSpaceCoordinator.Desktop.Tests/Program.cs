@@ -24,6 +24,7 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Performance diagnostics record nested phases, memory and timing aggregates without UI file I/O", PerformanceRecording),
             ("Event metadata loads only selected files, caches per session and retries failures", LazyEventMetadata),
             ("Genre autosave restores package bytes, rejects stale writes and finalizes project credits", GenreAutoSaveRestoration),
             ("Genre copies preserve all fields, reject collisions and invalid overwrites, and discard cleanly", GenreCopyRows),

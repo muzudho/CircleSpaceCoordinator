@@ -75,6 +75,8 @@ Windows 用の実行・画面処理を担当します。ドラッグや編集コ
 
 ゲーム画面がアクティブなとき、`Ctrl + P`またはツールバー右端のカメラボタンでPNGスクリーンショットを保存できます。保存先はピクチャーフォルダー内の`CircleSpaceCoordinator/Screenshots`です。撮影成功後はシャッター音と視覚エフェクトを再生し、エフェクト自体はPNGへ含めません。
 
+入力や撮影が遅い場合は、EXEの隣の `logs/performance-*.jsonl` に処理時間・メモリ・GC・画面更新停止の診断を自動記録します。[再現手順とログの読み方](../Docs/Dev/Troubleshooting/Performance.md)を参照してください。
+
 視覚エフェクトは `StationeryUI.MonoGame.Effects.ScreenshotEffect`、シャッター音は `StationeryUI.MonoGame.Audio.ScreenshotShutterSound`（同梱の `StationeryUI.MonoGame` 0.1.1）を使用します。共通実装のソースは StationeryUI リポジトリーの `src/StationeryUI.MonoGame/Effects/ScreenshotEffect.cs` と `src/StationeryUI.MonoGame/Audio/ScreenshotShutterSound.cs` です。アプリ側は入力・PNG保存・演出時間（0.42秒）・音量・音声リソースの破棄を担当します。共通実装を更新した際は、新しいバージョンのパッケージを作成し、`LocalPackages/StationeryUI` とパッケージ参照を更新して取り込みます。
 
 ウィンドウは通常のWindows操作でリサイズできます。ツールバーの手のひらアイコンの右隣にある「会場全体を画面内に収める」ボタンを押すと、右側の配置案パネルと上下のUIを避けて、会場全体を表示領域の中央へ収めます。画面を広げた後や、ズーム・パンで会場を見失ったときに使用します。

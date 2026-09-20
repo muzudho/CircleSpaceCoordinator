@@ -132,7 +132,7 @@ public sealed partial class VenueEditorGame
         var right = underlineRightRepeat.Update(keyboard.IsKeyDown(Keys.Right), IsPressed(keyboard, Keys.Right), statusHintTime, enabled);
         var back = underlineBackRepeat.Update(keyboard.IsKeyDown(Keys.Back), IsPressed(keyboard, Keys.Back), statusHintTime, enabled);
         var delete = underlineDeleteRepeat.Update(keyboard.IsKeyDown(Keys.Delete), IsPressed(keyboard, Keys.Delete), statusHintTime, enabled);
-        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P)) screenshotRequested = true;
+        if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P)) RequestScreenshot();
         if (!workerSuppressConfirmation && IsPressed(keyboard, Keys.Escape)) { FinishWorkerEdit(false); return; }
         if ((!workerSuppressConfirmation && IsPressed(keyboard, Keys.Enter)) || (enabled && IsPressed(keyboard, Keys.Tab)))
         { FinishWorkerEdit(true); return; }

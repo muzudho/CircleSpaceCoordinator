@@ -13,9 +13,11 @@ internal static class Program
             "logs",
             $"ui-operations-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.jsonl");
         using var operationLogger = new JsonLinesOperationLogger(logPath);
+        using var performance = new PerformanceRecorder(Path.Combine(AppContext.BaseDirectory, "logs",
+            $"performance-{DateTimeOffset.Now:yyyyMMdd-HHmmss}-{Environment.ProcessId}.jsonl"));
         try
         {
-            using var game = new VenueEditorGame(null, operationLogger, projectPath, startEngines: true);
+            using var game = new VenueEditorGame(null, operationLogger, projectPath, startEngines: true, performance: performance);
             game.Run();
         }
         catch (Exception exception)

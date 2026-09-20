@@ -60,6 +60,8 @@ public sealed partial class VenueEditorGame : Game
     private EditorCommandController? commandController;
     private ParticipantPlacementController? participantController;
     private readonly IOperationLogger operationLogger;
+    private readonly PerformanceRecorder? performance;
+    private long screenshotRequestedAt;
     private ApplicationSettingsService? settings;
     private string? projectSavePath;
     private readonly List<ToolbarButton> toolbarButtons = [];
@@ -113,13 +115,15 @@ public sealed partial class VenueEditorGame : Game
         IOperationLogger? operationLogger = null,
         string? projectSavePath = null,
         ApplicationSettingsService? settings = null,
-        bool startEngines = false)
+        bool startEngines = false,
+        PerformanceRecorder? performance = null)
     {
         this.workspace = workspace;
         if (workspace is not null) workspace.HandleProvider = () => Handle;
         if (workspace is not null) workspace.WorkDateProvider = () => WorkDate;
         this.startEngines = startEngines;
         this.operationLogger = operationLogger ?? NullOperationLogger.Instance;
+        this.performance = performance;
         this.projectSavePath = projectSavePath;
         // Names and paths are available before the engines; decode projects only on selection.
         this.settings = settings ?? new ApplicationSettingsService(UserSettingsPaths.PrepareFile("application-settings.json"), deferProjectMetadata: true);
@@ -174,7 +178,7 @@ public sealed partial class VenueEditorGame : Game
     protected override void LoadContent()
     {
         spriteBatch = new SpriteBatch(GraphicsDevice);
-        textRenderer = new DynamicTextRenderer(GraphicsDevice, spriteBatch);
+        textRenderer = new DynamicTextRenderer(GraphicsDevice, spriteBatch, performance);
         pixel = new Texture2D(GraphicsDevice, 1, 1);
         pixel.SetData([Color.White]);
         screenshotShutterSound = ScreenshotShutterSound.Create();
@@ -183,10 +187,17 @@ public sealed partial class VenueEditorGame : Game
 
     protected override void Update(GameTime gameTime)
     {
+        performance?.Heartbeat(mappingDraft is not null ? modalDialog?.Kind == ModalDialogKind.Text ? "genre_text" : "genre"
+            : modalDialog?.Kind == ModalDialogKind.Text ? "text" : workspace is null ? "events" : "editor");
+        using var updateTiming = performance?.Measure("update");
         statusHintTime = gameTime.TotalGameTime.TotalSeconds;
         pollBackgroundOperation?.Invoke();
         if (!ShowsStatusHintTimer) statusHintContext = null;
-        try { UpdateAutoSave(); UpdateEditor(gameTime); }
+        try
+        {
+            using (performance?.Measure("autosave_check")) UpdateAutoSave();
+            using (performance?.Measure("input_update")) UpdateEditor(gameTime);
+        }
         catch (InvalidOperationException exception) when (exception.InnerException is Grpc.Core.RpcException)
         {
             CancelInProgressPointerInteraction();
@@ -217,7 +228,7 @@ public sealed partial class VenueEditorGame : Game
 
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
-            screenshotRequested = true;
+            RequestScreenshot();
         if (projectMenuOpen || projectMenuDrain)
         {
             PollOptimization();
@@ -781,6 +792,7 @@ public sealed partial class VenueEditorGame : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        using var drawTiming = performance?.Measure("draw");
         GraphicsDevice.Clear(new Color(24, 28, 36));
         if (spriteBatch is null || pixel is null)
             return;
@@ -867,7 +879,8 @@ public sealed partial class VenueEditorGame : Game
             DrawModalDialog();
         }
         DrawWorkerBar();
-        spriteBatch.End();
+        using (performance?.Measure("draw_submit")) spriteBatch.End();
+        RecordTextFrameSubmitted();
 
         if (screenshotRequested)
         {
@@ -893,6 +906,10 @@ public sealed partial class VenueEditorGame : Game
 
     private void CaptureScreenshot(double now)
     {
+        using var captureTiming = performance?.Measure("screenshot_total");
+        if (screenshotRequestedAt != 0)
+            performance?.Record("screenshot_request_to_capture", System.Diagnostics.Stopwatch.GetElapsedTime(screenshotRequestedAt).TotalMilliseconds);
+        screenshotRequestedAt = 0;
         try
         {
             var directory = ScreenshotPath.DefaultDirectory;
@@ -901,11 +918,11 @@ public sealed partial class VenueEditorGame : Game
             var width = GraphicsDevice.PresentationParameters.BackBufferWidth;
             var height = GraphicsDevice.PresentationParameters.BackBufferHeight;
             var pixels = new Color[width * height];
-            GraphicsDevice.GetBackBufferData(pixels);
+            using (performance?.Measure("screenshot_gpu_readback")) GraphicsDevice.GetBackBufferData(pixels);
             using var texture = new Texture2D(GraphicsDevice, width, height);
-            texture.SetData(pixels);
+            using (performance?.Measure("screenshot_texture_upload")) texture.SetData(pixels);
             using var stream = File.Create(path);
-            texture.SaveAsPng(stream, width, height);
+            using (performance?.Measure("screenshot_png_write")) texture.SaveAsPng(stream, width, height);
 
             screenshotEffectStartedAt = now;
             if (screenshotShutterSoundInstance is not null)
@@ -916,13 +933,22 @@ public sealed partial class VenueEditorGame : Game
                 screenshotShutterSoundInstance.Play();
             }
             screenshotStatus = $"SCREENSHOT SAVED: {Path.GetFileName(path)}";
+            performance?.Record("screenshot_completed", 0);
             Log("screenshot_saved", success: true, detail: $"path={path};size={width}x{height}");
         }
         catch (Exception exception)
         {
             screenshotStatus = $"SCREENSHOT FAILED: {exception.Message}";
+            performance?.Record("screenshot_failed", 0);
             Log("screenshot_saved", success: false, detail: $"error={exception.GetType().Name};message={exception.Message}");
         }
+    }
+
+    private void RequestScreenshot()
+    {
+        if (!screenshotRequested) screenshotRequestedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+        screenshotRequested = true;
+        performance?.Record("screenshot_requested", 0);
     }
 
     private void DrawGrid()
@@ -2745,7 +2771,7 @@ public sealed partial class VenueEditorGame : Game
         }
         if (action == ToolbarAction.CaptureScreenshot)
         {
-            screenshotRequested = true;
+            RequestScreenshot();
             return (true, "capture_requested");
         }
         if (action == ToolbarAction.SaveProject)
@@ -3700,6 +3726,7 @@ public sealed partial class VenueEditorGame : Game
 
     private (bool Success, string Detail) SaveProject()
     {
+        using var timing = performance?.Measure("project_save");
         savedProjectState = null;
         if (workspace is null || projectSavePath is null)
             return (false, "save_path_unavailable");

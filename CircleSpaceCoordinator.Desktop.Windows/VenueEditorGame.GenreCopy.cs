@@ -42,9 +42,7 @@ public sealed partial class VenueEditorGame
                     mappingOrderChanged = true;
                 }
                 draft.ReorderRows(BuildGenrePreviewGroups().Select(group => group.GenreId));
-                var index = draft.Rows.ToList().FindIndex(row => row.Key == key);
-                mappingScroll = EnsureGenreRowVisible(mappingScroll, index, draft.Rows.Count);
-                mappingRow = index;
+                SelectGenreTarget(key);
             }
             else
             {
@@ -61,8 +59,7 @@ public sealed partial class VenueEditorGame
                     GenreStyles = overwrite ? rows.Select(row => row.GenreId == key ? definition : row).ToArray() : [.. rows, definition],
                     GenreCodeOrder = order,
                 };
-                var index = Array.FindIndex(PackageGenreRows(), row => row.GenreId == key);
-                packageGenreScroll = EnsureGenreRowVisible(packageGenreScroll, index, PackageGenreRows().Length);
+                SelectPackageGenreTarget(key);
             }
             mappingWidth = -1;
             mappingFocus = -1;

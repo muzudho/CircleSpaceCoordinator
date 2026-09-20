@@ -29,6 +29,7 @@ public sealed partial class VenueEditorGame
     private string compositionText = "";
     private bool suppressTextConfirmation;
     private bool selectingUnderlineText;
+    private long underlineInputReceivedAt;
     private Func<string, string?>? underlineValidation;
 
     private void OpenUnderlineInput(string title, string initial, Action<string> accepted, string? message = null, int maxLength = 100,
@@ -44,6 +45,7 @@ public sealed partial class VenueEditorGame
                 () => OpenUnderlineInput(title, editor.Text, accepted, message, maxLength, allowEmpty, validate, cancelled, trim)); }
         });
         underlineEditor = editor;
+        underlineInputReceivedAt = 0;
         underlineValidation = validate ?? (value => CircleSpaceCoordinator.Desktop.Core.Interaction.EditorDialogValidation.Name(value, allowEmpty));
         compositionText = "";
         suppressTextConfirmation = false;
@@ -81,9 +83,15 @@ public sealed partial class VenueEditorGame
 
     private bool UpdateUnderlineInput(KeyboardState keyboard, MouseState mouse)
     {
+        using var timing = performance?.Measure("text_input_update");
         if (underlineEditor is not { } editor || textInputService is null) return true;
         var hadComposition = compositionText.Length > 0;
         var updates = textInputService.DrainUpdates();
+        if (updates.Count > 0)
+        {
+            if (underlineInputReceivedAt == 0) underlineInputReceivedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+            performance?.Record("text_input_batch", 0);
+        }
         foreach (var update in updates)
         {
             selectingUnderlineText = false;
@@ -253,6 +261,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawUnderlineInput()
     {
+        using var timing = performance?.Measure("text_input_draw");
         if (underlineEditor is not { } editor) return;
         var bounds = UnderlineBounds();
         var insertion = compositionText.Length > 0 ? editor.SelectionStart : editor.Caret;
@@ -274,5 +283,12 @@ public sealed partial class VenueEditorGame
             DrawLine(new ScreenPoint(caretX, y + textHeight), new ScreenPoint(bounds.X + MeasureInput(display[..(insertion + compositionText.Length)]) * scale, y + textHeight), 2, new Color(255, 225, 128));
         if (modalFocus == TextInputFocus) DrawRectangle(new ScreenRectangle(caretX, y, 2, textHeight), new Color(147, 244, 200));
         textInputService?.SetInputArea(new ScreenRectangle(caretX, bounds.Y, Math.Max(1, bounds.Width - (caretX - bounds.X)), bounds.Height));
+    }
+
+    private void RecordTextFrameSubmitted()
+    {
+        if (underlineInputReceivedAt == 0) return;
+        performance?.Record("text_input_to_draw", System.Diagnostics.Stopwatch.GetElapsedTime(underlineInputReceivedAt).TotalMilliseconds);
+        underlineInputReceivedAt = 0;
     }
 }
