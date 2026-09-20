@@ -20,8 +20,10 @@ public sealed partial class VenueEditorGame
     private void OpenPackageReadDialog()
     {
         SetMappingTextFocus(false);
-        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "パッケージ読込", ""), _ =>
+        OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "パッケージ読込", ""), action =>
         {
+            if (action == ModalDialogAction.Accept && packageReadDialog is { CanRead: true } selection)
+                ShowPackageGenreTable(selection.Tables[selection.TableIndex]);
             packageReadDialog = null;
         }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
         packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json));

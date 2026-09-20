@@ -1,6 +1,8 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using Microsoft.Xna.Framework;
+using CircleSpaceCoordinator.Core.Model;
+using CircleSpaceCoordinator.Desktop.Core.Interaction;
 using StationeryUI.Canvas;
 using StationeryUI.Controls;
 
@@ -8,6 +10,34 @@ public sealed partial class VenueEditorGame
 {
     private enum GenreGridLayoutMode { FullWidth, SplitPane }
     private GenreGridLayoutMode genreGridLayoutMode;
+    private PortableMaterial? packageGenreTable;
+    private int packageGenreScroll;
+
+    private GenreStyleDefinition[] PackageGenreRows()
+    {
+        var rows = packageGenreTable?.GenreStyles ?? [];
+        if (genreOrdinalSort) return rows.OrderBy(row => row.GenreId, StringComparer.Ordinal).ToArray();
+        var order = packageGenreTable?.GenreCodeOrder?.ToArray() ?? [];
+        return rows.OrderBy(row => Array.IndexOf(order, row.GenreId) is var index && index >= 0 ? index : int.MaxValue).ToArray();
+    }
+
+    private void ShowPackageGenreTable(PortableMaterial table)
+    {
+        packageGenreTable = table;
+        packageGenreScroll = 0;
+        genrePageTab = 0;
+        genreGridLayoutMode = GenreGridLayoutMode.SplitPane;
+        mappingWidth = -1;
+        mappingFocus = -1;
+    }
+
+    private void ScrollPackageGenreRows(int offset)
+    {
+        var count = packageGenreTable?.GenreStyles?.Length ?? 0;
+        var lastPage = Math.Max(0, (count - 1) / MappingVisibleRows);
+        packageGenreScroll = Math.Clamp(packageGenreScroll / MappingVisibleRows + Math.Sign(offset), 0, lastPage) * MappingVisibleRows;
+        mappingWidth = -1;
+    }
     private const string GenreGridLayoutButtonName = "データの読み書き（表示切り替え）";
     private bool GenreGridVisible => mappingKnowledgeComments && genrePageTab == 0;
     private bool GenreGridSplit => GenreGridVisible && genreGridLayoutMode == GenreGridLayoutMode.SplitPane;
@@ -66,7 +96,7 @@ public sealed partial class VenueEditorGame
         Line(.67, .89, .83, .86);
     }
 
-    private void DrawEmptyPackageGenreGrid()
+    private void DrawPackageGenreGrid()
     {
         var headers = new[] { "順", "ジャンル", "太線色", "細線色", "網掛け", "見本", "コメント" };
         DrawRectangle(MappingGridBounds(20, 102, 960, 34, right: true), new Color(48, 65, 77));
@@ -75,12 +105,56 @@ public sealed partial class VenueEditorGame
             var width = MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6;
             textRenderer?.Draw(headers[column], ToRectangle(MappingGridBounds(MappingColumnEdges[column], 104, width, 30, right: true), 3),
                 Color.White, Math.Max(10, (int)(13 * MappingEditorScale)), true);
-            for (var row = 0; row < MappingVisibleRows; row++)
-                DrawOutline(MappingCell(row, column, right: true), 1, new Color(48, 65, 77));
+            if (packageGenreTable is null)
+                for (var row = 0; row < MappingVisibleRows; row++)
+                    DrawOutline(MappingCell(row, column, right: true), 1, new Color(48, 65, 77));
         }
-        var message = MappingGridBounds(20, 62, 960, 36, right: true);
-        textRenderer?.Draw("パッケージ ＞ ジャンルコード表（未選択）", ToRectangle(message, 6),
+        var message = MappingGridBounds(20, 62, packageGenreTable is null ? 960 : 640, 36, right: true);
+        textRenderer?.Draw(packageGenreTable is { } table ? "パッケージ ＞ " + table.Name : "パッケージ ＞ ジャンルコード表（未選択）", ToRectangle(message, 6),
             Color.LightGray, Math.Max(10, (int)(15 * MappingEditorScale)), true);
+        if (packageGenreTable is { } loaded)
+            DrawGenreKnowledgeComment(loaded.OverallComment, MappingGridBounds(672, 62, 308, 36, right: true), "", editable: false);
+        var rows = PackageGenreRows();
+        void Text(string value, ScreenRectangle bounds, Color? color = null) =>
+            textRenderer?.Draw(value, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(17 * MappingEditorScale)), true);
+        for (var row = 0; row < MappingVisibleRows && packageGenreScroll + row < rows.Length; row++)
+        {
+            var style = rows[packageGenreScroll + row];
+            for (var column = 0; column < headers.Length; column++)
+            {
+                var bounds = MappingCell(row, column, right: true);
+                if (column == 3 && style.Pattern == "solid") continue;
+                var plain = column is 1 or 6;
+                if (!plain) DrawRectangle(bounds, new Color(35, 43, 54));
+                if (column == 0)
+                {
+                    var order = packageGenreTable?.GenreCodeOrder?.ToArray() ?? [];
+                    var index = Array.IndexOf(order, style.GenreId);
+                    Text((index >= 0 ? index + 1 : packageGenreScroll + row + 1).ToString(), bounds);
+                }
+                else if (column == 1) Text(style.GenreId, bounds);
+                else if (column == 6) DrawGenreKnowledgeComment(style.KnowledgeComment, bounds, "", editable: false);
+                else if (column is 2 or 3)
+                {
+                    var id = column == 2 ? style.PrimaryColor : style.SecondaryColor;
+                    var color = GenreColorFromId(id, Color.Gray);
+                    DrawRectangle(bounds, color);
+                    Text(StyleMappingDraft.Colors.FirstOrDefault(choice => choice.Id == id).Label ?? id, bounds, MappingColorText(color));
+                }
+                else
+                {
+                    var swatch = new ScreenRectangle(bounds.X + 4, bounds.Y + 3, bounds.Width - 8, bounds.Height - 6);
+                    DrawRectangle(swatch, column == 4 ? Color.Black : GenreColorFromId(style.PrimaryColor, Color.Gray));
+                    DrawGenrePattern(swatch, GenrePatternFromId(style.Pattern), column == 4 ? Color.White : GenreColorFromId(style.SecondaryColor, Color.White), 255);
+                }
+                if (!plain) DrawOutline(bounds, 1, new Color(100, 119, 130));
+            }
+        }
+        if (packageGenreTable is not null && rows.Length == 0)
+            Text("この表にジャンルはありません。", MappingGridBounds(20, 142, 960, 46, right: true));
+        if (packageGenreTable is not null)
+            Text($"{(rows.Length == 0 ? 0 : packageGenreScroll + 1)}–{Math.Min(rows.Length, packageGenreScroll + MappingVisibleRows)} / {rows.Length} 件",
+                MappingGridBounds(380, 460, 600, 32, right: true));
         var divider = MappingGridBounds(20, 102, 960, 390);
         var x = divider.X + divider.Width + 8 * MappingEditorScale;
         DrawLine(new(x, divider.Y), new(x, divider.Y + divider.Height), 1, new Color(100, 119, 130));

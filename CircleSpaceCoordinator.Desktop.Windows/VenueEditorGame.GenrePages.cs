@@ -244,6 +244,7 @@ public sealed partial class VenueEditorGame
                     genreCodeSort = code;
                     genreSpaceSort = sort;
                     genreOrdinalSort = ordinal;
+                    packageGenreScroll = 0;
                     if (mappingKnowledgeComments)
                         mappingDraft?.ReorderRows(BuildGenrePreviewGroups(chartOrder: sort).Select(group => group.GenreId));
                     if (code && genreCodeOrder.Length > 0)

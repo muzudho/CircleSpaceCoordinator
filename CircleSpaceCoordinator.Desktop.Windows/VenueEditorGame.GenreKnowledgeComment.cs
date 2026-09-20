@@ -46,13 +46,13 @@ public sealed partial class VenueEditorGame
             maxLength: int.MaxValue, allowEmpty: true, validate: ValidateGenreComment);
     }
 
-    private void DrawGenreKnowledgeComment(string? comment, ScreenRectangle bounds, string placeholder = "コメントを入力")
+    private void DrawGenreKnowledgeComment(string? comment, ScreenRectangle bounds, string placeholder = "コメントを入力", bool editable = true)
     {
         var size = Math.Max(10, (int)(14 * MappingEditorScale));
         var badge = ActionBadgeComponent.Create("EDIT", new Rectangle(0, 0,
             (int)(bounds.Width / MappingEditorScale), (int)(bounds.Height / MappingEditorScale)));
         var mouse = Mouse.GetState();
-        var hovered = mappingPickerColumn == 0 && CanShowEditorHover && Contains(bounds, new(mouse.X, mouse.Y));
+        var hovered = editable && mappingPickerColumn == 0 && CanShowEditorHover && Contains(bounds, new(mouse.X, mouse.Y));
         if (hovered) badge.Show();
         var value = string.IsNullOrEmpty(comment) ? placeholder : comment;
         var available = Math.Max(1, badge.Bounds.X * MappingEditorScale - 12);
