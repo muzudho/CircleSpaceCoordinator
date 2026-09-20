@@ -29,6 +29,7 @@ internal static partial class Program
             ("Event metadata loads only selected files, caches per session and retries failures", LazyEventMetadata),
             ("Genre autosave restores package bytes, rejects stale writes and finalizes project credits", GenreAutoSaveRestoration),
             ("Genre copies preserve all fields, reject collisions and invalid overwrites, and discard cleanly", GenreCopyRows),
+            ("Shared shading tables preserve block metadata, legacy files, undo, packages and isolated edits", SharedShadingTablesRoundTrip),
             ("Package reader filters files, lists genre tables and clears stale selections on errors", PackageReaderSelection),
             ("Genre table diff trades both sides atomically, preserves package items and rejects stale saves", GenreTableDiffTradesAndPersistence),
             ("Named genre tables survive project/package round trips without layouts or current participants", NamedGenreCodeTablesRoundTrip),
@@ -1782,12 +1783,12 @@ internal static partial class Program
             Plans = [plan with { SeatLabels = labels }],
             BlockStyles = [new("A", "blue", "white", "solid"), new("unused", "red", "white", "dots")],
         };
-        AssertEqual("A", new BlockStyleDraft(project).Mapping.Rows.Single().Key);
+        AssertEqual("A,unused", string.Join(',', new BlockStyleDraft(project).Mapping.Rows.Select(row => row.Key)));
         var separated = project with
         {
             DeskLayouts = [new("frames", "Frames", plan.DeskPlacements) { SeatLabels = [labels[0] with { BlockName = "B" }] }],
         };
-        AssertEqual("B", new BlockStyleDraft(separated).Mapping.Rows.Single().Key);
+        AssertEqual("A,B,unused", string.Join(',', new BlockStyleDraft(separated).Mapping.Rows.Select(row => row.Key)));
         AssertEqual(0, new BlockStyleDraft(original).Mapping.Rows.Count);
         var directory = Path.Combine(Path.GetTempPath(), $"block-style-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);

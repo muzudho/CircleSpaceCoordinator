@@ -9,11 +9,6 @@ public sealed class BlockStyleDraft
 
     public BlockStyleDraft(CircleSpaceProject project)
     {
-        var labels = project.DeskLayouts.Count > 0
-            ? project.DeskLayouts.SelectMany(layout => layout.SeatLabels)
-            : project.Plans.SelectMany(plan => plan.SeatLabels);
-        Mapping = new StyleMappingDraft(labels.Select(label => label.BlockName),
-            project.BlockStyles.Select(style => new StyleMappingEntry(style.BlockNumber,
-                style.PrimaryColor, style.SecondaryColor, style.Pattern)));
+        Mapping = ShadingTable.CreateDraft(project, blocks: true);
     }
 }

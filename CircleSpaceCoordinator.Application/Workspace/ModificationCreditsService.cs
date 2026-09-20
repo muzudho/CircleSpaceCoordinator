@@ -9,6 +9,11 @@ public static class ModificationCreditsService
 {
     public static CircleSpaceProject Apply(CircleSpaceProject before, CircleSpaceProject after, EditorOperation operation)
     {
+        if (operation is SetBlockStyles { UpdateCredits: true } block)
+        {
+            block.Credits?.Validate();
+            return after with { BlockStyleCredits = block.Credits };
+        }
         if (operation is SetGenreStyles { UpdateCredits: true } genre)
         {
             genre.Credits?.Validate();
@@ -46,7 +51,8 @@ public static class ModificationCreditsService
                 || before.GetGenreCodeTableName() != after.GetGenreCodeTableName()
                 || Changed(before.GenreCodeOrder, after.GenreCodeOrder) || before.GenreCodeOrderComment != after.GenreCodeOrderComment
                 ? Edited(before.GenreStyleCredits) : before.GenreStyleCredits,
-            BlockStyleCredits = Changed(before.BlockStyles, after.BlockStyles) ? Edited(before.BlockStyleCredits) : before.BlockStyleCredits,
+            BlockStyleCredits = Changed(before.BlockStyles, after.BlockStyles) || Changed(before.BlockStyleTable, after.BlockStyleTable)
+                ? Edited(before.BlockStyleCredits) : before.BlockStyleCredits,
             CircleLayouts = after.CircleLayouts.Select(item =>
             {
                 var previous = before.CircleLayouts.FirstOrDefault(old => old.Id == item.Id);

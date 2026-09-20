@@ -3,13 +3,14 @@ namespace CircleSpaceCoordinator.Desktop.Windows;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StationeryUI.Canvas;
+using CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 public sealed partial class VenueEditorGame
 {
     private int genreScrollbarDrag = -1;
     private double genreScrollbarGrab;
 
-    private int GenreScrollCount(bool right) => right ? packageGenreTable?.GenreStyles?.Length ?? 0 : mappingDraft?.Rows.Count ?? 0;
+    private int GenreScrollCount(bool right) => right ? packageGenreTable?.Rows().Length ?? 0 : mappingDraft?.Rows.Count ?? 0;
     private ScreenRectangle GenreScrollArea(bool right)
     {
         var grid = MappingGridBounds(20, 102, 960, 390, right);

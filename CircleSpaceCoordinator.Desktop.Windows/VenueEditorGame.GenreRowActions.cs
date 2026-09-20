@@ -1,6 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using StationeryUI.Canvas;
+using CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 public sealed partial class VenueEditorGame
 {
@@ -24,7 +25,7 @@ public sealed partial class VenueEditorGame
         SetMappingTextFocus(false);
         var draft = right ? CreatePackageCellDraft() : mappingDraft;
         // Material storage order can differ from the order currently visible in the right pane.
-        if (right) draft.ReorderRows(PackageGenreRows().Select(row => row.GenreId));
+        if (right) draft.ReorderRows(PackageGenreRows().Select(row => row.Key));
         var selected = right ? selectedPackageGenreKey : selectedGenreKey;
         var index = draft.Rows.ToList().FindIndex(row => row.Key == selected);
         string? next;
@@ -32,7 +33,7 @@ public sealed partial class VenueEditorGame
         {
             // With no target, start at the first visible row (or the first row of an empty table).
             if (index < 0) index = Math.Clamp(right ? packageGenreScroll : mappingScroll, 0, draft.Rows.Count);
-            next = draft.InsertNewGenreRow(index);
+            next = draft.InsertNewGenreRow(index, mappingBlocks ? "新しいブロック" : "新しいジャンルコード");
         }
         else
         {
@@ -47,7 +48,7 @@ public sealed partial class VenueEditorGame
         if (right)
         {
             ApplyPackageCellDraft(draft);
-            packageGenreTable = packageGenreTable! with { GenreCodeOrder = order };
+            packageGenreTable = packageGenreTable!.WithOrder(order);
             selectedPackageGenreKey = next;
             selectedGenreKey = null;
             if (next is not null) SelectPackageGenreTarget(next);

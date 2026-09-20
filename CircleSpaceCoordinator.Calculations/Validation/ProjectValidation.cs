@@ -74,6 +74,14 @@ public static class ProjectValidator
         var participantCircleIds = project.Participants.Select(item => item.CircleId).ToHashSet(StringComparer.Ordinal);
         var featureIds = project.Evaluation.Features.Select(item => item.Id).ToHashSet();
 
+        try { project.BlockStyleTable.Validate(); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidDataException)
+        { Add("blockStyle.table.invalid", "blockStyleTable", ex.Message); }
+        foreach (var style in project.BlockStyles)
+        {
+            try { GenreStyleDefinition.NormalizeKnowledgeComment(style.KnowledgeComment); }
+            catch (ArgumentException ex) { Add("blockStyle.comment.invalid", "blockStyles", ex.Message); }
+        }
         try { GenreStyleDefinition.NormalizeKnowledgeComment(project.GenreStyleComment); }
         catch (ArgumentException ex) { Add("genreStyle.comment.invalid", "genreStyleComment", ex.Message); }
         if (project.GenreCodeTableName is not null)

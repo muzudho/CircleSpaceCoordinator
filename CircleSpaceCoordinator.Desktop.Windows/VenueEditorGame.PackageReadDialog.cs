@@ -68,7 +68,7 @@ public sealed partial class VenueEditorGame
             }
             packageReadDialog = null;
         }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
-        packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json));
+        packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json), MappingMaterialKind);
         packageReadFocus = 0;
         packageReadFolderError = null;
         Array.Clear(packageReadScroll);
@@ -222,7 +222,7 @@ public sealed partial class VenueEditorGame
             var area = PackageReadListArea(list);
             var count = list == 0 ? model.Files.Length : model.Tables.Length;
             packageReadScroll[list] = Math.Clamp(packageReadScroll[list], 0, Math.Max(0, count - PackageReadPageSize));
-            textRenderer?.Draw(list == 0 ? "パッケージファイル" : "ジャンルコード表",
+            textRenderer?.Draw(list == 0 ? "パッケージファイル" : "網掛け対応表",
                 ToRectangle(new(area.X, area.Y - 30, area.Width, 28)), Color.White, 18, true);
             DrawRectangle(area, new Color(18, 23, 29));
             DrawOutline(area, 1, packageReadFocus == list + 3 ? OperationTargetColor : Color.SlateGray);
@@ -235,7 +235,7 @@ public sealed partial class VenueEditorGame
                     ToRectangle(bounds, 4), Color.White, 16, true);
             }
             if (count == 0)
-                textRenderer?.Draw(list == 0 ? "対象ファイルがありません" : model.FileIndex < 0 ? "ファイルを選んでください" : "ジャンルコード表がありません",
+                textRenderer?.Draw(list == 0 ? "対象ファイルがありません" : model.FileIndex < 0 ? "ファイルを選んでください" : "対応する網掛け対応表がありません",
                     ToRectangle(new(area.X + 4, area.Y + 4, area.Width - 8, 32)), Color.LightGray, 15, true);
             textRenderer?.Draw($"{count} 件　↑↓・PageUp/PageDown・ホイール",
                 ToRectangle(new(area.X, area.Y + area.Height + 4, area.Width, 24)), Color.LightGray, 12, true);

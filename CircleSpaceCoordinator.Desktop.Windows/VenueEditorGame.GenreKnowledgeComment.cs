@@ -68,7 +68,7 @@ public sealed partial class VenueEditorGame
         {
             draft.SetKnowledgeComment(row, value);
             mappingWidth = -1;
-        }, "ジャンルの範囲や補足を1000文字以内で入力してください。例：アクションRPGを含む\n空欄で確定するとコメントを削除します。キャンセルすると元のコメントを残します。",
+        }, "この行の補足を1000文字以内で入力してください。\n空欄で確定するとコメントを削除します。キャンセルすると元のコメントを残します。",
             maxLength: int.MaxValue, allowEmpty: true, validate: ValidateGenreComment);
     }
 

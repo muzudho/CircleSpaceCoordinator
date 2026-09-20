@@ -21,6 +21,8 @@ public sealed record CircleSpaceProject(
     public IReadOnlyList<string> GenreCodeOrder { get; init; } = [];
     public string? GenreCodeOrderComment { get; init; }
     public PersonCredits? BlockStyleCredits { get; init; }
+    public ShadingTableMetadata BlockStyleTable { get; init; } = new();
+    public string GetBlockStyleTableName() => BlockStyleTable.Name ?? $"{Name}_ブロック網掛け対応表";
     public IReadOnlyList<ChannelKnowledge> ChannelKnowledge { get; init; } = [];
 
     /// <summary>Marks business data that must not be published. This is a visual warning, not access control.</summary>

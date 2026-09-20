@@ -25,9 +25,9 @@ public static class ProjectPortableSerializer
     public static string UpdateGenreTable(string json, PortableMaterial table, string handle, DateOnly date, string changeLog)
     {
         var loaded = Load(json).Document;
-        var previous = loaded.Materials?.SingleOrDefault(item => item.Id == table.Id && item.Kind == "genre-styles")
-            ?? throw new InvalidDataException("パッケージに対象のジャンルコード表がありません。");
-        if (table.Kind != "genre-styles") throw new InvalidDataException("ジャンルコード表だけを更新できます。");
+        var previous = loaded.Materials?.SingleOrDefault(item => item.Id == table.Id && item.Kind == table.Kind)
+            ?? throw new InvalidDataException("パッケージに対象の網掛け対応表がありません。");
+        if (table.Kind is not ("genre-styles" or "block-styles")) throw new InvalidDataException("網掛け対応表だけを更新できます。");
         var updated = table with { IsConfidential = table.IsConfidential || previous.IsConfidential || loaded.IsConfidential,
             Credits = (previous.Credits ?? new()).WrittenBy(handle, date, changeLog.Length == 0 ? null : changeLog) with { ModifiedAt = DateTimeOffset.Now } };
         updated.Validate();

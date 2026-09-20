@@ -9,6 +9,14 @@ using CircleSpaceCoordinator.Application.Plans;
 
 public static class EditorOperationHandler
 {
+    private static CircleSpaceProject ApplyBlockStyles(CircleSpaceProject project, SetBlockStyles operation)
+    {
+        operation.Table?.Validate();
+        foreach (var row in operation.styles) GenreStyleDefinition.NormalizeKnowledgeComment(row.KnowledgeComment);
+        return project with { BlockStyles = operation.styles, BlockStyleTable = operation.Table ?? project.BlockStyleTable,
+            IsConfidential = project.IsConfidential || operation.MarkConfidential };
+    }
+
     public static CircleSpaceProject Apply(CircleSpaceProject project, EditorOperation operation) =>
         ModificationCreditsService.Apply(project, ApplyCore(project, operation), operation);
 
@@ -81,7 +89,7 @@ public static class EditorOperationHandler
             GenreCodeOrder = op.GenreCodeOrder ?? project.GenreCodeOrder,
             GenreCodeOrderComment = op.UpdateGenreCodeOrder ? GenreStyleDefinition.NormalizeKnowledgeComment(op.GenreCodeOrderComment) : project.GenreCodeOrderComment,
             GenreStyleComment = op.UpdateOverallComment ? GenreStyleDefinition.NormalizeKnowledgeComment(op.OverallComment) : project.GenreStyleComment },
-        SetBlockStyles op => project with { BlockStyles = op.styles },
+        SetBlockStyles op => ApplyBlockStyles(project, op),
         SwapNumberAddresses op => AddressSwapEditor.Swap(project, op.planId, op.channel, op.source, op.destination, op.width, op.height, op.sourceFrameIds),
         SetExportPlan op => op.planId is null || project.Plans.Any(plan => plan.Id == op.planId)
             ? project with { ExportPlanId = op.planId }

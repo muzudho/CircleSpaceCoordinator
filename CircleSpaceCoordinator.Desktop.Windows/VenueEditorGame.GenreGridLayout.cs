@@ -13,12 +13,12 @@ public sealed partial class VenueEditorGame
     private PortableMaterial? packageGenreTable;
     private int packageGenreScroll;
 
-    private GenreStyleDefinition[] PackageGenreRows()
+    private StyleMappingEntry[] PackageGenreRows()
     {
-        var rows = packageGenreTable?.GenreStyles ?? [];
-        if (genreOrdinalSort) return rows.OrderBy(row => row.GenreId, StringComparer.Ordinal).ToArray();
-        var order = packageGenreTable?.GenreCodeOrder?.ToArray() ?? [];
-        return rows.OrderBy(row => Array.IndexOf(order, row.GenreId) is var index && index >= 0 ? index : int.MaxValue).ToArray();
+        var rows = packageGenreTable?.Rows() ?? [];
+        if (genreOrdinalSort) return rows.OrderBy(row => row.Key, StringComparer.Ordinal).ToArray();
+        var order = packageGenreTable?.Metadata().RowOrder.ToArray() ?? [];
+        return rows.OrderBy(row => Array.IndexOf(order, row.Key) is var index && index >= 0 ? index : int.MaxValue).ToArray();
     }
 
     private void ShowPackageGenreTable(PortableMaterial table)
@@ -99,7 +99,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawPackageGenreGrid()
     {
-        var headers = new[] { "順", "ジャンル", "太線色", "細線色", "網掛け", "見本", "コメント" };
+        var headers = new[] { "順", MappingRowLabel, "太線色", "細線色", "網掛け", "見本", "コメント" };
         DrawRectangle(MappingGridBounds(20, 102, 960, 34, right: true), new Color(48, 65, 77));
         for (var column = 0; column < headers.Length; column++)
         {
@@ -113,7 +113,7 @@ public sealed partial class VenueEditorGame
         if (packageGenreTable is { } loaded)
             DrawTableHeader(loaded.Name, loaded.OverallComment, right: true, editable: false);
         else
-            textRenderer?.Draw("パッケージ ＞ ジャンルコード表（未選択）",
+            textRenderer?.Draw("パッケージ ＞ 網掛け対応表（未選択）",
                 ToRectangle(MappingGridBounds(20, 62, 960, 36, right: true), 6),
                 Color.LightGray, Math.Max(10, (int)(15 * MappingEditorScale)), true);
         var rows = PackageGenreRows();
@@ -130,11 +130,11 @@ public sealed partial class VenueEditorGame
                 if (!plain) DrawRectangle(bounds, new Color(35, 43, 54));
                 if (column == 0)
                 {
-                    var order = packageGenreTable?.GenreCodeOrder?.ToArray() ?? [];
-                    var index = Array.IndexOf(order, style.GenreId);
+                    var order = packageGenreTable?.Metadata().RowOrder.ToArray() ?? [];
+                    var index = Array.IndexOf(order, style.Key);
                     Text((index >= 0 ? index + 1 : packageGenreScroll + row + 1).ToString(), bounds);
                 }
-                else if (column == 1) Text(style.GenreId, bounds);
+                else if (column == 1) Text(style.Key, bounds);
                 else if (column == 6) Text(style.KnowledgeComment ?? "コメントを入力", bounds);
                 else if (column is 2 or 3)
                 {
@@ -151,14 +151,14 @@ public sealed partial class VenueEditorGame
                 }
                 if (!plain) DrawOutline(bounds, 1, new Color(100, 119, 130));
             }
-            if (style.GenreId == selectedPackageGenreKey)
+            if (style.Key == selectedPackageGenreKey)
             {
                 DrawOutline(GenreTargetRowBounds(row, right: true), 2 * MappingEditorScale, OperationTargetColor);
                 DrawGenreCellHover(row, style.Pattern, true);
             }
         }
         if (packageGenreTable is not null && rows.Length == 0)
-            Text("この表にジャンルはありません。", MappingGridBounds(20, 142, 960, 46, right: true));
+            Text("この表に行はありません。", MappingGridBounds(20, 142, 960, 46, right: true));
         var divider = MappingGridBounds(20, 102, 960, 390);
         var x = GraphicsDevice.Viewport.Width / 2d;
         DrawLine(new(x, divider.Y), new(x, divider.Y + divider.Height), 1, new Color(100, 119, 130));

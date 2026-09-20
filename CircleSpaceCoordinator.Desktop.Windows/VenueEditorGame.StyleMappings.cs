@@ -53,7 +53,7 @@ public sealed partial class VenueEditorGame
         MappingGridBounds(MappingColumnEdges[column], 142 + visibleRow * 52, MappingColumnEdges[column + 1] - MappingColumnEdges[column] - 6, 46, right);
 
     /// <summary>Opens the shared editor; the caller owns persistence and undo.</summary>
-    private void OpenStyleMappingEditor(StyleMappingDraft draft, string keyLabel, string emptyMessage,
+    private void OpenShadingTableEditor(StyleMappingDraft draft, string keyLabel, string emptyMessage,
         Action<StyleMappingEntry[], string, string, DateOnly> apply, PersonCredits? previousCredits = null, bool knowledgeComments = false)
     {
         CancelInProgressPointerInteraction();
@@ -313,14 +313,14 @@ public sealed partial class VenueEditorGame
             {
                 Add("新規作成", GenreRowActionBounds(0, 120), CreateGenreRow,
                     !GenreRowActionsRight || packageGenreTable is not null,
-                    tooltip: "操作対象の上に新しいジャンルコードを作り、その行を操作対象にします。");
+                    tooltip: $"操作対象の上に新しい{MappingRowLabel}を作り、その行を操作対象にします。");
                 if (GenreGridSplit)
                     Add("反対側へコピー", GenreRowActionBounds(132, 200), CopyGenreToOtherPane,
                         packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
-                        tooltip: "対象のジャンルを反対側の表へコピーします。右側の変更は作業中の表に保持します。");
+                        tooltip: "対象の行を反対側の表へコピーします。右側の変更は作業中の表に保持します。");
                 Add("削除", GenreRowActionBounds(GenreGridSplit ? 344 : 132, 100), DeleteGenreRow,
                     GenreRowActionsRight ? selectedPackageGenreKey is not null : selectedGenreKey is not null,
-                    tooltip: "操作対象のジャンルを表から削除します。参加サークルのジャンル値は変更しません。");
+                    tooltip: "操作対象の行を表から削除します。サークルや配置の値は変更しません。");
             }
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, MappingCommentsCanClose && mappingComposition.Length == 0,
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
@@ -405,9 +405,9 @@ public sealed partial class VenueEditorGame
         else if (mappingFocus < 0 && !GenreChartVisible && GenreGridSplit && selectedPackageGenreKey is { } packageKey)
         {
             var rows = PackageGenreRows();
-            var index = Array.FindIndex(rows, row => row.GenreId == packageKey);
+            var index = Array.FindIndex(rows, row => row.Key == packageKey);
             var delta = IsPressed(keyboard, Keys.Up) ? -1 : IsPressed(keyboard, Keys.Down) ? 1 : 0;
-            if (delta != 0 && rows.Length > 0) SelectPackageGenreTarget(rows[Math.Clamp(index + delta, 0, rows.Length - 1)].GenreId);
+            if (delta != 0 && rows.Length > 0) SelectPackageGenreTarget(rows[Math.Clamp(index + delta, 0, rows.Length - 1)].Key);
             if (IsPressed(keyboard, Keys.PageUp)) ScrollPackageGenreRows(-MappingVisibleRows);
             if (IsPressed(keyboard, Keys.PageDown)) ScrollPackageGenreRows(MappingVisibleRows);
         }
@@ -466,7 +466,7 @@ public sealed partial class VenueEditorGame
                     for (var row = 0; row < MappingVisibleRows && packageGenreScroll + row < rows.Length; row++)
                         if (Contains(MappingCell(row, 1, right: true), pointer))
                         {
-                            SelectPackageGenreTarget(rows[packageGenreScroll + row].GenreId);
+                            SelectPackageGenreTarget(rows[packageGenreScroll + row].Key);
                             return;
                         }
                 }
@@ -513,8 +513,8 @@ public sealed partial class VenueEditorGame
         BuildMappingEditorButtons();
         void Text(string text, ScreenRectangle bounds, int size = 17, Color? color = null) =>
             textRenderer?.Draw(text, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)), true);
-        Text(mappingKnowledgeComments ? "ジャンル" : $"{mappingKeyLabel}と色・網掛けパターンの紐づけ",
-            MappingBounds(20, 18, mappingKnowledgeComments ? 78 : 960, 38), mappingKnowledgeComments ? 22 : 26);
+        Text(mappingBlocks ? "ブロック ＞ 網掛け対応表" : "ジャンル",
+            MappingBounds(20, 18, mappingBlocks ? 620 : 78, 38), 22);
         if (mappingKnowledgeComments && genrePageTab == 3)
             Text("スペース数順", MappingBounds(700, 18, 280, 36), 18, new Color(180, 220, 230));
         if (mappingKnowledgeComments)
@@ -525,7 +525,7 @@ public sealed partial class VenueEditorGame
         else
         {
             var headers = mappingKnowledgeComments
-                ? new[] { GenreGridSplit ? "順" : "並び順", "ジャンル", "太線色", "細線色", "網掛け", "見本", "コメント" }
+                ? new[] { GenreGridSplit ? "順" : "並び順", MappingRowLabel, "太線色", "細線色", "網掛け", "見本", "コメント" }
                 : new[] { mappingKeyLabel, "太線色", "細線色", "網掛け（白黒見本）", "配色の見本" };
             DrawRectangle(MappingGridBounds(20, 102, 960, 34), new Color(48, 65, 77));
             for (var column = 0; column < headers.Length; column++)

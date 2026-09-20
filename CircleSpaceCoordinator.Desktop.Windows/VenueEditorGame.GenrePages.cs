@@ -166,7 +166,7 @@ public sealed partial class VenueEditorGame
         var panel = new ScreenRectangle(40, 50, Math.Min(1000, GraphicsDevice.Viewport.Width - 80), Math.Min(610, GraphicsDevice.Viewport.Height - 100));
         DrawRectangle(panel, new Color(24, 29, 36));
         DrawOutline(panel, 2, Color.LightSlateGray);
-        textRenderer?.Draw("ジャンルコードの並び順", ToRectangle(new(panel.X + 24, panel.Y + 18, panel.Width - 48, 34), 0), Color.White, 23, true);
+        textRenderer?.Draw("網掛け対応表の並び順", ToRectangle(new(panel.X + 24, panel.Y + 18, panel.Width - 48, 34), 0), Color.White, 23, true);
         var commentBounds = GenreOrderCommentBounds;
         var comment = genreOrderCommentEditing ? genreOrderCommentEditor?.Text : mappingGenreCodeOrderComment;
         var commentDisplay = genreOrderCommentEditing && genreOrderCommentEditor is { } editingEditor && genreOrderCommentComposition.Length > 0
@@ -216,6 +216,7 @@ public sealed partial class VenueEditorGame
 
     private void AddGenreTabs()
     {
+        if (mappingBlocks) return;
         if (mappingKnowledgeComments && genrePageTab != 3)
         {
             foreach (var (label, spaceSort, codeSort) in new[] { ("スペース順", true, false), ("ジャンルコード順", false, true), ("文字コード順", false, false) })
@@ -287,7 +288,7 @@ public sealed partial class VenueEditorGame
 
     private IReadOnlyList<GenreDataGroup> BuildGenrePreviewGroups(bool chartOrder = false)
     {
-        var groups = BuildGenreDataGroups().ToList();
+        var groups = mappingBlocks ? new List<GenreDataGroup>() : BuildGenreDataGroups().ToList();
         foreach (var style in mappingDraft?.Build() ?? [])
             if (!groups.Any(group => group.GenreId == style.Key)) groups.Add(new(style.Key, 0, 0));
         if (chartOrder || genreSpaceSort)
@@ -297,6 +298,7 @@ public sealed partial class VenueEditorGame
         if (genreCodeSort)
             return groups.OrderBy(group => Array.IndexOf(genreCodeOrder, group.GenreId) is var index && index >= 0 ? index : int.MaxValue)
                 .ThenBy(group => group.GenreId, StringComparer.Ordinal).ToArray();
+        if (mappingBlocks) return groups;
         var order = workspace?.Project.Participants
             .Select(item => string.IsNullOrWhiteSpace(item.GenreId) ? "（未設定）" : item.GenreId!)
             .Distinct(StringComparer.Ordinal).ToArray() ?? [];

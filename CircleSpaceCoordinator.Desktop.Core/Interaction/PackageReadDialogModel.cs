@@ -4,7 +4,7 @@ using CircleSpaceCoordinator.Engine.Model;
 using CircleSpaceCoordinator.Core.Model;
 
 /// <summary>Selection state for the shared package reader; never imports or modifies a package.</summary>
-public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse)
+public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse, string tableKind = "genre-styles")
 {
     public string DirectoryPath { get; private set; } = "";
     public string[] Files { get; private set; } = [];
@@ -59,7 +59,7 @@ public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse)
             var package = parse(json);
             SelectedJson = json;
             SelectedPackage = package;
-            Tables = package.Materials.Where(material => material.Kind == "genre-styles")
+            Tables = package.Materials.Where(material => material.Kind == tableKind)
                 .OrderBy(material => material.Name, StringComparer.Ordinal).ToArray();
         }
         catch (Exception ex)

@@ -149,7 +149,13 @@ public sealed record SetGenreStyles(IReadOnlyList<GenreStyleDefinition> styles) 
     public bool UpdateOverallComment { get; init; }
     public string? OverallComment { get; init; }
 }
-public sealed record SetBlockStyles(IReadOnlyList<BlockStyleDefinition> styles) : EditorOperation;
+public sealed record SetBlockStyles(IReadOnlyList<BlockStyleDefinition> styles) : EditorOperation
+{
+    public ShadingTableMetadata? Table { get; init; }
+    public bool UpdateCredits { get; init; }
+    public PersonCredits? Credits { get; init; }
+    public bool MarkConfidential { get; init; }
+}
 public sealed record SwapNumberAddresses(string planId, int channel, GridPosition source, GridPosition destination,
     int width, int height, IReadOnlyList<string> sourceFrameIds) : EditorOperation, IPlanOperation;
 public sealed record SetExportPlan(string? planId) : EditorOperation;

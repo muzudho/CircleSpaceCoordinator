@@ -52,7 +52,7 @@ public sealed partial class VenueEditorGame
             {
                 if (!Contains(MappingGridBounds(20, 142 + row * 52, 960, 46, right), pointer)) continue;
                 var index = scroll + row;
-                var key = right ? packageRows[index].GenreId : mappingDraft!.Rows[index].Key;
+                var key = right ? packageRows[index].Key : mappingDraft!.Rows[index].Key;
                 var selected = key == (right ? selectedPackageGenreKey : selectedGenreKey);
                 SetMappingTextFocus(false);
                 if (right) SelectPackageGenreTarget(key); else SelectGenreTarget(key);
@@ -72,28 +72,24 @@ public sealed partial class VenueEditorGame
 
     private StyleMappingDraft CreatePackageCellDraft()
     {
-        var rows = packageGenreTable!.GenreStyles ?? [];
-        var draft = new StyleMappingDraft(rows.Select(row => row.GenreId),
-            rows.Select(row => new StyleMappingEntry(row.GenreId, row.PrimaryColor, row.SecondaryColor, row.Pattern)
+        var rows = packageGenreTable!.Rows() ?? [];
+        var draft = new StyleMappingDraft(rows.Select(row => row.Key),
+            rows.Select(row => new StyleMappingEntry(row.Key, row.PrimaryColor, row.SecondaryColor, row.Pattern)
             { KnowledgeComment = row.KnowledgeComment }));
-        draft.ReorderRows(rows.Select(row => row.GenreId));
+        draft.ReorderRows(rows.Select(row => row.Key));
         return draft;
     }
 
     private void ApplyPackageCellDraft(StyleMappingDraft draft)
     {
         if (packageGenreTable is null) return;
-        packageGenreTable = packageGenreTable with
-        {
-            GenreStyles = draft.Build().Select(row => new GenreStyleDefinition(row.Key, row.PrimaryColor, row.SecondaryColor, row.Pattern)
-            { KnowledgeComment = row.KnowledgeComment }).ToArray(),
-        };
+        packageGenreTable = packageGenreTable.WithRows(draft.Build());
         mappingWidth = -1;
     }
 
     private void OpenGenreNameEditor(int row, bool right)
     {
-        var key = right ? PackageGenreRows()[row].GenreId : mappingDraft!.Rows[row].Key;
+        var key = right ? PackageGenreRows()[row].Key : mappingDraft!.Rows[row].Key;
         var draft = right ? CreatePackageCellDraft() : mappingDraft!;
         var index = draft.Rows.ToList().FindIndex(item => item.Key == key);
         string? Validate(string value)
@@ -101,12 +97,12 @@ public sealed partial class VenueEditorGame
             try
             {
                 var name = PersonCredits.NormalizeChangeLog(value);
-                return draft.Build().Any(item => item.Key != key && item.Key == name) ? "同じジャンルコードが既にあります。" : null;
+                return draft.Build().Any(item => item.Key != key && item.Key == name) ? "同じ名前が既にあります。" : null;
             }
             catch (ArgumentException ex) { return ex.Message; }
         }
         SetMappingTextFocus(false);
-        OpenUnderlineInput("ジャンル名", key, value =>
+        OpenUnderlineInput(MappingRowLabel + "名", key, value =>
         {
             var name = PersonCredits.NormalizeChangeLog(value);
             if (name == key) return;
@@ -114,7 +110,7 @@ public sealed partial class VenueEditorGame
             if (right)
             {
                 ApplyPackageCellDraft(draft);
-                packageGenreTable = packageGenreTable! with { GenreCodeOrder = packageGenreTable.GenreCodeOrder?.Select(item => item == key ? name : item).ToArray() };
+                packageGenreTable = packageGenreTable!.WithOrder(packageGenreTable!.Metadata().RowOrder.Select(item => item == key ? name : item).ToArray());
                 SelectPackageGenreTarget(name);
             }
             else
@@ -126,13 +122,13 @@ public sealed partial class VenueEditorGame
                 SelectGenreTarget(name);
             }
             mappingWidth = -1;
-        }, "このジャンルコード表の名前を変更します。参加サークルのジャンル値は変更しません。", 1000, validate: Validate);
+        }, "この表の行名を変更します。サークルや配置の値は変更しません。", 1000, validate: Validate);
     }
 
     private void OpenPackageGenreCell(int row, int column)
     {
         if (column == 1) { OpenGenreNameEditor(row, true); return; }
-        var key = PackageGenreRows()[row].GenreId;
+        var key = PackageGenreRows()[row].Key;
         var draft = CreatePackageCellDraft();
         var index = draft.Rows.ToList().FindIndex(item => item.Key == key);
         if (column == 6)

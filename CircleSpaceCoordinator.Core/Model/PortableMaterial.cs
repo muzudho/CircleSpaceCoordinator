@@ -22,13 +22,18 @@ public sealed record PortableMaterial(
     public string? GenreCodeOrderComment { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public BlockStyleDefinition[]? BlockStyles { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ShadingTableMetadata? TableMetadata { get; init; }
 
     public void Validate()
     {
         Credits?.Validate();
+        TableMetadata?.Validate();
+        if (TableMetadata is not null && Kind != "block-styles")
+            throw new InvalidDataException("この形式の表メタデータはブロック網掛け対応表の項目です。");
         if (OverallComment is not null)
         {
-            if (Kind != "genre-styles") throw new InvalidDataException("全体コメントはジャンル対応表の項目です。");
+            if (Kind is not ("genre-styles" or "block-styles")) throw new InvalidDataException("全体コメントは網掛け対応表の項目です。");
             GenreStyleDefinition.NormalizeKnowledgeComment(OverallComment);
         }
         if (GenreCodeOrderComment is not null)
@@ -53,6 +58,8 @@ public sealed record PortableMaterial(
                 ? GenreStyles!.Select(s => s is null ? default : (s.GenreId, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray()
                 : BlockStyles!.Select(s => s is null ? default : (s.BlockNumber, s.PrimaryColor, s.SecondaryColor, s.Pattern)).ToArray();
             foreach (var style in GenreStyles ?? [])
+                if (style is not null) GenreStyleDefinition.NormalizeKnowledgeComment(style.KnowledgeComment);
+            foreach (var style in BlockStyles ?? [])
                 if (style is not null) GenreStyleDefinition.NormalizeKnowledgeComment(style.KnowledgeComment);
             if (rows.Select(s => s.Item1).Distinct(StringComparer.Ordinal).Count() != rows.Length ||
                 rows.Any(s => string.IsNullOrWhiteSpace(s.Item1) || string.IsNullOrWhiteSpace(s.Item2) ||

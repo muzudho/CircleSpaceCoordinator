@@ -190,6 +190,7 @@ public static class ProjectJsonSerializer
             GenreCodeOrder = source.GenreCodeOrder ?? [],
             GenreCodeOrderComment = source.GenreCodeOrderComment,
             BlockStyleCredits = source.BlockStyleCredits,
+            BlockStyleTable = source.BlockStyleTable ?? new(),
             BlockStyles = source.BlockStyles.OrderBy(item => item.BlockNumber, StringComparer.Ordinal).ToArray(),
             GenreStyles = source.GenreStyles.Select(item => new GenreStyleDefinition(
                 item.GenreId,
@@ -236,6 +237,7 @@ public static class ProjectJsonSerializer
         GenreCodeOrder = source.GenreCodeOrder.Count == 0 ? null : source.GenreCodeOrder.ToList(),
         GenreCodeOrderComment = source.GenreCodeOrderComment,
         BlockStyleCredits = source.BlockStyleCredits,
+        BlockStyleTable = source.BlockStyleTable,
         GenreStyles = source.GenreStyles.Select(item => new GenreStyleDocument
         {
             GenreId = item.GenreId,
@@ -455,6 +457,7 @@ public static class ProjectJsonSerializer
         public List<string>? GenreCodeOrder { get; set; }
         public string? GenreCodeOrderComment { get; set; }
         public PersonCredits? BlockStyleCredits { get; set; }
+        public ShadingTableMetadata? BlockStyleTable { get; set; }
         public List<GenreStyleDocument> GenreStyles { get; set; } = [];
         public List<BlockStyleDefinition> BlockStyles { get; set; } = [];
         public VenueDocument Venue { get; set; } = new();

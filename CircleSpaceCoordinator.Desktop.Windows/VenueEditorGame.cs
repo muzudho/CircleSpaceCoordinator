@@ -2100,7 +2100,7 @@ public sealed partial class VenueEditorGame : Game
     {
         if (string.IsNullOrWhiteSpace(genreId))
             return new GenreVisualStyle(new Color(104, 112, 124), Color.White, 1);
-        if (mappingKnowledgeComments && mappingDraft?.Rows.FirstOrDefault(item => item.Key == genreId) is { } preview)
+        if (mappingKnowledgeComments && !mappingBlocks && mappingDraft?.Rows.FirstOrDefault(item => item.Key == genreId) is { } preview)
             return new GenreVisualStyle(GenreColorFromId(preview.PrimaryColor, Color.Gray),
                 GenreColorFromId(preview.SecondaryColor, Color.White), GenrePatternFromId(preview.Pattern));
         var genreIds = workspace?.Project.Participants
