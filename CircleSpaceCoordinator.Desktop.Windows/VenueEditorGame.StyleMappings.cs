@@ -80,6 +80,7 @@ public sealed partial class VenueEditorGame
         mappingAppliedGenreOrderComment = mappingGenreCodeOrderComment;
         mappingOrderChanged = false;
         mappingRow = mappingScroll = mappingPickerColumn = 0;
+        genreScrollbarDrag = -1;
         if (knowledgeComments) InitializeGenreScopeAutoSave();
         mappingColumn = knowledgeComments ? 2 : 1;
         mappingFocus = -1;
@@ -298,7 +299,7 @@ public sealed partial class VenueEditorGame
         {
             if (mappingKnowledgeComments) AddGenreTabs();
             AddGenreGridLayoutButton();
-            if (!mappingKnowledgeComments || genrePageTab != 1)
+            if (!mappingKnowledgeComments || genrePageTab is 2 or 3)
             {
                 Add(GenreGridSplit ? "前へ" : "前のページ", MappingGridBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
                     tooltip: "前のページの行を表示します。PageUpでも移動できます。");
@@ -310,10 +311,6 @@ public sealed partial class VenueEditorGame
                 Add("反対側へコピー", MappingBounds(444, 606, 220, 34), CopyGenreToOtherPane,
                     packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
                     tooltip: "対象のジャンルを反対側の表へコピーします。右側の変更は作業中の表に保持します。");
-                Add("前へ", MappingGridBounds(20, 460, 160, 32, right: true), () => ScrollPackageGenreRows(-MappingVisibleRows), packageGenreScroll > 0,
-                    tooltip: "パッケージのジャンルコード表の前のページを表示します。");
-                Add("次へ", MappingGridBounds(192, 460, 160, 32, right: true), () => ScrollPackageGenreRows(MappingVisibleRows), packageGenreScroll + MappingVisibleRows < (packageGenreTable?.GenreStyles?.Length ?? 0),
-                    tooltip: "パッケージのジャンルコード表の次のページを表示します。");
             }
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, MappingCommentsCanClose && mappingComposition.Length == 0,
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
@@ -341,6 +338,7 @@ public sealed partial class VenueEditorGame
 
     private void ScrollMappingRows(int offset)
     {
+        if (GenreGridVisible) { SetGenreScroll(false, mappingScroll + offset); return; }
         var lastPage = Math.Max(0, (mappingDraft!.Rows.Count - 1) / MappingVisibleRows);
         var page = Math.Clamp(mappingScroll / MappingVisibleRows + Math.Sign(offset), 0, lastPage);
         mappingScroll = page * MappingVisibleRows;
@@ -354,6 +352,7 @@ public sealed partial class VenueEditorGame
         if (genreOrderDialogOpen) { UpdateGenreOrderDialog(keyboard, mouse); return; }
         if (genrePieExpanded) { UpdateExpandedGenrePie(keyboard, mouse); return; }
         BuildMappingEditorButtons();
+        if (UpdateGenreScrollbars(mouse)) return;
         if (mappingKnowledgeComments && mappingPickerColumn == 0 && mouse.LeftButton == ButtonState.Pressed &&
             previousMouse.LeftButton == ButtonState.Released && Contains(MappingTableNameBounds, new(mouse.X, mouse.Y)))
         {
@@ -425,7 +424,8 @@ public sealed partial class VenueEditorGame
                     selectedGenreKey = draft.Rows[mappingRow].Key;
                     selectedPackageGenreKey = null;
                 }
-                mappingScroll = mappingRow / MappingVisibleRows * MappingVisibleRows;
+                mappingScroll = GenreGridVisible ? EnsureGenreRowVisible(mappingScroll, mappingRow, draft.Rows.Count)
+                    : mappingRow / MappingVisibleRows * MappingVisibleRows;
                 mappingWidth = -1;
             }
             if (IsPressed(keyboard, Keys.PageUp)) ScrollMappingRows(-MappingVisibleRows);
@@ -438,13 +438,13 @@ public sealed partial class VenueEditorGame
             return;
         }
         if (mappingPickerColumn == 0 && GenreGridSplit && mouse.ScrollWheelValue != previousMouse.ScrollWheelValue &&
-            Contains(MappingGridBounds(20, 102, 960, 390, right: true), new(mouse.X, mouse.Y)))
+            Contains(GenreScrollArea(right: true), new(mouse.X, mouse.Y)))
         {
-            ScrollPackageGenreRows(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue));
+            ScrollPackageGenreRows(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue) * 3);
             BuildMappingEditorButtons();
         }
         if (mappingPickerColumn == 0 && mouse.ScrollWheelValue != previousMouse.ScrollWheelValue &&
-            (!GenreGridSplit || Contains(MappingGridBounds(20, 102, 960, 390), new(mouse.X, mouse.Y))))
+            (!GenreGridVisible || Contains(GenreScrollArea(right: false), new(mouse.X, mouse.Y))))
         {
             ScrollGenreOrMapping(-Math.Sign(mouse.ScrollWheelValue - previousMouse.ScrollWheelValue) * 3);
             BuildMappingEditorButtons();
@@ -579,6 +579,7 @@ public sealed partial class VenueEditorGame
             }
             if (draft.Rows.Count == 0) Text(mappingEmptyMessage, MappingGridBounds(20, 142, 960, 46));
             if (GenreGridSplit) DrawPackageGenreGrid();
+            if (GenreGridVisible) DrawGenreScrollbars();
         }
         DrawMappingChangeTag();
         if (mappingKnowledgeComments) DrawPackageChangeTag();

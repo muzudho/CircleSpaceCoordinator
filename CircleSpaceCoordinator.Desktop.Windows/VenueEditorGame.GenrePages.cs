@@ -37,7 +37,7 @@ public sealed partial class VenueEditorGame
         var row = draft.Rows.ToList().FindIndex(style => style.Key == key);
         if (row < 0) return; // Unassigned participants have no editable genre code.
         mappingRow = row;
-        mappingScroll = row / MappingVisibleRows * MappingVisibleRows;
+        mappingScroll = EnsureGenreRowVisible(mappingScroll, row, draft.Rows.Count);
         mappingFocus = -1;
         if (navigate) genrePageTab = 0;
         mappingWidth = -1;

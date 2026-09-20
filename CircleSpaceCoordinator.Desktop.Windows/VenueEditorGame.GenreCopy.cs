@@ -13,7 +13,7 @@ public sealed partial class VenueEditorGame
         selectedPackageGenreKey = key;
         selectedGenreKey = null;
         var index = Array.FindIndex(PackageGenreRows(), row => row.GenreId == key);
-        if (index >= 0) packageGenreScroll = index / MappingVisibleRows * MappingVisibleRows;
+        if (index >= 0) packageGenreScroll = EnsureGenreRowVisible(packageGenreScroll, index, PackageGenreRows().Length);
         mappingFocus = -1;
         mappingWidth = -1;
     }
@@ -42,7 +42,7 @@ public sealed partial class VenueEditorGame
                 }
                 draft.ReorderRows(BuildGenrePreviewGroups().Select(group => group.GenreId));
                 var index = draft.Rows.ToList().FindIndex(row => row.Key == key);
-                mappingScroll = index / MappingVisibleRows * MappingVisibleRows;
+                mappingScroll = EnsureGenreRowVisible(mappingScroll, index, draft.Rows.Count);
                 mappingRow = index;
             }
             else
@@ -61,7 +61,7 @@ public sealed partial class VenueEditorGame
                     GenreCodeOrder = order,
                 };
                 var index = Array.FindIndex(PackageGenreRows(), row => row.GenreId == key);
-                packageGenreScroll = index / MappingVisibleRows * MappingVisibleRows;
+                packageGenreScroll = EnsureGenreRowVisible(packageGenreScroll, index, PackageGenreRows().Length);
             }
             mappingWidth = -1;
             mappingFocus = -1;

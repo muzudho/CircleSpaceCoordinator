@@ -34,10 +34,7 @@ public sealed partial class VenueEditorGame
 
     private void ScrollPackageGenreRows(int offset)
     {
-        var count = packageGenreTable?.GenreStyles?.Length ?? 0;
-        var lastPage = Math.Max(0, (count - 1) / MappingVisibleRows);
-        packageGenreScroll = Math.Clamp(packageGenreScroll / MappingVisibleRows + Math.Sign(offset), 0, lastPage) * MappingVisibleRows;
-        mappingWidth = -1;
+        SetGenreScroll(true, packageGenreScroll + offset);
     }
     private const string GenreGridLayoutButtonName = "データの読み書き（表示切り替え）";
     private bool GenreGridVisible => mappingKnowledgeComments && genrePageTab == 0;
@@ -52,8 +49,9 @@ public sealed partial class VenueEditorGame
         var gap = 16 * MappingEditorScale;
         var totalWidth = Math.Max(1, GraphicsDevice.Viewport.Width - 2 * margin);
         var paneWidth = GenreGridSplit ? (totalWidth - gap) / 2 : totalWidth;
-        return new(margin + (right ? paneWidth + gap : 0) + (x - 20) * paneWidth / 960,
-            vertical.Y, width * paneWidth / 960, vertical.Height);
+        var contentWidth = Math.Max(1, paneWidth - 18 * MappingEditorScale);
+        return new(margin + (right ? paneWidth + gap : 0) + (x - 20) * contentWidth / 960,
+            vertical.Y, width * contentWidth / 960, vertical.Height);
     }
 
     private void AddGenreGridLayoutButton()
@@ -160,7 +158,7 @@ public sealed partial class VenueEditorGame
             Text($"{(rows.Length == 0 ? 0 : packageGenreScroll + 1)}–{Math.Min(rows.Length, packageGenreScroll + MappingVisibleRows)} / {rows.Length} 件",
                 MappingGridBounds(380, 460, 600, 32, right: true));
         var divider = MappingGridBounds(20, 102, 960, 390);
-        var x = divider.X + divider.Width + 8 * MappingEditorScale;
+        var x = GraphicsDevice.Viewport.Width / 2d;
         DrawLine(new(x, divider.Y), new(x, divider.Y + divider.Height), 1, new Color(100, 119, 130));
     }
 }
