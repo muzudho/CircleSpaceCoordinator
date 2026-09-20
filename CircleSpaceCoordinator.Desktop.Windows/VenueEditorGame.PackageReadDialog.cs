@@ -27,11 +27,11 @@ public sealed partial class VenueEditorGame
     private void OpenPackageReadDialog()
         => OpenPackageReadDialog(null, null);
 
-    private void OpenGenrePackageReader(string? sourcePath, string? tableId = null)
+    private void OpenShadingPackageReader(string? sourcePath, string? tableId = null, bool blocks = false)
     {
         projectMenuOpen = false;
         CancelInProgressPointerInteraction();
-        OpenGenreStyleEditor();
+        if (blocks) OpenBlockStyleEditor(); else OpenGenreStyleEditor();
         genrePageTab = 0;
         genreGridLayoutMode = GenreGridLayoutMode.SplitPane;
         mappingWidth = -1;

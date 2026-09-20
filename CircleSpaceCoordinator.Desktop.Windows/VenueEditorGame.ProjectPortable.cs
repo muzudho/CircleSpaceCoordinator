@@ -22,8 +22,6 @@ public sealed partial class VenueEditorGame
             rows.Rows[rows.Rows.Add(false, snapshot.Venue.Name, "会場の寸法・障害物・ゾーン", snapshot.Venue.Id, "会場")].Tag =
                 new PortableMaterialSelection("venue", snapshot.Venue.Id);
             var sourceLayout = snapshot.DeskLayouts.FirstOrDefault(layout => layout.Id == workspace.SelectedDeskLayoutId);
-            rows.Rows[rows.Rows.Add(false, "ブロック色の対応表", "対応表全体と変更タグ", "project", "ブロック色対応表")].Tag =
-                new PortableMaterialSelection("block-styles", "project");
             var sourceDefinitions = sourceLayout?.Definitions ?? SpaceDefinitions.Current;
             foreach (var type in sourceDefinitions.Types)
                 rows.Rows[rows.Rows.Add(false, type.Name, $"元：{sourceLayout?.Name ?? "共通カタログ"}／{type.Width}×{type.Height}", type.Id, "フレーム定義")].Tag =
@@ -122,7 +120,13 @@ public sealed partial class VenueEditorGame
                 throw new InvalidDataException("このパッケージには独立したジャンルコード表がありません。");
             if (genreTableOnly)
             {
-                OpenGenrePackageReader(sourcePath);
+                OpenShadingPackageReader(sourcePath);
+                return;
+            }
+            if (package.Items.Count == 0 && package.Knowledge.Count == 0 &&
+                package.Materials.Count > 0 && package.Materials.All(item => item.Kind == "block-styles"))
+            {
+                OpenShadingPackageReader(sourcePath, blocks: true);
                 return;
             }
             var revision = owner.Revision;
@@ -135,10 +139,10 @@ public sealed partial class VenueEditorGame
             foreach (var item in package.Knowledge)
                 rows.Rows.Add(false, item.Name, $"知見・未対応付け：{item.Purpose}／{item.InputRule.ValueMeanings}", "knowledge:" + item.Id, "チャンネルの知見");
             foreach (var material in package.Materials)
-                rows.Rows.Add(false, material.Name, material.Kind == "genre-styles" ? "ジャンルのスプリットペーンで読込・編集。表は1つずつ選択。" : material.Kind == "block-styles" ? "イベント直下の表全体を置換。配置案の選択は不要。" : material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
+                rows.Rows.Add(false, material.Name, material.Kind == "genre-styles" ? "ジャンルのスプリットペーンで読込・編集。表は1つずつ選択。" : material.Kind == "block-styles" ? "ブロックの網掛け対応表ページで読込・編集。表は1つずつ選択。" : material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
                     material.Id, MaterialKindName(material.Kind));
             foreach (Forms.DataGridViewRow row in rows.Rows)
-                if (package.Materials.Any(item => item.Kind == "genre-styles" && item.Id == (string)row.Cells[3].Value!))
+                if (package.Materials.Any(item => (item.Kind is "genre-styles" or "block-styles") && item.Id == (string)row.Cells[3].Value!))
                     row.Cells[1].ReadOnly = true;
             var details = new Forms.TextBox { Left = 16, Top = 340, Width = 700, Height = 84,
                 Multiline = true, ReadOnly = true, ScrollBars = Forms.ScrollBars.Vertical,
@@ -215,10 +219,10 @@ public sealed partial class VenueEditorGame
                             };
                         }).ToArray();
                     if (owner.Revision != revision) throw new InvalidOperationException("イベントが変更されました。閉じて、もう一度読み込んでください。");
-                    var genreTables = selection.Where(selected => package.Materials.Any(item => item.Id == selected.ItemId && item.Kind == "genre-styles")).ToArray();
+                    var genreTables = selection.Where(selected => package.Materials.Any(item => item.Id == selected.ItemId && item.Kind is "genre-styles" or "block-styles")).ToArray();
                     if (genreTables.Length > 0)
                     {
-                        if (selection.Length != 1) throw new InvalidOperationException("ジャンルコード表は1つだけ選んで比較編集してください。他の項目は別に取り込めます。");
+                        if (selection.Length != 1) throw new InvalidOperationException("網掛け対応表は1つだけ選んで比較編集してください。他の項目は別に取り込めます。");
                         genreTableToRead = genreTables[0].ItemId;
                         form.DialogResult = Forms.DialogResult.Cancel;
                         return;
@@ -257,7 +261,8 @@ public sealed partial class VenueEditorGame
                 CreateToolbar();
                 ShowInAppMessage("部分読込みが完了しました", catalogApplied ? "共通カタログに保存しました。直前登録はライブラリー画面から戻せます。" : "選択した項目を適用しました。イベントを保存するとファイルに残ります。");
             }
-            if (genreTableToRead is not null) OpenGenrePackageReader(sourcePath, genreTableToRead);
+            if (genreTableToRead is not null) OpenShadingPackageReader(sourcePath, genreTableToRead,
+                blocks: package.Materials.Single(item => item.Id == genreTableToRead).Kind == "block-styles");
         }
         catch (Exception ex) { ShowInAppMessage("読み込めません", ex.Message); }
         finally { modalInputDrain = true; }
