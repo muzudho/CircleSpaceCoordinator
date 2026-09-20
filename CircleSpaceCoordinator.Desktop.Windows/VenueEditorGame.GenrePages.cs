@@ -31,6 +31,7 @@ public sealed partial class VenueEditorGame
 
     private void SelectGenreTarget(string key, bool navigate = false)
     {
+        genreRowActionsRight = false;
         if (mappingDraft is not { } draft) return;
         selectedGenreKey = key;
         selectedPackageGenreKey = null;

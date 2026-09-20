@@ -134,6 +134,19 @@ public sealed class StyleMappingDraft
         rows[index] = rows[index] with { Key = key };
     }
 
+    public string InsertNewGenreRow(int index)
+    {
+        if (index < 0 || index > rows.Count) throw new ArgumentOutOfRangeException(nameof(index));
+        const string name = "新しいジャンルコード";
+        var keys = rows.Concat(otherStyles).Select(row => row.Key).ToHashSet(StringComparer.Ordinal);
+        var key = name;
+        for (var suffix = 2; keys.Contains(key); suffix++) key = name + "_" + suffix;
+        rows.Insert(index, new(key, "white", "black", "solid"));
+        return key;
+    }
+
+    public void DeleteRow(int index) => rows.RemoveAt(index);
+
     public void CopyRow(StyleMappingEntry source, string key, bool overwrite)
     {
         key = PersonCredits.NormalizeChangeLog(key);

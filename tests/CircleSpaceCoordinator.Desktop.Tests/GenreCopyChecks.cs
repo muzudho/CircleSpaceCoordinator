@@ -14,6 +14,31 @@ internal static partial class Program
         catch (InvalidOperationException) { rejected = true; }
         AssertEqual(true, rejected);
         AssertEqual(false, draft.HasChanges);
+        // Insert at the selected position, even when storage order is not alphabetical.
+        var rows = new StyleMappingDraft(["A", "B", "新しいジャンルコード", "新しいジャンルコード_2"], []);
+        rows.ReorderRows(["B", "A", "新しいジャンルコード", "新しいジャンルコード_2"]);
+        var added = rows.InsertNewGenreRow(1);
+        AssertEqual("新しいジャンルコード_3", added);
+        AssertEqual("B", rows.Rows[0].Key);
+        AssertEqual(added, rows.Rows[1].Key);
+        AssertEqual("A", rows.Rows[2].Key);
+        AssertEqual(true, rows.HasChanges);
+        var rebuilt = new StyleMappingDraft(rows.Rows.Select(row => row.Key), rows.Build());
+        rebuilt.ReorderRows(rows.Rows.Select(row => row.Key));
+        AssertEqual(true, rows.Rows.SequenceEqual(rebuilt.Rows));
+        rows.DeleteRow(1);
+        AssertEqual("A", rows.Rows[1].Key);
+        AssertEqual(false, rows.Build().Any(row => row.Key == added));
+        rows.RestoreOpeningSnapshot();
+        AssertEqual(false, rows.HasChanges);
+        var empty = new StyleMappingDraft([], []);
+        AssertEqual("新しいジャンルコード", empty.InsertNewGenreRow(0));
+        empty.DeleteRow(0);
+        AssertEqual(0, empty.Build().Length);
+        AssertEqual("新しいジャンルコード", empty.InsertNewGenreRow(0));
+        var hidden = new StyleMappingDraft([], [original with { Key = "新しいジャンルコード" }]);
+        AssertEqual("新しいジャンルコード_2", hidden.InsertNewGenreRow(0));
+        AssertEqual(2, hidden.Build().Length);
         draft.RenameRow(0, " 新しい名前😀 ");
         AssertEqual(original with { Key = "新しい名前😀" }, draft.Build().Single());
         AssertEqual(true, draft.HasChanges);

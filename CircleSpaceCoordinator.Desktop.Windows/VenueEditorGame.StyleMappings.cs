@@ -309,11 +309,17 @@ public sealed partial class VenueEditorGame
                 Add(GenreGridSplit ? "次へ" : "次のページ", MappingGridBounds(192, 460, 160, 32), () => ScrollGenreOrMapping(MappingVisibleRows), GenreChartVisible ? genrePreviewScroll + GenrePreviewPageSize < BuildGenrePreviewGroups().Count : mappingScroll + MappingVisibleRows < draft.Rows.Count,
                     tooltip: "次のページの行を表示します。PageDownでも移動できます。");
             }
-            if (GenreGridSplit)
+            if (GenreGridVisible)
             {
-                Add("反対側へコピー", MappingGridBounds(380, 460, 360, 32, right: true), CopyGenreToOtherPane,
-                    packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
+                Add("新規作成", GenreRowActionBounds(0, 120), CreateGenreRow,
+                    !GenreRowActionsRight || packageGenreTable is not null,
+                    tooltip: "操作対象の上に新しいジャンルコードを作り、その行を操作対象にします。");
+                Add("反対側へコピー", GenreRowActionBounds(132, 200), CopyGenreToOtherPane,
+                    GenreGridSplit && packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
                     tooltip: "対象のジャンルを反対側の表へコピーします。右側の変更は作業中の表に保持します。");
+                Add("削除", GenreRowActionBounds(344, 100), DeleteGenreRow,
+                    GenreRowActionsRight ? selectedPackageGenreKey is not null : selectedGenreKey is not null,
+                    tooltip: "操作対象のジャンルを表から削除します。参加サークルのジャンル値は変更しません。");
             }
             Add("閉じる", MappingCloseBounds, SaveStyleMapping, MappingCommentsCanClose && mappingComposition.Length == 0,
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");

@@ -24,6 +24,7 @@ public sealed partial class VenueEditorGame
     private void ShowPackageGenreTable(PortableMaterial table)
     {
         packageGenreTable = table;
+        genreRowActionsRight = false;
         selectedPackageGenreKey = null;
         packageGenreScroll = 0;
         genrePageTab = 0;

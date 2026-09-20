@@ -38,6 +38,16 @@ public sealed partial class VenueEditorGame
             var packageRows = right ? PackageGenreRows() : [];
             var count = right ? packageRows.Length : mappingDraft!.Rows.Count;
             var scroll = right ? packageGenreScroll : mappingScroll;
+            if (count == 0 && (!right || packageGenreTable is not null) &&
+                Contains(MappingGridBounds(20, 142, 960, 306, right), pointer))
+            {
+                SetMappingTextFocus(false);
+                genreRowActionsRight = right;
+                selectedGenreKey = selectedPackageGenreKey = null;
+                mappingWidth = -1;
+                mappingFocus = -1;
+                return true;
+            }
             for (var row = 0; row < MappingVisibleRows && scroll + row < count; row++)
             {
                 if (!Contains(MappingGridBounds(20, 142 + row * 52, 960, 46, right), pointer)) continue;

@@ -10,6 +10,7 @@ public sealed partial class VenueEditorGame
 
     private void SelectPackageGenreTarget(string key)
     {
+        genreRowActionsRight = true;
         selectedPackageGenreKey = key;
         selectedGenreKey = null;
         var index = Array.FindIndex(PackageGenreRows(), row => row.GenreId == key);
