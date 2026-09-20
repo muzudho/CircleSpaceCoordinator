@@ -20,6 +20,11 @@ public sealed partial class VenueEditorGame
     private void OpenTextViewer(string title, string text, Action? back = null)
     {
         OpenModal(new ModalDialogModel(ModalDialogKind.Message, title, ""), _ => back?.Invoke());
+        SetViewerText(text);
+    }
+
+    private void SetViewerText(string text)
+    {
         viewerDocument = new(text);
         viewerLines = viewerDocument.Lines.ToArray();
         viewerTop = viewerLeft = 0;

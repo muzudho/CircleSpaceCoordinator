@@ -10,7 +10,7 @@ public sealed partial class VenueEditorGame
     {
         // Repeated window-close requests must not replace an active input dialog.
         if (modalDialog is not null || mappingComposition.Length > 0) return false;
-        if (!SaveGenreScope()) { ShowGenreExitSaveError(); return false; }
+        if (!SaveGenreScope(() => { if (TryExitGenreScope()) Exit(); })) { ShowGenreExitSaveError(); return false; }
         SyncMappingChangeTag();
         if (MappingCommentsCanClose) return FinishGenreScope();
         var missing = new List<string>();
@@ -39,7 +39,7 @@ public sealed partial class VenueEditorGame
 
     private void ContinueGenreCommentExit()
     {
-        if (!SaveGenreScope()) { ShowGenreExitSaveError(); return; }
+        if (!SaveGenreScope(ContinueGenreCommentExit)) { ShowGenreExitSaveError(); return; }
         SyncMappingChangeTag();
         if (mappingChangeTag?.CanClose == false)
             OpenGenreChangeComment(project: true, accepted: ContinueGenreCommentExit);
@@ -48,6 +48,10 @@ public sealed partial class VenueEditorGame
         else if (FinishGenreScope()) Exit();
     }
 
-    private void ShowGenreExitSaveError() => ShowInAppMessage("保存できないため終了しません",
-        genreSaveError ?? autoSaveError ?? "保存に失敗しました。内容を保持しています。保存先を確認してから、終了をやり直してください。");
+    private void ShowGenreExitSaveError()
+    {
+        if (modalDialog is not null) return;
+        ShowInAppMessage("保存できないため終了しません",
+            genreSaveError ?? autoSaveError ?? "保存に失敗しました。内容を保持しています。保存先を確認してから、終了をやり直してください。");
+    }
 }

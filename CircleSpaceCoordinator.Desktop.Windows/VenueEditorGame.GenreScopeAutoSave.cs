@@ -25,6 +25,7 @@ public sealed partial class VenueEditorGame
     private bool genreCloseAfterDiscard;
     private bool genreButtonsProjectChanged;
     private bool genreButtonsPackageChanged;
+    private bool genrePackageOverwriteDeferred;
 
     private bool GenreProjectChanged => mappingDraft?.HasChanges == true ||
         mappingGenreCodeTableName != mappingAppliedGenreCodeTableName ||
@@ -79,6 +80,7 @@ public sealed partial class VenueEditorGame
     private void AttachPackageGenreSaveSession(string path, string json, CircleSpaceCoordinator.Engine.Model.PortablePackage package, PortableMaterial table)
     {
         packageGenreSaveSession = new(path, json, package, table);
+        genrePackageOverwriteDeferred = false;
         packageChangeTag = CreateGenreTag(table.Credits);
         genrePackageRequiresComment = HasPendingGenreComment(table.Credits);
         genreCloseAfterDiscard = false;
@@ -101,14 +103,14 @@ public sealed partial class VenueEditorGame
         if (GenreSavePending && statusHintTime - genreSaveChangedAt >= GenreSaveDelay &&
             modalDialog is null && mappingComposition.Length == 0)
         {
-            SaveGenreScope();
+            SaveGenreScope(automatic: true);
             genreSaveChangedAt = statusHintTime;
         }
         if (genreCloseAfterDiscard && modalDialog is null && !GenreScopeChanged && MappingCommentsCanClose && !GenreSavePending && genreSaveError is null)
             CloseStyleMappingEditor();
     }
 
-    private bool SaveGenreScope()
+    private bool SaveGenreScope(Action? afterSave = null, bool automatic = false)
     {
         if (mappingDraft is null || applyStyleMapping is null) return true;
         if (string.IsNullOrWhiteSpace(Handle) && (GenreScopeChanged || genreProjectRequiresComment || genrePackageRequiresComment))
@@ -145,6 +147,7 @@ public sealed partial class VenueEditorGame
         var packageStamp = GenrePackageStamp;
         if (packageStamp != genrePackageSavedStamp && packageGenreTable is { } table && packageGenreSaveSession is { } session)
         {
+            if (automatic && genrePackageOverwriteDeferred) return false;
             try
             {
                 if (projectSavePath is not null && string.Equals(Path.GetFullPath(projectSavePath), session.Path, StringComparison.OrdinalIgnoreCase))
@@ -160,6 +163,20 @@ public sealed partial class VenueEditorGame
                 genrePackageSavedContent = GenrePackageContent;
                 genrePackageSavedStamp = GenrePackageStamp;
                 packageChangeTag?.SaveSucceeded();
+                genrePackageOverwriteDeferred = false;
+            }
+            catch (PackageCommentConflictException ex)
+            {
+                genrePackageOverwriteDeferred = true;
+                genreSaveError = "パッケージ：上書きの確認が必要です。";
+                OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "変更コメントの上書き確認", ""), action =>
+                {
+                    if (action != ModalDialogAction.Accept) return;
+                    session.ApprovedOverwriteJson = ex.Json;
+                    if (SaveGenreScope(afterSave)) afterSave?.Invoke();
+                }, [("キャンセル", ModalDialogAction.Cancel), ("上書きする", ModalDialogAction.Accept)]);
+                SetViewerText("変更コメントが既に入力されています。\n作業中に他の誰かがデータを変更したのかもしれません。\n上書きしますか？\n\n保存先の変更タグ\n" + ex.Credits.AttributionText + "\n変更コメント：" + ex.Credits.ChangeLog);
+                return false;
             }
             catch (Exception ex)
             {
@@ -174,7 +191,7 @@ public sealed partial class VenueEditorGame
     private bool FinishGenreScope()
     {
         if (mappingComposition.Length > 0) return false;
-        if (!SaveGenreScope()) return false;
+        if (!SaveGenreScope(() => FinishGenreScope())) return false;
         SyncMappingChangeTag();
         if (!MappingCommentsCanClose)
         {

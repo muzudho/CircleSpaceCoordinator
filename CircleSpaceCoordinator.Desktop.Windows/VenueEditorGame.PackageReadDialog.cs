@@ -1,6 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
 using CircleSpaceCoordinator.Desktop.Core.Interaction;
+using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.EditorClient;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -20,7 +21,7 @@ public sealed partial class VenueEditorGame
     private void OpenPackageReadDialog()
     {
         genreCloseAfterDiscard = false;
-        if (GenreSavePending && !SaveGenreScope()) return;
+        if (GenreSavePending && !SaveGenreScope(OpenPackageReadDialog)) return;
         if (GenrePackageChanged || genrePackageRequiresComment)
         {
             SyncMappingChangeTag();
@@ -37,9 +38,19 @@ public sealed partial class VenueEditorGame
         {
             if (action == ModalDialogAction.Accept && packageReadDialog is { CanRead: true, SelectedJson: not null, SelectedPackage: not null } selection)
             {
-                ShowPackageGenreTable(selection.Tables[selection.TableIndex]);
-                AttachPackageGenreSaveSession(selection.Files[selection.FileIndex], selection.SelectedJson,
-                    selection.SelectedPackage, selection.Tables[selection.TableIndex]);
+                var table = selection.Tables[selection.TableIndex];
+                void ReadTable()
+                {
+                    ShowPackageGenreTable(table);
+                    AttachPackageGenreSaveSession(selection.Files[selection.FileIndex], selection.SelectedJson,
+                        selection.SelectedPackage, table);
+                }
+                if (PackageGenreSaveSession.HasMissingComment(table))
+                    OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "変更コメントの確認",
+                        "変更コメントが未入力のデータです。\nどのような変更が行われたデータか分かりません。\n読み込みますか？"),
+                        answer => { if (answer == ModalDialogAction.Accept) ReadTable(); },
+                        [("キャンセル", ModalDialogAction.Cancel), ("読み込む", ModalDialogAction.Accept)]);
+                else ReadTable();
             }
             packageReadDialog = null;
         }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);

@@ -44,7 +44,7 @@ public sealed partial class VenueEditorGame
 
     private void OpenGenreChangeComment(bool project, Action? accepted = null)
     {
-        if (!SaveGenreScope()) return;
+        if (!SaveGenreScope(() => OpenGenreChangeComment(project, accepted))) return;
         SyncMappingChangeTag();
         if ((project ? mappingChangeTag : packageChangeTag) is not { HasChanges: true } tag) return;
         SetMappingTextFocus(false);

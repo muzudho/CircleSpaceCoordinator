@@ -64,12 +64,55 @@ internal static partial class Program
             session.Save(edited, "test", date, "パッケージ専用の変更コメント", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
             AssertEqual("パッケージ専用の変更コメント", connection.ParsePortable(File.ReadAllText(path)).Materials.Single().Credits!.ChangeLog!);
             AssertEqual("確定した変更コメント", workspace.Project.GenreStyleCredits!.ChangeLog!);
+            try
+            {
+                session.Save(edited, "test", date, "パッケージだけ追記", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+                throw new Exception("Expected comment overwrite confirmation.");
+            }
+            catch (PackageCommentConflictException ex)
+            {
+                AssertEqual("パッケージ専用の変更コメント", ex.Credits.ChangeLog!);
+                session.ApprovedOverwriteJson = ex.Json;
+            }
             session.Save(edited, "test", date, "パッケージだけ追記", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
             AssertEqual("パッケージだけ追記", connection.ParsePortable(File.ReadAllText(path)).Materials.Single().Credits!.ChangeLog!);
             AssertEqual("確定した変更コメント", workspace.Project.GenreStyleCredits!.ChangeLog!);
             workspace.Execute(new SetGenreStyles(project.GenreStyles) { UpdateCredits = true, Credits = openingCredits }, selectedPlanEdit: false);
             AssertEqual(true, project.GenreStyles.SequenceEqual(workspace.Project.GenreStyles));
             AssertEqual(openingCredits, workspace.Project.GenreStyleCredits);
+
+            AssertEqual(true, PackageGenreSaveSession.HasMissingComment(original with { Credits = null }));
+            AssertEqual(true, PackageGenreSaveSession.HasMissingComment(original with { Credits = new() { ChangeLog = "  " } }));
+            AssertEqual(false, PackageGenreSaveSession.HasMissingComment(session.CurrentTable));
+            var external = connection.UpdatePortableGenreTable(new(session.CurrentJson, edited, "other", date, "他の人の変更"));
+            File.WriteAllText(path, external);
+            try
+            {
+                session.Save(edited, "test", date, "", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+                throw new Exception("Expected protection against automatic comment clearing.");
+            }
+            catch (PackageCommentConflictException ex)
+            {
+                AssertEqual("other", ex.Credits.Modifier!);
+                AssertEqual("他の人の変更", ex.Credits.ChangeLog!);
+                AssertEqual(external, File.ReadAllText(path));
+                session.ApprovedOverwriteJson = ex.Json;
+            }
+            var newer = connection.UpdatePortableGenreTable(new(external, edited, "third", date, "確認後の変更"));
+            File.WriteAllText(path, newer);
+            try
+            {
+                session.Save(edited, "test", date, "自分の変更", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+                throw new Exception("Expected renewed confirmation for a newer version.");
+            }
+            catch (PackageCommentConflictException ex)
+            {
+                AssertEqual("確認後の変更", ex.Credits.ChangeLog!);
+                AssertEqual(newer, File.ReadAllText(path));
+                session.ApprovedOverwriteJson = ex.Json;
+            }
+            session.Save(edited, "test", date, "自分の変更", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+            AssertEqual("自分の変更", connection.ParsePortable(File.ReadAllText(path)).Materials.Single().Credits!.ChangeLog!);
         }
         finally { Directory.Delete(directory, recursive: true); }
     }
