@@ -6,6 +6,7 @@ using CircleSpaceCoordinator.Desktop.Core.Persistence;
 using CircleSpaceCoordinator.EditorClient;
 using Microsoft.Xna.Framework;
 using StationeryUI.Canvas;
+using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
@@ -27,23 +28,25 @@ public sealed partial class VenueEditorGame
     private bool GenrePackageChanged => packageGenreTable is not null && packageGenreSaveSession is { } session &&
         JsonSerializer.Serialize(packageGenreTable) != JsonSerializer.Serialize(session.OpeningTable);
     private bool GenreScopeChanged => GenreProjectChanged || GenrePackageChanged;
-    private string GenreSaveLog => mappingComposition.Length == 0 && mappingChangeTag is { ValidationError: null } tag ? tag.Text : PendingGenreLog;
+    private string GenreProjectSaveLog => mappingComposition.Length == 0 && mappingChangeTag is { ValidationError: null } tag ? tag.Text : PendingGenreLog;
+    private string GenrePackageSaveLog => packageChangeTag is { ValidationError: null } tag ? tag.Text : PendingGenreLog;
     private string GenreProjectStamp => JsonSerializer.Serialize(new
     {
         Styles = mappingDraft?.Build().OrderBy(row => row.Key, StringComparer.Ordinal),
         Comment = mappingDraft?.OverallComment, Name = mappingGenreCodeTableName,
         Order = mappingGenreCodeOrder, OrderComment = mappingGenreCodeOrderComment,
-        Log = GenreProjectChanged ? GenreSaveLog : "",
+        Log = GenreProjectChanged ? GenreProjectSaveLog : "",
     });
     private string GenrePackageStamp => packageGenreTable is null ? "" : JsonSerializer.Serialize(new
     {
-        Table = packageGenreTable, Log = GenrePackageChanged ? GenreSaveLog : "",
+        Table = packageGenreTable, Log = GenrePackageChanged ? GenrePackageSaveLog : "",
     });
     private bool GenreSavePending => genreProjectSavedStamp != GenreProjectStamp || genrePackageSavedStamp != GenrePackageStamp;
 
     private void InitializeGenreScopeAutoSave()
     {
         packageGenreSaveSession = null;
+        packageChangeTag = new ChangeTagEditor(ValidateMappingChangeLog);
         genreSaveError = null;
         genreCloseAfterDiscard = false;
         genreProjectSavedStamp = GenreProjectStamp;
@@ -55,6 +58,7 @@ public sealed partial class VenueEditorGame
     private void AttachPackageGenreSaveSession(string path, string json, CircleSpaceCoordinator.Engine.Model.PortablePackage package, PortableMaterial table)
     {
         packageGenreSaveSession = new(path, json, package, table);
+        packageChangeTag = new ChangeTagEditor(ValidateMappingChangeLog);
         genreCloseAfterDiscard = false;
         genrePackageSavedStamp = GenrePackageStamp;
         genreSaveError = null;
@@ -96,11 +100,17 @@ public sealed partial class VenueEditorGame
         {
             try
             {
-                applyStyleMapping(mappingDraft.Build(), GenreProjectChanged ? GenreSaveLog : "変更を破棄（編集開始時の内容に復元）", Handle, WorkDate);
+                applyStyleMapping(mappingDraft.Build(), GenreProjectChanged ? GenreProjectSaveLog : "変更を破棄（編集開始時の内容に復元）", Handle, WorkDate);
                 if (!FlushAutoSave()) throw new IOException(autoSaveError ?? "プロジェクトを保存できませんでした。");
                 genreProjectSavedStamp = projectStamp;
+                mappingChangeTag?.SaveSucceeded();
             }
-            catch (Exception ex) { success = false; genreSaveError = "プロジェクト：" + ex.Message; }
+            catch (Exception ex)
+            {
+                success = false;
+                genreSaveError = "プロジェクト：" + ex.Message;
+                mappingChangeTag?.SaveFailed(genreSaveError);
+            }
         }
         var packageStamp = GenrePackageStamp;
         if (packageStamp != genrePackageSavedStamp && packageGenreTable is { } table && packageGenreSaveSession is { } session)
@@ -109,23 +119,29 @@ public sealed partial class VenueEditorGame
             {
                 if (projectSavePath is not null && string.Equals(Path.GetFullPath(projectSavePath), session.Path, StringComparison.OrdinalIgnoreCase))
                     throw new IOException("イベントとパッケージに同じ保存先は使用できません。");
-                session.Save(table, Handle, WorkDate, GenreSaveLog, !GenrePackageChanged,
+                session.Save(table, Handle, WorkDate, GenrePackageSaveLog, !GenrePackageChanged,
                     EditorConnection.Current.UpdatePortableGenreTable, EditorConnection.Current.ParsePortable);
                 genrePackageSavedStamp = packageStamp;
+                packageChangeTag?.SaveSucceeded();
             }
-            catch (Exception ex) { success = false; genreSaveError = (genreSaveError is null ? "" : genreSaveError + " / ") + "パッケージ：" + ex.Message; }
+            catch (Exception ex)
+            {
+                success = false;
+                packageChangeTag?.SaveFailed("パッケージ：" + ex.Message);
+                genreSaveError = (genreSaveError is null ? "" : genreSaveError + " / ") + "パッケージ：" + ex.Message;
+            }
         }
-        if (!success) mappingChangeTag?.SaveFailed(genreSaveError!);
-        else mappingChangeTag?.SaveSucceeded();
         return success;
     }
 
     private bool FinishGenreScope()
     {
         SyncMappingChangeTag();
-        if (mappingComposition.Length > 0 || mappingChangeTag?.CanClose != true)
+        if (mappingComposition.Length > 0) return false;
+        if (!MappingCommentsCanClose)
         {
-            SetMappingTextFocus(true);
+            if (mappingChangeTag?.CanClose != true) SetMappingTextFocus(true);
+            else if (modalDialog is null) OpenPackageChangeComment();
             return false;
         }
         if (!SaveGenreScope()) return false;
@@ -148,12 +164,17 @@ public sealed partial class VenueEditorGame
     private void DiscardGenreSide(bool project)
     {
         SetMappingTextFocus(false);
-        if (project) RestoreGenreProject();
+        if (project)
+        {
+            RestoreGenreProject();
+            mappingChangeTag = new ChangeTagEditor(ValidateMappingChangeLog);
+        }
         else if (packageGenreSaveSession is { } session)
         {
             packageGenreTable = session.OpeningTable;
             packageGenreScroll = 0;
             selectedPackageGenreKey = null;
+            packageChangeTag = new ChangeTagEditor(ValidateMappingChangeLog);
         }
         mappingWidth = -1;
         mappingFocus = -1;

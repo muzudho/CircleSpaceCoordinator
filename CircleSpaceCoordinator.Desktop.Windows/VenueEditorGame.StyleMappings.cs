@@ -94,6 +94,7 @@ public sealed partial class VenueEditorGame
         mappingDraft = null;
         SetMappingTextFocus(false);
         mappingChangeTag = null;
+        packageChangeTag = null;
         mappingOrderChanged = false;
         applyStyleMapping = null;
         mappingEditorButtons.Clear();
@@ -121,9 +122,7 @@ public sealed partial class VenueEditorGame
         if (mappingDraft is not null && mappingKnowledgeComments)
         {
             SyncMappingChangeTag();
-            if (mappingComposition.Length == 0 && mappingChangeTag?.CanClose == true) return FinishGenreScope();
-            SetMappingTextFocus(true);
-            return false;
+            return FinishGenreScope();
         }
         if (mappingExitConfirmationOpen) return false;
         SyncMappingChangeTag();
@@ -244,7 +243,7 @@ public sealed partial class VenueEditorGame
         SyncMappingChangeTag();
         var hasChanges = mappingKnowledgeComments ? GenreScopeChanged : draft.HasChanges || mappingOrderChanged || MappingTableNameChanged;
         if (mappingPickerColumn == 0 && mappingEditorButtons.FirstOrDefault(item => item.Button.AccessibleName == "閉じる") is { } close)
-            close.Button.IsEnabled = mappingChangeTag?.CanClose == true && mappingComposition.Length == 0;
+            close.Button.IsEnabled = MappingCommentsCanClose && mappingComposition.Length == 0;
         if (mappingWidth == GraphicsDevice.Viewport.Width && mappingHeight == GraphicsDevice.Viewport.Height &&
             (mappingPickerColumn > 0 || mappingButtonsHaveChanges == hasChanges &&
                 (!mappingKnowledgeComments || genreButtonsProjectChanged == GenreProjectChanged && genreButtonsPackageChanged == GenrePackageChanged))) return;
@@ -331,15 +330,18 @@ public sealed partial class VenueEditorGame
                 Add("次へ", MappingGridBounds(192, 460, 160, 32, right: true), () => ScrollPackageGenreRows(MappingVisibleRows), packageGenreScroll + MappingVisibleRows < (packageGenreTable?.GenreStyles?.Length ?? 0),
                     tooltip: "パッケージのジャンルコード表の次のページを表示します。");
             }
-            Add("閉じる", MappingCloseBounds, SaveStyleMapping, mappingChangeTag?.CanClose == true && mappingComposition.Length == 0,
+            Add("閉じる", MappingCloseBounds, SaveStyleMapping, MappingCommentsCanClose && mappingComposition.Length == 0,
                 tooltip: hasChanges ? "変更は自動で保存されます。前のページに戻ります。" : "前のページに戻ります。");
             if (mappingKnowledgeComments)
             {
+                if (GenrePackageChanged)
+                    Add("入力・編集", GenreTagButtonBounds(right: true, edit: true), OpenPackageChangeComment,
+                        tooltip: "パッケージへの変更コメントを入力・編集します。");
                 if (GenreProjectChanged)
-                    Add("プロジェクトへの変更を破棄", MappingBounds(20, 644, 310, 30), () => DiscardGenreSide(project: true),
+                    Add("プロジェクトへの変更を破棄", GenreTagButtonBounds(right: false), () => DiscardGenreSide(project: true),
                         tooltip: "プロジェクトを編集開始時点へ戻し、自動保存します。パッケージの変更は残します。");
                 if (GenrePackageChanged)
-                    Add("パッケージへの変更を破棄", MappingBounds(342, 644, 310, 30), () => DiscardGenreSide(project: false),
+                    Add("パッケージへの変更を破棄", GenreTagButtonBounds(right: true), () => DiscardGenreSide(project: false),
                         tooltip: "読み込み時点のパッケージへ戻し、自動保存します。プロジェクトの変更は残します。");
             }
             else if (hasChanges)
@@ -591,6 +593,7 @@ public sealed partial class VenueEditorGame
             if (GenreGridSplit) DrawPackageGenreGrid();
         }
         DrawMappingChangeTag();
+        if (mappingKnowledgeComments) DrawPackageChangeTag();
         if (mappingPickerColumn > 0)
         {
             DrawRectangle(new(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 190));

@@ -15,9 +15,9 @@ public sealed partial class VenueEditorGame
     private bool mappingTextSuppressExit;
     private string mappingComposition = "";
     private (int Start, int End) mappingTextRange;
-    private ScreenRectangle MappingLogBounds => MappingBounds(36, 536, 680, 36);
-    private ScreenRectangle MappingBadgeBounds => MappingBounds(608, 544, 100, 26);
-    private ScreenRectangle MappingCloseBounds => MappingBounds(728, 536, 100, 36);
+    private ScreenRectangle MappingLogBounds => ChangeTagEditorView.GetInputBounds(ProjectTagBounds, MappingEditorScale, ProjectTagActionWidth);
+    private ScreenRectangle MappingBadgeBounds => ChangeTagEditorView.GetBadgeBounds(ProjectTagBounds, MappingEditorScale, ProjectTagActionWidth);
+    private ScreenRectangle MappingCloseBounds => mappingKnowledgeComments ? MappingBounds(860, 606, 120, 34) : MappingBounds(728, 536, 100, 36);
     private ScreenRectangle MappingDiscardBounds => MappingBounds(840, 536, 100, 36);
 
     private string? ValidateMappingChangeLog(string value)
@@ -33,7 +33,8 @@ public sealed partial class VenueEditorGame
 
     private void SyncMappingChangeTag()
     {
-        if (mappingChangeTag is not null) mappingChangeTag.HasChanges = mappingKnowledgeComments ? GenreScopeChanged : mappingDraft?.HasChanges == true || mappingOrderChanged || MappingTableNameChanged;
+        if (mappingChangeTag is not null) mappingChangeTag.HasChanges = mappingKnowledgeComments ? GenreProjectChanged : mappingDraft?.HasChanges == true || mappingOrderChanged || MappingTableNameChanged;
+        if (packageChangeTag is not null) packageChangeTag.HasChanges = GenrePackageChanged;
     }
 
     private void SetMappingTextFocus(bool focused)
@@ -52,6 +53,13 @@ public sealed partial class VenueEditorGame
 
     private bool UpdateMappingChangeTag(KeyboardState keyboard, MouseState mouse)
     {
+        if (mappingKnowledgeComments && packageChangeTag is { HasChanges: true } && mappingComposition.Length == 0 &&
+            mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released &&
+            Contains(PackageLogBounds, new(mouse.X, mouse.Y)))
+        {
+            OpenPackageChangeComment();
+            return true;
+        }
         if (mappingChangeTag is not { } tag) return false;
         var editor = tag.Editor;
         var hadComposition = mappingComposition.Length > 0;
@@ -147,15 +155,15 @@ public sealed partial class VenueEditorGame
             textRenderer?.Draw(value, ToRectangle(bounds), color ?? Color.White, Math.Max(10, (int)(size * MappingEditorScale)));
         var size = Math.Max(10, (int)(ChangeTagEditorView.InputFontSize * MappingEditorScale));
         var mouse = Mouse.GetState();
-        mappingTagView.Draw(tag, MappingBounds(20, 502, tag.HasChanges ? 936 : 824, 98), MappingEditorScale,
+        mappingTagView.Draw(tag, ProjectTagBounds, MappingEditorScale,
             mappingTextFocused, Contains(MappingLogBounds, new(mouse.X, mouse.Y)),
-            draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate),
+            (mappingKnowledgeComments ? "プロジェクトへの変更コメント　" : "") + draft.AttributionSummary(mappingPreviousCredits, Handle, WorkDate),
             mappingComposition,
             value => textRenderer?.Measure(value, size).X ?? 0,
             (value, area, fontSize, ink) => Text(value, area, fontSize, MappingInk(ink)),
             (area, ink) => DrawRectangle(area, MappingInk(ink)),
             _ => DrawMappingActionBadge(), previousLog: mappingPreviousCredits?.ChangeLog,
-            actionAreaWidth: tag.HasChanges ? 240 : 128);
+            actionAreaWidth: ProjectTagActionWidth);
         mappingTextRange = mappingTagView.VisibleRange;
         if (mappingTextFocused) textInputService?.SetInputArea(mappingTagView.CaretBounds);
     }
@@ -164,7 +172,7 @@ public sealed partial class VenueEditorGame
     {
         // Reuse the library's badge label, placement and visibility. Adapt its rounded
         // drawing to this app's pixel-coordinate SpriteBatch (no separate canvas/font).
-        var badge = ActionBadgeComponent.Create("change", new Rectangle(0, 0, 680, 36));
+        var badge = ActionBadgeComponent.Create("change", new Rectangle(0, 0, (int)(MappingLogBounds.Width / MappingEditorScale), 36));
         badge.Show();
         DrawMappingBadge(badge, MappingLogBounds);
     }

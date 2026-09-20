@@ -50,6 +50,14 @@ internal static partial class Program
             workspace.Execute(new SetGenreStyles(edited.GenreStyles!)
             { UpdateCredits = true, Credits = draftCredits.WrittenBy("test", date, "確定した変更コメント") }, selectedPlanEdit: false);
             AssertEqual("確定した変更コメント", workspace.Project.GenreStyleCredits!.ChangeLog!);
+            // Finalizing or revising the package comment must not overwrite the project's comment.
+            File.WriteAllText(path, json);
+            session.Save(edited, "test", date, "パッケージ専用の変更コメント", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+            AssertEqual("パッケージ専用の変更コメント", connection.ParsePortable(File.ReadAllText(path)).Materials.Single().Credits!.ChangeLog!);
+            AssertEqual("確定した変更コメント", workspace.Project.GenreStyleCredits!.ChangeLog!);
+            session.Save(edited, "test", date, "パッケージだけ追記", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+            AssertEqual("パッケージだけ追記", connection.ParsePortable(File.ReadAllText(path)).Materials.Single().Credits!.ChangeLog!);
+            AssertEqual("確定した変更コメント", workspace.Project.GenreStyleCredits!.ChangeLog!);
             workspace.Execute(new SetGenreStyles(project.GenreStyles) { UpdateCredits = true, Credits = openingCredits }, selectedPlanEdit: false);
             AssertEqual(true, project.GenreStyles.SequenceEqual(workspace.Project.GenreStyles));
             AssertEqual(openingCredits, workspace.Project.GenreStyleCredits);

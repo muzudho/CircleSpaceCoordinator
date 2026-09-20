@@ -57,6 +57,24 @@ internal static partial class Program
         AssertEqual(false, empty.CanClose);
         AssertEqual(1, drawn.Count(item => item.Text.Contains("入力してください", StringComparison.Ordinal)));
         AssertEqual(true, drawn.All(item => item.Bounds.Y < view.InputBounds.Y + view.InputBounds.Height));
+        // Resized side-by-side tags use the same current geometry for painting and pointer hits.
+        foreach (var scale in new[] { .75, 1.0, 1.25 })
+        foreach (var x in new[] { 20.0, 648.0 })
+        {
+            var panel = new StationeryUI.Canvas.ScreenRectangle(x, 502, 600, 98 * scale);
+            var hit = ChangeTagEditorView.GetInputBounds(panel, scale, 16);
+            var badgeHit = ChangeTagEditorView.GetBadgeBounds(panel, scale, 16);
+            drawn.Clear();
+            view.Draw(empty, panel, scale, true, true, "author", "", text => text.Length * 10,
+                (text, bounds, _, _) => drawn.Add((text, bounds)), (_, _) => { }, actionAreaWidth: 16);
+            AssertEqual(hit, view.InputBounds);
+            AssertEqual(badgeHit, drawn.Single(item => item.Text == "(change)").Bounds);
+            var placeholder = drawn.Single(item => item.Text.Contains("入力してください", StringComparison.Ordinal)).Bounds;
+            AssertEqual(hit.X, placeholder.X);
+            AssertEqual(hit.Y, placeholder.Y);
+            AssertEqual(true, hit.X >= panel.X && hit.X + hit.Width <= panel.X + panel.Width);
+            AssertEqual(true, badgeHit.X + badgeHit.Width <= hit.X + hit.Width);
+        }
         // A preedit replaces the selected span visually, at the insertion point;
         // it must not change the committed log or appear in the help row.
         var ime = new ChangeTagEditor(Validate) { HasChanges = true };

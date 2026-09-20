@@ -23,9 +23,9 @@ public sealed partial class VenueEditorGame
         if (GenrePackageChanged)
         {
             SyncMappingChangeTag();
-            if (mappingChangeTag?.CanClose != true)
+            if (packageChangeTag?.CanClose != true)
             {
-                ShowInAppMessage("パッケージの変更が残っています", "変更コメントを書いてから別の表を読み込むか、［パッケージへの変更を破棄］で元に戻してください。");
+                ShowInAppMessage("パッケージの変更が残っています", "［パッケージへの変更コメント］を書いてから別の表を読み込むか、［パッケージへの変更を破棄］で元に戻してください。");
                 return;
             }
             if (!SaveGenreScope()) return;

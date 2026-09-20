@@ -18,6 +18,16 @@ public sealed class ChangeTagEditorView
     public ScreenRectangle CompositionBounds { get; private set; }
     public const int InputFontSize = 14;
 
+    public static ScreenRectangle GetInputBounds(ScreenRectangle bounds, double scale, double actionAreaWidth)
+        => new(bounds.X + 16 * scale, bounds.Y + 34 * scale,
+            Math.Max(scale, bounds.Width - (actionAreaWidth + 16) * scale), 36 * scale);
+
+    public static ScreenRectangle GetBadgeBounds(ScreenRectangle bounds, double scale, double actionAreaWidth)
+    {
+        var input = GetInputBounds(bounds, scale, actionAreaWidth);
+        return new(input.X + input.Width - 108 * scale, input.Y + 8 * scale, 100 * scale, 26 * scale);
+    }
+
     public void Draw(ChangeTagEditor model, ScreenRectangle bounds, double scale, bool focused, bool hovered,
         string attribution, string composition,
         Func<string, double> measure,
@@ -31,9 +41,8 @@ public sealed class ChangeTagEditorView
         fill(new(bounds.X + 5 * scale, bounds.Y + 5 * scale, bounds.Width, bounds.Height), ChangeTagInk.Shadow);
         fill(bounds, ChangeTagInk.Paper);
         // About forty full-width characters at 14px, plus the existing action badge.
-        var inputWidth = Math.Max(1, width - actionAreaWidth - 16);
-        InputBounds = Area(16, 34, inputWidth, 36);
-        BadgeBounds = Area(16 + inputWidth - 108, 42, 100, 26);
+        InputBounds = GetInputBounds(bounds, scale, actionAreaWidth);
+        BadgeBounds = GetBadgeBounds(bounds, scale, actionAreaWidth);
         text(attribution, Area(16, 8, width - 32, 22), 14, ChangeTagInk.Text);
         if (!model.HasChanges)
         {
