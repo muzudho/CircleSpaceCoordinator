@@ -8,6 +8,15 @@ public sealed partial class VenueEditorGame
 
     private bool TryExitGenreScope()
     {
+        if (packageReadDialog is { } reader)
+        {
+            var path = reader.FileIndex >= 0 ? reader.Files[reader.FileIndex] : null;
+            var tableId = reader.CanRead ? reader.Tables[reader.TableIndex].Id : null;
+            ShowNotice("ウィンドウを閉じられない理由",
+                "パッケージ読込ダイアログで操作中のため、終了を保留しています。\nこの案内を閉じてから、パッケージ読込の［キャンセル］を押してください。\nその後、ウィンドウ右上の［×］をもう一度押すと終了できます。\n変更コメントの確認が出た場合は、入力するか変更を巻き戻すかを選んでください。",
+                () => OpenPackageReadDialog(path, tableId));
+            return false;
+        }
         // Repeated window-close requests must not replace an active input dialog.
         if (modalDialog is not null || mappingComposition.Length > 0) return false;
         if (!SaveGenreScope(() => { if (TryExitGenreScope()) Exit(); })) { ShowGenreExitSaveError(); return false; }

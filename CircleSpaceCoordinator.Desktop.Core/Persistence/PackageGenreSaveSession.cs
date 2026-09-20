@@ -7,7 +7,11 @@ using CircleSpaceCoordinator.Engine.Model;
 public sealed class PackageGenreSaveSession(string path, string openingJson, PortablePackage openingPackage,
     PortableMaterial openingTable)
 {
-    public string Path { get; } = System.IO.Path.GetFullPath(path);
+    public string Path { get; private set; } = System.IO.Path.GetFullPath(path);
+    public void RenameFile(string expectedJson, string newName)
+    {
+        Path = PackageFileOperations.Rename(Path, expectedJson, newName);
+    }
     public string OpeningJson { get; } = openingJson;
     public PortableMaterial OpeningTable { get; } = openingTable;
     public string CurrentJson { get; private set; } = openingJson;

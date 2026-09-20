@@ -18,7 +18,9 @@ public sealed partial class VenueEditorGame
     private readonly int[] packageReadScroll = new int[2];
     private int packageReadFocus;
     private const int PackageReadRowHeight = 32;
-    private const int PackageReadButtonCount = 5;
+    private const int PackageReadButtonCount = 6;
+    // Application-specific action, intercepted before the shared modal model handles it.
+    private const ModalDialogAction PackageRenameAction = (ModalDialogAction)100;
 
     private void OpenPackageReadDialog()
         => OpenPackageReadDialog(null, null);
@@ -70,7 +72,8 @@ public sealed partial class VenueEditorGame
             }
             packageReadDialog = null;
         }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("新規作成", ModalDialogAction.Decrease),
-            ("削除", ModalDialogAction.Stop), ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
+            ("リネーム", PackageRenameAction), ("削除", ModalDialogAction.Stop),
+            ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
         packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json), MappingMaterialKind);
         packageReadFocus = 0;
         packageReadFolderError = null;

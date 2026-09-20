@@ -119,6 +119,7 @@ public sealed partial class VenueEditorGame
         {
             if (action == ModalDialogAction.Increase) { ChoosePackageReadDirectory(); return; }
             if (action == ModalDialogAction.Decrease) { CreatePackageFromReader(); return; }
+            if (action == PackageRenameAction) { RenamePackageFromReader(); return; }
             if (action == ModalDialogAction.Stop) { DeletePackageFromReader(); return; }
             if (action == ModalDialogAction.Accept && !packageReader.CanRead) return;
         }
@@ -251,7 +252,7 @@ public sealed partial class VenueEditorGame
             var button = modalButtons[index].Button;
             button.IsSelected = false;
             button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false } || packageReadDialog is { CanRead: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
-            if (packageReadDialog is { SelectedPackage: null } && modalButtons[index].Action == ModalDialogAction.Stop)
+            if (packageReadDialog is { SelectedPackage: null } && (modalButtons[index].Action == ModalDialogAction.Stop || modalButtons[index].Action == PackageRenameAction))
                 button.IsEnabled = false;
             if (modalDialog.Kind == ModalDialogKind.Text && underlineRequireValidInput && modalButtons[index].Action == ModalDialogAction.Accept)
                 button.IsEnabled &= compositionText.Length == 0 && underlineValidation?.Invoke(underlineEditor?.Text ?? "") is null;

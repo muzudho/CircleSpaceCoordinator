@@ -29,6 +29,20 @@ public static class PackageFileOperations
     public static bool NameMatches(string expected, string entered) =>
         !string.IsNullOrWhiteSpace(expected) && string.Equals(expected, entered, StringComparison.Ordinal);
 
+    public static string Rename(string path, string expectedJson, string newName)
+    {
+        const string extension = ".package-csc.json";
+        if (newName.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) newName = newName[..^extension.Length];
+        if (ValidateName(newName) is { } error) throw new ArgumentException(error);
+        var source = Path.GetFullPath(path);
+        var destination = Path.Combine(Path.GetDirectoryName(source)!, newName + extension);
+        if (!string.Equals(File.ReadAllText(source), expectedJson, StringComparison.Ordinal))
+            throw new IOException("確認中にファイルが変更されました。選び直してからリネームしてください。");
+        if (string.Equals(source, destination, StringComparison.Ordinal)) return source;
+        File.Move(source, destination, overwrite: false);
+        return destination;
+    }
+
     public static void Delete(string path, string expectedJson, string packageName, string enteredName)
     {
         if (!NameMatches(packageName, enteredName)) throw new InvalidOperationException("パッケージ名が一致しません。");

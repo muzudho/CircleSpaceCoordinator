@@ -5,6 +5,29 @@ using CircleSpaceCoordinator.EditorClient;
 
 public sealed partial class VenueEditorGame
 {
+    private void RenamePackageFromReader()
+    {
+        if (packageReadDialog is not { SelectedPackage: not null, SelectedJson: { } json, FileIndex: >= 0 } reader) return;
+        var path = Path.GetFullPath(reader.Files[reader.FileIndex]);
+        var tableId = reader.CanRead ? reader.Tables[reader.TableIndex].Id : null;
+        const string extension = ".package-csc.json";
+        var fileName = Path.GetFileName(path);
+        var stem = fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase) ? fileName[..^extension.Length] : Path.GetFileNameWithoutExtension(fileName);
+        OpenUnderlineInput("パッケージファイルのリネーム", stem, name =>
+        {
+            string renamed;
+            if (packageGenreSaveSession is { } session && string.Equals(session.Path, path, StringComparison.OrdinalIgnoreCase))
+            {
+                session.RenameFile(json, name);
+                renamed = session.Path;
+            }
+            else renamed = PackageFileOperations.Rename(path, json, name);
+            OpenPackageReadDialog(renamed, tableId);
+            packageReadNotice = "ファイル名を変更しました。";
+        }, $"現在のファイル：{fileName}\n新しいファイル名を入力してください。拡張子 .package-csc.json は自動で付きます。\nパッケージ内の名前と内容は変更しません。同名ファイルには上書きしません。",
+            maxLength: 117, cancelled: () => OpenPackageReadDialog(path, tableId), acceptLabel: "リネーム");
+    }
+
     private void CreatePackageFromReader()
     {
         if (packageReadDialog is not { } reader) return;
