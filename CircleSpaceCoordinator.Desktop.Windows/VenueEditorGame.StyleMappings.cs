@@ -298,21 +298,6 @@ public sealed partial class VenueEditorGame
         {
             if (mappingKnowledgeComments) AddGenreTabs();
             AddGenreGridLayoutButton();
-            if (mappingKnowledgeComments)
-            {
-                Add("表を書き出し", MappingBounds(20, 606, 200, 34), () =>
-                {
-                    if (!TryFinishStyleMapping()) return;
-                    ExportPortable(genreTableOnly: true);
-                    OpenGenreStyleEditor();
-                }, tooltip: "ジャンルコード表だけをパッケージ直下へ書き出します。未使用ジャンルも含みます。");
-                Add("表を読み込み", MappingBounds(232, 606, 200, 34), () =>
-                {
-                    if (!TryFinishStyleMapping()) return;
-                    ImportPortable(genreTableOnly: true);
-                    OpenGenreStyleEditor();
-                }, tooltip: "名前付きジャンルコード表をイベントプロジェクト直下へ読み込みます。");
-            }
             if (!mappingKnowledgeComments || genrePageTab != 1)
             {
                 Add(GenreGridSplit ? "前へ" : "前のページ", MappingGridBounds(20, 460, 160, 32), () => ScrollGenreOrMapping(-MappingVisibleRows), GenreChartVisible ? genrePreviewScroll > 0 : mappingScroll > 0,
