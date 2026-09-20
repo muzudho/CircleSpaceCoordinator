@@ -42,7 +42,7 @@ public sealed partial class VenueEditorGame
     private void OpenProjectChangeComment()
         => OpenGenreChangeComment(project: true);
 
-    private void OpenGenreChangeComment(bool project)
+    private void OpenGenreChangeComment(bool project, Action? accepted = null)
     {
         if (!SaveGenreScope()) return;
         SyncMappingChangeTag();
@@ -54,6 +54,7 @@ public sealed partial class VenueEditorGame
             tag.Editor.Delete(false);
             tag.Insert(value);
             mappingWidth = -1;
+            accepted?.Invoke();
         }, project ? "左側のジャンルコード表に対する変更内容を入力してください。パッケージ側のコメントとは別に保存します。"
             : "右側のジャンルコード表に対する変更内容を入力してください。プロジェクト側のコメントとは別に保存します。", 1000,
             validate: ValidateMappingChangeLog);

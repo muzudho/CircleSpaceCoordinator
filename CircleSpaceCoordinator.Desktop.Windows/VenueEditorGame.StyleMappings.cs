@@ -122,8 +122,7 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not null && mappingKnowledgeComments)
         {
-            SyncMappingChangeTag();
-            return FinishGenreScope();
+            return TryExitGenreScope();
         }
         if (mappingExitConfirmationOpen) return false;
         SyncMappingChangeTag();

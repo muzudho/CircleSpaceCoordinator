@@ -175,6 +175,14 @@ public sealed partial class VenueEditorGame
         }
         if (modalChoices is { } choices)
         {
+            if (genreExitConfirmationOpen)
+            {
+                for (var index = 0; index < choices.Length; index++)
+                    Add(choices[index].Label, choices[index].Action, bounds.X + 20,
+                        bottom - (choices.Length - 1 - index) * 50, bounds.Width - 40);
+                if (initializeFocus) modalFocus = choices.Length - 1;
+                return;
+            }
             var choiceWidth = (bounds.Width - 40 - 12 * (choices.Length - 1)) / choices.Length;
             for (var index = 0; index < choices.Length; index++)
                 Add(choices[index].Label, choices[index].Action,

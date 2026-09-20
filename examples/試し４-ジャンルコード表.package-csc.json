@@ -18,8 +18,8 @@
         "firstProvider": "\u3080\u305A\u3067\u3087",
         "latestProvider": "\u3080\u305A\u3067\u3087",
         "modifiedOn": "2026-09-20",
-        "modifiedAt": "2026-09-20T13:03:05.7376337\u002B09:00",
-        "changeLog": "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B0\uFF13"
+        "modifiedAt": "2026-09-20T13:21:34.2699067\u002B09:00",
+        "changeLog": "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B0"
       },
       "overallComment": "\u5BFE\u6226\u683C\u95D8\u3092\u65B0\u8A2D\u3002",
       "definitions": null,
@@ -115,6 +115,13 @@
           "secondaryColor": "yellow",
           "pattern": "horizontal",
           "knowledgeComment": null
+        },
+        {
+          "genreId": "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B05",
+          "primaryColor": "green",
+          "secondaryColor": "yellow",
+          "pattern": "horizontal",
+          "knowledgeComment": null
         }
       ],
       "genreCodeOrder": [
@@ -130,7 +137,8 @@
         "\u30D1\u30BA\u30EB",
         "\u97F3\u30B2\u30FC22",
         "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B02",
-        "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B03"
+        "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B03",
+        "\u30B7\u30E5\u30FC\u30C6\u30A3\u30F3\u30B05"
       ],
       "genreCodeOrderComment": "\u3042\u3044\u3046\u3048\u304A\u9806"
     }
