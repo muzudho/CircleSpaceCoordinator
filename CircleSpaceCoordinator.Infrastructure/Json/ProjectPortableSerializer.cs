@@ -22,6 +22,34 @@ public sealed record PortableDocument(
 
 public static class ProjectPortableSerializer
 {
+    public static string CreateShadingTable(string json, string kind, string name, string? comment, string handle, DateOnly date)
+    {
+        var loaded = Load(json).Document;
+        if (kind is not ("genre-styles" or "block-styles")) throw new InvalidDataException("網掛け表の種類が不正です。");
+        name = GenreStyleDefinition.NormalizeTableName(name);
+        comment = GenreStyleDefinition.NormalizeKnowledgeComment(comment);
+        if (loaded.Materials?.Any(table => table.Kind == kind && table.Name == name) == true)
+            throw new InvalidDataException("同じ名前の網掛け表が既にあります。");
+        var table = new PortableMaterial("shading-" + Guid.NewGuid().ToString("N"), kind, name, loaded.IsConfidential)
+        {
+            OverallComment = comment,
+            Credits = new PersonCredits().WrittenBy(handle, date, "網掛け表を新規作成") with { ModifiedAt = DateTimeOffset.Now },
+            GenreStyles = kind == "genre-styles" ? [] : null,
+            BlockStyles = kind == "block-styles" ? [] : null,
+            GenreCodeOrder = kind == "genre-styles" ? [] : null,
+            TableMetadata = kind == "block-styles" ? new() { Name = name, OverallComment = comment } : null,
+        };
+        table.Validate();
+        var root = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        if (root["kind"]?.GetValue<string>() != Kind) throw new InvalidDataException("パッケージ形式のファイルを選択してください。");
+        root["formatVersion"] = 2;
+        if (root["materials"] is null) root["materials"] = new System.Text.Json.Nodes.JsonArray();
+        root["materials"]!.AsArray().Add(JsonSerializer.SerializeToNode(table, Options));
+        var result = root.ToJsonString(Options) + Environment.NewLine;
+        Load(result);
+        return result;
+    }
+
     public static string UpdateGenreTable(string json, PortableMaterial table, string handle, DateOnly date, string changeLog)
     {
         var loaded = Load(json).Document;

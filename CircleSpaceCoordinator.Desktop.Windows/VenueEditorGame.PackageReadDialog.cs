@@ -18,10 +18,11 @@ public sealed partial class VenueEditorGame
     private readonly int[] packageReadScroll = new int[2];
     private int packageReadFocus;
     private const int PackageReadRowHeight = 32;
-    private const int PackageReadButtonCount = 7;
+    private const int PackageReadButtonCount = 8;
     // Application-specific action, intercepted before the shared modal model handles it.
     private const ModalDialogAction PackageRenameAction = (ModalDialogAction)100;
     private const ModalDialogAction PackageSelectFileAction = (ModalDialogAction)101;
+    private const ModalDialogAction PackageCreateTableAction = (ModalDialogAction)102;
 
     private void OpenPackageReadDialog()
         => OpenPackageReadDialog(null, null);
@@ -73,7 +74,7 @@ public sealed partial class VenueEditorGame
             }
             packageReadDialog = null;
         }, [("フォルダー選択", ModalDialogAction.Increase), ("ファイル選択", PackageSelectFileAction),
-            ("新規作成", ModalDialogAction.Decrease),
+            ("パッケージを新規作成", ModalDialogAction.Decrease), ("網掛け表を新規作成", PackageCreateTableAction),
             ("リネーム", PackageRenameAction), ("削除", ModalDialogAction.Stop),
             ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
         packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json), MappingMaterialKind);
@@ -97,7 +98,7 @@ public sealed partial class VenueEditorGame
     {
         var panel = ModalBounds();
         var width = (panel.Width - 56) / 2;
-        return new(panel.X + 20 + list * (width + 16), panel.Y + 128, width, Math.Max(32, panel.Height - 248));
+        return new(panel.X + 20 + list * (width + 16), panel.Y + 128, width, Math.Max(32, panel.Height - 298));
     }
 
     private int PackageReadPageSize => Math.Max(1, (int)(PackageReadListArea(0).Height / PackageReadRowHeight));
@@ -269,7 +270,7 @@ public sealed partial class VenueEditorGame
         }
         var error = packageReadFolderError ?? model.Error;
         textRenderer?.Draw(error ?? packageReadNotice ?? "ファイルと表を選んで［読取］を押してください。",
-            ToRectangle(new(panel.X + 20, panel.Y + panel.Height - 90, panel.Width - 40, 28)),
+            ToRectangle(new(panel.X + 20, panel.Y + panel.Height - 140, panel.Width - 40, 28)),
             error is null ? Color.LightGray : Color.Salmon, 14, true);
     }
 

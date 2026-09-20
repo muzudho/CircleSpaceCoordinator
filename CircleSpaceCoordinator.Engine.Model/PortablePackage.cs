@@ -34,6 +34,7 @@ public sealed record PortableExportRequest(CircleSpaceProject Project, IReadOnly
 public sealed record PortableCatalogRequest(SpaceDefinitionCatalog Catalog, PortablePackage Package, IReadOnlyList<PortableImportItem> Selection);
 public sealed record PortableMetadataRequest(string Json, string Name, string Description, IReadOnlyList<string> Tags);
 public sealed record PortableGenreTableUpdate(string Json, PortableMaterial Table, string Handle, DateOnly WorkDate, string ChangeLog);
+public sealed record PortableShadingTableCreate(string Json, string Kind, string Name, string? Comment, string Handle, DateOnly WorkDate);
 public sealed record PortablePreviewRequest(CircleSpaceProject Project, PortablePackage Package,
     IReadOnlyList<PortableImportItem> Selection);
 public sealed record PortableTypeMapping(string ItemId, string SourceTypeId, string TargetTypeId);

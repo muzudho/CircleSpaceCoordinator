@@ -25,6 +25,7 @@ public sealed class EditorConnection : IDisposable
         new DocumentRequest { ModelJson = WireJson.Write(project) }, Deadline())).ProjectJson;
     public string ExportPortable(PortableExportRequest request) => Portable("export", WireJson.Write(request));
     public string CreateEmptyPortable(string name) => Portable("create-empty", WireJson.Write(name));
+    public string CreatePortableShadingTable(PortableShadingTableCreate request) => Portable("create-shading-table", WireJson.Write(request));
     public PortablePackage ParsePortable(string json) => WireJson.Read<PortablePackage>(Portable("parse", json));
     public PortablePreview PreviewPortable(PortablePreviewRequest request) => WireJson.Read<PortablePreview>(Portable("preview", WireJson.Write(request)));
     public SpaceDefinitionCatalog PreviewPortableCatalog(PortableCatalogRequest request) => WireJson.Read<SpaceDefinitionCatalog>(Portable("catalog-preview", WireJson.Write(request)));

@@ -38,7 +38,7 @@ public sealed partial class VenueEditorGame
         {
             var path = PackageFileOperations.CreateEmpty(directory, name, EditorConnection.Current.CreateEmptyPortable);
             OpenPackageReadDialog(path, null);
-            packageReadNotice = "空のパッケージを作成しました。";
+            packageReadNotice = "空のパッケージを作成しました。［網掛け表を新規作成］で表を追加できます。";
         }, "空のパッケージを作成します。\nパッケージ名を入力してください。同名ファイルは上書きせず、連番を付けます。",
             validate: PackageFileOperations.ValidateName, cancelled: () => OpenPackageReadDialog(previousPath, null), acceptLabel: "作成");
     }

@@ -12,6 +12,11 @@ public sealed partial class EditorService
         string result;
         switch (request.Action)
         {
+            case "create-shading-table":
+                var newTable = WireJson.Read<PortableShadingTableCreate>(request.Json);
+                result = ProjectPortableSerializer.CreateShadingTable(newTable.Json, newTable.Kind, newTable.Name,
+                    newTable.Comment, newTable.Handle, newTable.WorkDate);
+                break;
             case "create-empty":
                 var packageName = CircleSpaceCoordinator.Core.Model.PersonCredits.NormalizeChangeLog(WireJson.Read<string>(request.Json));
                 result = ProjectPortableSerializer.Save(packageName, "", [], false, []);

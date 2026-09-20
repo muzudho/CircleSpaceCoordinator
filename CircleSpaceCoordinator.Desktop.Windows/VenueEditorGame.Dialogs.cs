@@ -32,6 +32,7 @@ public sealed partial class VenueEditorGame
         textInputService?.Stop();
         ResetUnderlineKeyRepeat();
         underlineEditor = null;
+        packageTableForm = null;
         underlineAcceptLabel = "確定";
         underlineRequireValidInput = false;
         weightCommentFeatureId = null;
@@ -119,6 +120,7 @@ public sealed partial class VenueEditorGame
         {
             if (action == ModalDialogAction.Increase) { ChoosePackageReadDirectory(); return; }
             if (action == PackageSelectFileAction) { ChoosePackageReadFile(); return; }
+            if (action == PackageCreateTableAction) { CreateTableFromReader(); return; }
             if (action == ModalDialogAction.Decrease) { CreatePackageFromReader(); return; }
             if (action == PackageRenameAction) { RenamePackageFromReader(); return; }
             if (action == ModalDialogAction.Stop) { DeletePackageFromReader(); return; }
@@ -153,7 +155,7 @@ public sealed partial class VenueEditorGame
         var availableHeight = GraphicsDevice.Viewport.Height - WorkerBarHeight - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
         var large = packageReadDialog is not null || selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null || evaluationRows is not null || modalDialog?.Kind == ModalDialogKind.Text && underlineRequireValidInput;
         var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
-        var height = Math.Min(large ? 620d : weightCommentFeatureId is not null ? 460d : 350d, Math.Max(1, availableHeight - 16d));
+        var height = Math.Min(large ? 620d : weightCommentFeatureId is not null || packageTableForm is not null ? 460d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
             WorkerBarHeight + (availableHeight - height) / 2d, width, height);
     }
@@ -181,6 +183,15 @@ public sealed partial class VenueEditorGame
         }
         if (modalChoices is { } choices)
         {
+            if (packageReadDialog is not null)
+            {
+                var columnWidth = (bounds.Width - 40 - 36) / 4;
+                for (var index = 0; index < choices.Length; index++)
+                    Add(choices[index].Label, choices[index].Action, bounds.X + 20 + index % 4 * (columnWidth + 12),
+                        bottom - 50 + index / 4 * 50, columnWidth);
+                if (initializeFocus) modalFocus = packageReadFocus;
+                return;
+            }
             if (genreExitConfirmationOpen)
             {
                 for (var index = 0; index < choices.Length; index++)
@@ -253,7 +264,7 @@ public sealed partial class VenueEditorGame
             var button = modalButtons[index].Button;
             button.IsSelected = false;
             button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false } || packageReadDialog is { CanRead: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
-            if (packageReadDialog is { SelectedPackage: null } && (modalButtons[index].Action == ModalDialogAction.Stop || modalButtons[index].Action == PackageRenameAction))
+            if (packageReadDialog is { SelectedPackage: null } && (modalButtons[index].Action == ModalDialogAction.Stop || modalButtons[index].Action == PackageRenameAction || modalButtons[index].Action == PackageCreateTableAction))
                 button.IsEnabled = false;
             if (packageReadDialog is { } reader && modalButtons[index].Action == ModalDialogAction.Decrease && !Directory.Exists(reader.DirectoryPath))
                 button.IsEnabled = false;

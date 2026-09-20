@@ -62,6 +62,7 @@ public sealed partial class VenueEditorGame
 
     private ScreenRectangle UnderlineBounds()
     {
+        if (packageTableForm is { } form) return PackageTableInputBounds(form.CommentFocused);
         var bounds = ModalBounds();
         return new ScreenRectangle(bounds.X + 20, bounds.Y + bounds.Height - (weightCommentFeatureId is null ? 136 : 272), bounds.Width - 40, 46);
     }
@@ -118,6 +119,7 @@ public sealed partial class VenueEditorGame
         var moveLeft = underlineLeftRepeat.Update(keyboard.IsKeyDown(Keys.Left), IsPressed(keyboard, Keys.Left), statusHintTime, repeatEnabled);
         var moveRight = underlineRightRepeat.Update(keyboard.IsKeyDown(Keys.Right), IsPressed(keyboard, Keys.Right), statusHintTime, repeatEnabled);
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
+        if (UpdatePackageTableFormFocus(keyboard, mouse)) return true;
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released &&
             !Contains(UnderlineBounds(), pointer) && !modalButtons.Any(item => item.Button.Contains(pointer)))
         {
@@ -269,6 +271,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawUnderlineInput()
     {
+        DrawPackageTableForm();
         using var timing = performance?.Measure("text_input_draw");
         if (underlineEditor is not { } editor) return;
         var bounds = UnderlineBounds();
