@@ -167,7 +167,7 @@ public sealed partial class VenueEditorGame : Game
                 modalButtons.Clear();
                 modalInputDrain = true;
                 if (projectSavePath is { } path) { projectSavePath = null; OpenEventProject(path); }
-            }, exception => OpenModal(new ModalDialogModel(ModalDialogKind.Message, "エンジンの起動に失敗しました", exception.Message), _ => Exit()));
+            }, exception => OpenModal(new ModalDialogModel(ModalDialogKind.Message, "エンジンの起動に失敗しました", exception.Message), _ => Exit()), eventStartupOverlay: true);
         }
     }
 

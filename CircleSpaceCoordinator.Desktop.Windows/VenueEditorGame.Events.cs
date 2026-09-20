@@ -71,7 +71,7 @@ public sealed partial class VenueEditorGame
             var width = (EventSidebarWidth - (columns - 1) * 12) / columns;
             var bounds = new ScreenRectangle(eventWidth - 24 - EventSidebarWidth + (eventButtons.Count % columns) * (width + 12),
                 108 + WorkerBarHeight + eventButtons.Count / columns * step, width, step - 6);
-            eventButtons.Add((new IconButtonModel(bounds, label) { IsEnabled = enabled }, execute));
+            eventButtons.Add((new IconButtonModel(bounds, label) { IsEnabled = enabled && !eventStartupLoading }, execute));
         }
         Add("開く", () => { if (SelectedEvent is { } item) OpenEventProject(item.Project.Path); }, usable);
         Add("新規作成", CreateEventProject);
@@ -163,12 +163,12 @@ public sealed partial class VenueEditorGame
             var index = eventScroll + row;
             var item = eventProjects[index];
             var bounds = EventRowBounds(row);
-            var button = new IconButtonModel(bounds, item.Project.DisplayName) { IsSelected = index == eventSelection };
+            var button = new IconButtonModel(bounds, item.Project.DisplayName) { IsSelected = index == eventSelection, IsEnabled = !eventStartupLoading };
             button.UpdatePointer(new ScreenPoint(previousMouse.X, previousMouse.Y));
             OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)), (_, _) => { });
-            if (eventFocus < 0 && index == eventSelection) DrawOutline(bounds, 2, OperationTargetColor);
+            if (!eventStartupLoading && eventFocus < 0 && index == eventSelection) DrawOutline(bounds, 2, OperationTargetColor);
             Text((item.Confidential == true ? "（秘） " : "") + item.Project.DisplayName, new(bounds.X + 10, bounds.Y + 5, bounds.Width - 20, 24), 19, true);
             var detail = !item.Exists ? "ファイルが見つかりません：" + item.Project.Path : item.Error ?? (item.Confidential is null ? "未確認：" : "") + item.Project.Path;
             var maxCharacters = Math.Max(12, (int)((bounds.Width - 20) / 8));
@@ -193,6 +193,25 @@ public sealed partial class VenueEditorGame
         }
         Text($"{eventProjects.Count} 件　↑↓：選択　Enter：開く　Tab：操作へ移動　ホイール：スクロール",
             new(24, GraphicsDevice.Viewport.Height - 48, GraphicsDevice.Viewport.Width - 48, 28), 16);
+        if (eventStartupLoading) DrawEventStartupSpinner();
+    }
+
+    private void DrawEventStartupSpinner()
+    {
+        var firstRow = EventRowBounds(0);
+        var area = new ScreenRectangle(firstRow.X, firstRow.Y, firstRow.Width,
+            Math.Max(58, GraphicsDevice.Viewport.Height - 64 - firstRow.Y));
+        DrawRectangle(area, new Color(12, 18, 28, 150));
+        var center = new ScreenPoint(area.X + area.Width / 2, area.Y + area.Height / 2 - 16);
+        // A time-based ring keeps animating while engine startup runs on the worker thread.
+        for (var index = 0; index < 12; index++)
+        {
+            var angle = statusHintTime * Math.PI * 2 + index * Math.PI / 6;
+            var color = Color.Lerp(new Color(44, 66, 80), new Color(120, 220, 255), index / 11f);
+            DrawLine(new(center.X + Math.Cos(angle) * 16, center.Y + Math.Sin(angle) * 16),
+                new(center.X + Math.Cos(angle) * 27, center.Y + Math.Sin(angle) * 27), 4, color);
+        }
+        textRenderer?.Draw("起動しています…", ToRectangle(new ScreenRectangle(center.X - 90, center.Y + 40, 180, 28)), Color.White, 18, true);
     }
 
     private void RunEventAction(Action action)

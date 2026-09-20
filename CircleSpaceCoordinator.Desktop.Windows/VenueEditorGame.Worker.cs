@@ -208,7 +208,7 @@ public sealed partial class VenueEditorGame
         DrawLine(new(bounds.X, 29), new(bounds.X + bounds.Width, 29), editor is null ? 1 : 2, new Color(99, 223, 185));
         var badge = ActionBadgeComponent.Create("Edit", new Rectangle(0, 0, (int)bounds.Width, (int)bounds.Height));
         var mouse = Mouse.GetState();
-        if (CanShowEditorHover && Contains(bounds, new ScreenPoint(mouse.X, mouse.Y))) badge.Show();
+        if (!eventStartupLoading && CanShowEditorHover && Contains(bounds, new ScreenPoint(mouse.X, mouse.Y))) badge.Show();
         DrawMappingBadge(badge, bounds, 1);
         if (editor is not null)
         {

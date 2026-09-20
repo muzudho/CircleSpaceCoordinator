@@ -6,23 +6,30 @@ public sealed partial class VenueEditorGame
 {
     private Task? backgroundOperation;
     private Action? pollBackgroundOperation;
+    private bool eventStartupLoading;
 
-    private void RunBackground<T>(string title, Func<T> work, Action<T> completed, Action<Exception>? failed = null)
+    private void RunBackground<T>(string title, Func<T> work, Action<T> completed, Action<Exception>? failed = null, bool eventStartupOverlay = false)
     {
         if (backgroundOperation is not null) return;
         var owner = workspace;
         var task = Task.Run(work);
         backgroundOperation = task;
-        OpenModal(new ModalDialogModel(ModalDialogKind.Message, title, "処理中です。しばらくお待ちください。"));
+        eventStartupLoading = eventStartupOverlay;
+        eventWidth = -1;
+        if (!eventStartupOverlay)
+            OpenModal(new ModalDialogModel(ModalDialogKind.Message, title, "処理中です。しばらくお待ちください。"));
         pollBackgroundOperation = () =>
         {
             if (!task.IsCompleted)
             {
-                if (modalDialog is not null) modalDialog.Message = "処理中です" + new string('・', 1 + (int)(statusHintTime * 3) % 4);
+                if (!eventStartupOverlay && modalDialog is not null) modalDialog.Message = "処理中です" + new string('・', 1 + (int)(statusHintTime * 3) % 4);
                 return;
             }
             backgroundOperation = null;
             pollBackgroundOperation = null;
+            eventStartupLoading = false;
+            eventWidth = -1;
+            if (eventStartupOverlay) modalInputDrain = true;
             try
             {
                 var result = task.GetAwaiter().GetResult();
