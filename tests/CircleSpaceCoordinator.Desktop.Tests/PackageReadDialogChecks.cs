@@ -44,6 +44,17 @@ internal static partial class Program
             AssertEqual(true, model.Error is not null);
             AssertEqual(json, File.ReadAllText(Path.Combine(directory, "a.package-csc.json")));
 
+            model.SelectPath(Path.Combine(directory, "a.package-csc.json"));
+            AssertEqual(2, model.Files.Length);
+            AssertEqual(true, model.CanRead);
+            model.SelectPath(Path.Combine(directory, "legacy.project-portable.json"));
+            AssertEqual(3, model.Files.Length);
+            AssertEqual("legacy.project-portable.json", Path.GetFileName(model.Files[model.FileIndex]));
+            AssertEqual(true, model.CanRead);
+            model.SelectPath(Path.Combine(directory, "b.package-csc.json"));
+            AssertEqual(false, model.CanRead);
+            AssertEqual(true, model.Error is not null);
+
             var mixed = new PackageReadDialogModel(_ => new PortablePackage("mixed", "", [], false, [])
             {
                 Materials = [new("z", "genre-styles", "表Z", false), new("block", "block-styles", "ブロック", false),
@@ -53,6 +64,13 @@ internal static partial class Program
             mixed.SelectFile(0);
             AssertEqual("表A,表Z", string.Join(',', mixed.Tables.Select(table => table.Name)));
             mixed.SelectTable(2);
+            AssertEqual(false, mixed.CanRead);
+            mixed.SelectPath(Path.Combine(directory, "other.json"), "z");
+            AssertEqual("other.json", Path.GetFileName(mixed.Files[mixed.FileIndex]));
+            AssertEqual("z", mixed.Tables[mixed.TableIndex].Id);
+            mixed.SelectPath(Path.Combine(directory, "other.json"));
+            AssertEqual(false, mixed.CanRead);
+            mixed.SelectPath(Path.Combine(directory, "other.json"), "missing");
             AssertEqual(false, mixed.CanRead);
         }
         finally { Directory.Delete(directory, recursive: true); }

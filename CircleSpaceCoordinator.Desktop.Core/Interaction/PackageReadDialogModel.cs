@@ -32,6 +32,19 @@ public sealed class PackageReadDialogModel(Func<string, PortablePackage> parse)
         { Error = ex.Message; }
     }
 
+    public void SelectPath(string path, string? tableId = null)
+    {
+        path = Path.GetFullPath(path);
+        SetDirectory(Path.GetDirectoryName(path)!);
+        if (Error is not null) return;
+        // Partial import also accepts legacy package names and arbitrary JSON filenames.
+        if (!Files.Any(file => string.Equals(file, path, StringComparison.OrdinalIgnoreCase)))
+            Files = Files.Append(path).OrderBy(Path.GetFileName, StringComparer.Ordinal).ToArray();
+        SelectFile(Array.FindIndex(Files, file => string.Equals(file, path, StringComparison.OrdinalIgnoreCase)));
+        SelectTable(tableId is null ? (Tables.Length == 1 ? 0 : -1)
+            : Array.FindIndex(Tables, table => table.Id == tableId));
+    }
+
     public void SelectFile(int index)
     {
         FileIndex = index >= 0 && index < Files.Length ? index : -1;

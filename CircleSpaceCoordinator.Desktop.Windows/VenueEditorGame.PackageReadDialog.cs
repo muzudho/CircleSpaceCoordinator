@@ -19,9 +19,23 @@ public sealed partial class VenueEditorGame
     private const int PackageReadRowHeight = 32;
 
     private void OpenPackageReadDialog()
+        => OpenPackageReadDialog(null, null);
+
+    private void OpenGenrePackageReader(string? sourcePath, string? tableId = null)
+    {
+        projectMenuOpen = false;
+        CancelInProgressPointerInteraction();
+        OpenGenreStyleEditor();
+        genrePageTab = 0;
+        genreGridLayoutMode = GenreGridLayoutMode.SplitPane;
+        mappingWidth = -1;
+        OpenPackageReadDialog(sourcePath, tableId);
+    }
+
+    private void OpenPackageReadDialog(string? sourcePath, string? tableId)
     {
         genreCloseAfterDiscard = false;
-        if (GenreSavePending && !SaveGenreScope(OpenPackageReadDialog)) return;
+        if (GenreSavePending && !SaveGenreScope(() => OpenPackageReadDialog(sourcePath, tableId))) return;
         if (GenrePackageChanged || genrePackageRequiresComment)
         {
             SyncMappingChangeTag();
@@ -58,7 +72,16 @@ public sealed partial class VenueEditorGame
         packageReadFocus = 0;
         packageReadFolderError = null;
         Array.Clear(packageReadScroll);
-        if (packageReadDirectory is { } directory) packageReadDialog.SetDirectory(directory);
+        if (sourcePath is not null)
+        {
+            packageReadDialog.SelectPath(sourcePath, tableId);
+            packageReadDirectory = packageReadDialog.DirectoryPath;
+            packageReadScroll[0] = Math.Max(0, Math.Min(packageReadDialog.FileIndex,
+                packageReadDialog.Files.Length - PackageReadPageSize));
+            packageReadScroll[1] = Math.Max(0, Math.Min(packageReadDialog.TableIndex,
+                packageReadDialog.Tables.Length - PackageReadPageSize));
+        }
+        else if (packageReadDirectory is { } directory) packageReadDialog.SetDirectory(directory);
     }
 
     private ScreenRectangle PackageReadListArea(int list)

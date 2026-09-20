@@ -125,22 +125,22 @@ public sealed partial class VenueEditorGame
                 package.Materials.Count > 0 && package.Materials.All(item => item.Kind == "genre-styles");
             if (genreTableOnly && !package.Materials.Any(item => item.Kind == "genre-styles"))
                 throw new InvalidDataException("このパッケージには独立したジャンルコード表がありません。");
-            if (genreTableOnly && package.Materials.Count(item => item.Kind == "genre-styles") == 1)
+            if (genreTableOnly)
             {
-                ShowGenreTableDiff(package, package.Materials.Single(item => item.Kind == "genre-styles").Id, libraryJson, sourcePath);
+                OpenGenrePackageReader(sourcePath);
                 return;
             }
             var revision = owner.Revision;
-            using var form = PortableForm(genreTableOnly ? "比較するジャンルコード表を選択" : "部分読込み — 配置案・知見・素材を選択・改名");
+            using var form = PortableForm("部分読込み — 配置案・知見・素材を選択・改名");
             form.ClientSize = new System.Drawing.Size(740, 730);
             var rows = PortableGrid(form);
             rows.Columns[1].ReadOnly = false;
-            foreach (var item in package.Items.Where(_ => !genreTableOnly))
+            foreach (var item in package.Items)
                 rows.Rows.Add(false, item.Name, item.Project.DeskLayouts[0].Description ?? "", item.Id, item.Kind == "frame-fragment" ? "部分配置" : "フレーム配置案");
-            foreach (var item in package.Knowledge.Where(_ => !genreTableOnly))
+            foreach (var item in package.Knowledge)
                 rows.Rows.Add(false, item.Name, $"知見・未対応付け：{item.Purpose}／{item.InputRule.ValueMeanings}", "knowledge:" + item.Id, "チャンネルの知見");
-            foreach (var material in package.Materials.Where(item => !genreTableOnly || item.Kind == "genre-styles"))
-                rows.Rows.Add(false, material.Name, material.Kind == "genre-styles" ? "左右の比較画面でコードごとに交換・整理。表は1つずつ選択。" : material.Kind == "block-styles" ? "イベント直下の表全体を置換。配置案の選択は不要。" : material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
+            foreach (var material in package.Materials)
+                rows.Rows.Add(false, material.Name, material.Kind == "genre-styles" ? "ジャンルのスプリットペーンで読込・編集。表は1つずつ選択。" : material.Kind == "block-styles" ? "イベント直下の表全体を置換。配置案の選択は不要。" : material.Definitions is { } defs ? $"参照先フレーム定義 {defs.Types.Count} 件。配置案または共通カタログへ追加。" : "既存配置がある場合は同じ形状の会場だけ採用可能。",
                     material.Id, MaterialKindName(material.Kind));
             foreach (Forms.DataGridViewRow row in rows.Rows)
                 if (package.Materials.Any(item => item.Kind == "genre-styles" && item.Id == (string)row.Cells[3].Value!))
@@ -163,7 +163,7 @@ public sealed partial class VenueEditorGame
                 new Forms.Label { Text = "取込み方法", Left = 16, Top = 473, Width = 155 },
                 new Forms.Label { Text = "配置の移動量 X", Left = 16, Top = 509, Width = 155 },
                 new Forms.Label { Text = "Y", Left = 320, Top = 509, Width = 30 },
-                new Forms.Label { Text = "ジャンルコード表は比較画面へ進みます。その他の項目名は一覧で編集できます。", Left = 16, Top = 545, Width = 700 }]);
+                new Forms.Label { Text = "ジャンルコード表はジャンル画面の［パッケージ読込］へ進みます。その他の項目名は一覧で編集できます。", Left = 16, Top = 545, Width = 700 }]);
             void UpdateImportTargets()
             {
                 var ids = rows.Rows.Cast<Forms.DataGridViewRow>().Where(row => Equals(row.Cells[0].Value, true))
@@ -180,13 +180,6 @@ public sealed partial class VenueEditorGame
             rows.CellValueChanged += (_, _) => UpdateImportTargets();
             mode.SelectedIndexChanged += (_, _) => UpdateImportTargets();
             UpdateImportTargets();
-            if (genreTableOnly)
-            {
-                foreach (Forms.Control control in form.Controls)
-                    if (control.Top >= 434 && control.Top < 545) control.Visible = false;
-                form.Controls.Add(new Forms.Label { Text = $"比較する表を1つ選択してください。\n左：イベント「{owner.Project.Name}」／右：選択したパッケージの表。コードごとに交換・整理できます。",
-                    Left = 16, Top = 434, Width = 700, Height = 64 });
-            }
             rows.SelectionChanged += (_, _) =>
             {
                 if (rows.CurrentRow?.Cells[3].Value is not string id) return;
@@ -203,6 +196,7 @@ public sealed partial class VenueEditorGame
             var status = PortableStatus(form);
             var accept = PortableButtons(form, rows, "選択内容へ進む");
             var catalogApplied = false;
+            string? genreTableToRead = null;
             accept.Click += (_, _) =>
             {
                 try
@@ -230,7 +224,7 @@ public sealed partial class VenueEditorGame
                     if (genreTables.Length > 0)
                     {
                         if (selection.Length != 1) throw new InvalidOperationException("ジャンルコード表は1つだけ選んで比較編集してください。他の項目は別に取り込めます。");
-                        ShowGenreTableDiff(package, genreTables[0].ItemId, libraryJson, sourcePath, form);
+                        genreTableToRead = genreTables[0].ItemId;
                         form.DialogResult = Forms.DialogResult.Cancel;
                         return;
                     }
@@ -268,6 +262,7 @@ public sealed partial class VenueEditorGame
                 CreateToolbar();
                 ShowInAppMessage("部分読込みが完了しました", catalogApplied ? "共通カタログに保存しました。直前登録はライブラリー画面から戻せます。" : "選択した項目を適用しました。イベントを保存するとファイルに残ります。");
             }
+            if (genreTableToRead is not null) OpenGenrePackageReader(sourcePath, genreTableToRead);
         }
         catch (Exception ex) { ShowInAppMessage("読み込めません", ex.Message); }
         finally { modalInputDrain = true; }
