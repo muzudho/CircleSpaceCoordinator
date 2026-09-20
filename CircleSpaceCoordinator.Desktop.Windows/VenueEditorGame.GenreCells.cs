@@ -15,8 +15,8 @@ public sealed partial class VenueEditorGame
         return new(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, bounds.Height + 10);
     }
 
-    private static bool GenreCellEditable(int column, string pattern, bool right) =>
-        column is 1 or 2 or 4 or 6 || column == 3 && pattern != "solid" || column == 0 && !right;
+    private static bool GenreCellEditable(int column, string pattern) =>
+        column is 0 or 1 or 2 or 4 or 6 || column == 3 && pattern != "solid";
 
     private void DrawGenreCellHover(int row, string pattern, bool right)
     {
@@ -25,7 +25,7 @@ public sealed partial class VenueEditorGame
         for (var column = 0; column < 7; column++)
         {
             var bounds = MappingCell(row, column, right);
-            if (GenreCellEditable(column, pattern, right) && Contains(bounds, new(mouse.X, mouse.Y)))
+            if (GenreCellEditable(column, pattern) && Contains(bounds, new(mouse.X, mouse.Y)))
                 DrawOutline(bounds, 2 * MappingEditorScale, OperationTargetColor);
         }
     }
@@ -63,9 +63,9 @@ public sealed partial class VenueEditorGame
                 if (!selected || wasMultiple || modified || MultipleShadingRows) return true;
                 var pattern = right ? packageRows[index].Pattern : mappingDraft!.Rows[index].Pattern;
                 for (var column = 0; column < 7; column++)
-                    if (GenreCellEditable(column, pattern, right) && Contains(MappingCell(row, column, right), pointer))
+                    if (GenreCellEditable(column, pattern) && Contains(MappingCell(row, column, right), pointer))
                     {
-                        if (right) OpenPackageGenreCell(index, column); else OpenMappingPicker(index, column);
+                        OpenMappingPicker(index, column, right);
                         return true;
                     }
                 return true;
@@ -95,6 +95,7 @@ public sealed partial class VenueEditorGame
     {
         var key = right ? PackageGenreRows()[row].Key : mappingDraft!.Rows[row].Key;
         var draft = right ? CreatePackageCellDraft() : mappingDraft!;
+        var visibleOrder = right ? PackageGenreRows().Select(item => item.Key).ToArray() : mappingGenreCodeOrder;
         var index = draft.Rows.ToList().FindIndex(item => item.Key == key);
         string? Validate(string value)
         {
@@ -114,7 +115,7 @@ public sealed partial class VenueEditorGame
             if (right)
             {
                 ApplyPackageCellDraft(draft);
-                packageGenreTable = packageGenreTable!.WithOrder(packageGenreTable!.Metadata().RowOrder.Select(item => item == key ? name : item).ToArray());
+                packageGenreTable = packageGenreTable!.WithOrder(visibleOrder.Select(item => item == key ? name : item).ToArray());
                 SelectPackageGenreTarget(name);
             }
             else
@@ -129,31 +130,4 @@ public sealed partial class VenueEditorGame
         }, "この表の行名を変更します。サークルや配置の値は変更しません。", 1000, validate: Validate);
     }
 
-    private void OpenPackageGenreCell(int row, int column)
-    {
-        if (column == 1) { OpenGenreNameEditor(row, true); return; }
-        var key = PackageGenreRows()[row].Key;
-        var draft = CreatePackageCellDraft();
-        var index = draft.Rows.ToList().FindIndex(item => item.Key == key);
-        if (column == 6)
-        {
-            OpenUnderlineInput($"{key} の知見コメント", draft.Rows[index].KnowledgeComment ?? "", value =>
-            {
-                draft.SetKnowledgeComment(index, value);
-                ApplyPackageCellDraft(draft);
-            }, "1000文字以内で入力してください。空欄で確定すると削除します。", maxLength: int.MaxValue, allowEmpty: true, validate: ValidateGenreComment);
-            return;
-        }
-        packageCellDraft = draft;
-        packageCellRow = index;
-        mappingPickerColumn = column - 1;
-        var style = draft.Rows[index];
-        var current = column == 4 ? style.Pattern : column == 2 ? style.PrimaryColor : style.SecondaryColor;
-        var choices = column == 4 ? StyleMappingDraft.Patterns : StyleMappingDraft.Colors;
-        mappingFocus = choices.Select((choice, i) => (choice, i)).Where(item => item.choice.Id == current)
-            .Select(item => item.i).DefaultIfEmpty(column == 4 ? 0 : choices.Count).First();
-        mappingWidth = -1;
-        pressedMappingButton = null;
-        modalInputDrain = true;
-    }
 }

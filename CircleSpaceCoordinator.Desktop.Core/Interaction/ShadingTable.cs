@@ -28,6 +28,10 @@ public static class ShadingTable
         ? table with { TableMetadata = table.Metadata() with { RowOrder = order } }
         : table with { GenreCodeOrder = order };
 
+    public static PortableMaterial WithOrderComment(this PortableMaterial table, string? comment) => table.Kind == "block-styles"
+        ? table with { TableMetadata = table.Metadata() with { OrderComment = GenreStyleDefinition.NormalizeKnowledgeComment(comment) } }
+        : table with { GenreCodeOrderComment = GenreStyleDefinition.NormalizeKnowledgeComment(comment) };
+
     public static StyleMappingDraft CreateDraft(CircleSpaceProject project, bool blocks)
     {
         if (!blocks) return new GenreStyleDraft(project).Mapping;

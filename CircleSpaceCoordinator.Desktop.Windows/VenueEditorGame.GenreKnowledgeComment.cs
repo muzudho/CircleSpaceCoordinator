@@ -56,17 +56,18 @@ public sealed partial class VenueEditorGame
         try { GenreStyleDefinition.NormalizeKnowledgeComment(value); return null; }
         catch (ArgumentException ex) { return ex.Message; }
     }
-    private void OpenGenreKnowledgeComment(int row)
+    private void OpenGenreKnowledgeComment(int row, CircleSpaceCoordinator.Desktop.Core.Interaction.StyleMappingDraft draft, bool right)
     {
-        if (mappingDraft is not { } draft || row < 0 || row >= draft.Rows.Count) return;
-        mappingRow = row;
-        mappingColumn = 5;
+        if (row < 0 || row >= draft.Rows.Count) return;
+        if (!right) mappingRow = row;
+        mappingColumn = 6;
         mappingFocus = -1;
         SetMappingTextFocus(false);
         var style = draft.Rows[row];
         OpenUnderlineInput($"{style.Key} の知見コメント", style.KnowledgeComment ?? "", value =>
         {
             draft.SetKnowledgeComment(row, value);
+            if (right) ApplyPackageCellDraft(draft);
             mappingWidth = -1;
         }, "この行の補足を1000文字以内で入力してください。\n空欄で確定するとコメントを削除します。キャンセルすると元のコメントを残します。",
             maxLength: int.MaxValue, allowEmpty: true, validate: ValidateGenreComment);

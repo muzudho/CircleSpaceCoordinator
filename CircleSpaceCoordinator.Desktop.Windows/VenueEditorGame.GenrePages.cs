@@ -21,6 +21,10 @@ public sealed partial class VenueEditorGame
     private string[] mappingGenreCodeOrder = [];
     private string? mappingGenreCodeOrderComment;
     private bool genreOrderDialogOpen;
+    private bool genreOrderRight;
+    private StyleMappingDraft? genreOrderPackageDraft;
+    private StyleMappingDraft? GenreOrderDraft => genreOrderRight ? genreOrderPackageDraft : mappingDraft;
+    private string? GenreOrderComment => genreOrderRight ? packageGenreTable?.Metadata().OrderComment : mappingGenreCodeOrderComment;
     private int genreOrderDragIndex = -1;
     private int genreOrderPage;
     private const int GenreOrderPageSize = 16;
@@ -45,8 +49,11 @@ public sealed partial class VenueEditorGame
         mappingWidth = -1;
     }
 
-    private void OpenGenreCodeOrderEditor()
+    private void OpenGenreCodeOrderEditor(bool right = false)
     {
+        genreOrderRight = right;
+        genreOrderPackageDraft = right ? CreatePackageCellDraft() : null;
+        if (right) genreOrderPackageDraft!.ReorderRows(PackageGenreRows().Select(row => row.Key));
         genreOrderDialogOpen = true;
         genreOrderDragIndex = -1;
         genreOrderPage = 0;
@@ -63,7 +70,7 @@ public sealed partial class VenueEditorGame
 
     private void UpdateGenreOrderDialog(KeyboardState keyboard, MouseState mouse)
     {
-        if (mappingDraft is not { } draft) return;
+        if (GenreOrderDraft is not { } draft) return;
         if (genreOrderCommentEditing) { UpdateGenreOrderCommentInput(keyboard, mouse); return; }
         var pointer = new ScreenPoint(mouse.X, mouse.Y);
         if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released)
@@ -94,22 +101,28 @@ public sealed partial class VenueEditorGame
                 {
                     draft.MoveRow(genreOrderDragIndex, index - genreOrderDragIndex);
                     genreOrderDragIndex = index;
-                    mappingGenreCodeOrder = draft.Rows.Select(row => row.Key).ToArray();
-                    genreCodeOrder = mappingGenreCodeOrder.ToArray();
+                    var order = draft.Rows.Select(row => row.Key).ToArray();
+                    if (genreOrderRight) packageGenreTable = packageGenreTable!.WithOrder(order);
+                    else
+                    {
+                        mappingGenreCodeOrder = order;
+                        genreCodeOrder = order.ToArray();
+                        mappingOrderChanged = true;
+                    }
                     genreCodeSort = true;
                     genreSpaceSort = false;
                     genreOrdinalSort = false;
-                    mappingOrderChanged = true;
+                    mappingWidth = -1;
                     break;
                 }
             }
         if (mouse.LeftButton == ButtonState.Released && previousMouse.LeftButton == ButtonState.Pressed) genreOrderDragIndex = -1;
-        if (IsPressed(previousKeyboard, Keys.Escape)) { genreOrderDialogOpen = false; genreOrderDragIndex = -1; }
+        if (IsPressed(keyboard, Keys.Escape)) { genreOrderDialogOpen = false; genreOrderDragIndex = -1; }
     }
 
     private void BeginGenreOrderCommentEdit()
     {
-        genreOrderCommentEditor = new UnderlineTextEditor(mappingGenreCodeOrderComment ?? "", 1000);
+        genreOrderCommentEditor = new UnderlineTextEditor(GenreOrderComment ?? "", 1000);
         genreOrderCommentEditing = true;
         genreOrderCommentComposition = "";
         ResetUnderlineKeyRepeat();
@@ -143,7 +156,12 @@ public sealed partial class VenueEditorGame
     {
         if (genreOrderCommentEditor is not { } editor) return;
         var value = string.IsNullOrWhiteSpace(editor.Text) ? null : editor.Text.Trim();
-        if (value != mappingGenreCodeOrderComment) { mappingGenreCodeOrderComment = value; mappingOrderChanged = true; }
+        if (value != GenreOrderComment)
+        {
+            if (genreOrderRight) packageGenreTable = packageGenreTable!.WithOrderComment(value);
+            else { mappingGenreCodeOrderComment = value; mappingOrderChanged = true; }
+            mappingWidth = -1;
+        }
         genreOrderCommentEditing = false;
         genreOrderCommentEditor = null;
         genreOrderCommentComposition = "";
@@ -162,14 +180,14 @@ public sealed partial class VenueEditorGame
 
     private void DrawGenreOrderDialog()
     {
-        if (mappingDraft is not { } draft) return;
+        if (GenreOrderDraft is not { } draft) return;
         DrawRectangle(new ScreenRectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color(0, 0, 0, 200));
         var panel = new ScreenRectangle(40, 50, Math.Min(1000, GraphicsDevice.Viewport.Width - 80), Math.Min(610, GraphicsDevice.Viewport.Height - 100));
         DrawRectangle(panel, new Color(24, 29, 36));
         DrawOutline(panel, 2, Color.LightSlateGray);
         textRenderer?.Draw("網掛け対応表の並び順", ToRectangle(new(panel.X + 24, panel.Y + 18, panel.Width - 48, 34), 0), Color.White, 23, true);
         var commentBounds = GenreOrderCommentBounds;
-        var comment = genreOrderCommentEditing ? genreOrderCommentEditor?.Text : mappingGenreCodeOrderComment;
+        var comment = genreOrderCommentEditing ? genreOrderCommentEditor?.Text : GenreOrderComment;
         var commentDisplay = genreOrderCommentEditing && genreOrderCommentEditor is { } editingEditor && genreOrderCommentComposition.Length > 0
             ? editingEditor.Text.Insert(editingEditor.Caret, genreOrderCommentComposition) : comment;
         var commentText = string.IsNullOrWhiteSpace(commentDisplay) ? "並び順のコメント" : commentDisplay;

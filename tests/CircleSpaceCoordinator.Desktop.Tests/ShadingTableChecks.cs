@@ -98,6 +98,36 @@ internal static partial class Program
             AssertEqual(true, conflict);
             session.Save(blocks, "test", date, "", true, connection.UpdatePortableGenreTable, connection.ParsePortable);
             AssertEqual(json, File.ReadAllText(path));
+
+            // The same row editor must persist every column and ordering for either table kind.
+            foreach (var original in package.Materials.Where(item => item.Kind is "genre-styles" or "block-styles"))
+            {
+                File.WriteAllText(path, json);
+                var editSession = new PackageGenreSaveSession(path, json, package, original) { ApprovedOverwriteJson = json };
+                var editing = new StyleMappingDraft(["A", "B"],
+                    [new("A", "red", "white", "solid"), new("B", "blue", "black", "solid")]);
+                editing.RenameRow(0, "名前変更");
+                editing.SetPattern(0, "diagonal-up");
+                editing.SetColor(0, true, "blue");
+                editing.SetColor(0, false, "black");
+                editing.SetKnowledgeComment(0, "右側のコメント");
+                editing.MoveRow(0, 1);
+                var edited = original.WithRows(editing.Build()).WithOrder(editing.Rows.Select(row => row.Key).ToArray())
+                    .WithOrderComment("右側の並び順コメント");
+                editSession.Save(edited, "test", date, "各列を編集", false, connection.UpdatePortableGenreTable, connection.ParsePortable);
+                var reread = connection.ParsePortable(File.ReadAllText(path));
+                var actual = reread.Materials.Single(item => item.Id == original.Id);
+                AssertEqual("B,名前変更", string.Join(',', actual.Metadata().RowOrder));
+                AssertEqual("右側の並び順コメント", actual.Metadata().OrderComment!);
+                var row = actual.Rows().Single(item => item.Key == "名前変更");
+                AssertEqual("blue", row.PrimaryColor);
+                AssertEqual("black", row.SecondaryColor);
+                AssertEqual("diagonal-up", row.Pattern);
+                AssertEqual("右側のコメント", row.KnowledgeComment!);
+                AssertEqual(JsonSerializer.Serialize(package.Materials.Where(item => item.Id != original.Id)),
+                    JsonSerializer.Serialize(reread.Materials.Where(item => item.Id != original.Id)));
+                AssertEqual(true, string.IsNullOrEmpty(actual.WithOrderComment(null).Metadata().OrderComment));
+            }
         }
         finally { Directory.Delete(directory, recursive: true); }
         using var receiver = connection.Open(ProjectJsonSerializer.Save(PortableExample()));

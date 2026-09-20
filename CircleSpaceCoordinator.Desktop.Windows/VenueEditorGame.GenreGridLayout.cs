@@ -121,44 +121,7 @@ public sealed partial class VenueEditorGame
         var rows = PackageGenreRows();
         void Text(string value, ScreenRectangle bounds, Color? color = null) =>
             textRenderer?.Draw(value, ToRectangle(bounds, 3), color ?? Color.White, Math.Max(10, (int)(17 * MappingEditorScale)), true);
-        for (var row = 0; row < MappingVisibleRows && packageGenreScroll + row < rows.Length; row++)
-        {
-            var style = rows[packageGenreScroll + row];
-            for (var column = 0; column < headers.Length; column++)
-            {
-                var bounds = MappingCell(row, column, right: true);
-                if (column == 3 && style.Pattern == "solid") continue;
-                var plain = column is 1 or 6;
-                if (!plain) DrawRectangle(bounds, new Color(35, 43, 54));
-                if (column == 0)
-                {
-                    var order = packageGenreTable?.Metadata().RowOrder.ToArray() ?? [];
-                    var index = Array.IndexOf(order, style.Key);
-                    Text((index >= 0 ? index + 1 : packageGenreScroll + row + 1).ToString(), bounds);
-                }
-                else if (column == 1) Text(style.Key, bounds);
-                else if (column == 6) Text(style.KnowledgeComment ?? "コメントを入力", bounds);
-                else if (column is 2 or 3)
-                {
-                    var id = column == 2 ? style.PrimaryColor : style.SecondaryColor;
-                    var color = GenreColorFromId(id, Color.Gray);
-                    DrawRectangle(bounds, color);
-                    Text(StyleMappingDraft.Colors.FirstOrDefault(choice => choice.Id == id).Label ?? id, bounds, MappingColorText(color));
-                }
-                else
-                {
-                    var swatch = new ScreenRectangle(bounds.X + 4, bounds.Y + 3, bounds.Width - 8, bounds.Height - 6);
-                    DrawRectangle(swatch, column == 4 ? Color.Black : GenreColorFromId(style.PrimaryColor, Color.Gray));
-                    DrawGenrePattern(swatch, GenrePatternFromId(style.Pattern), column == 4 ? Color.White : GenreColorFromId(style.SecondaryColor, Color.White), 255);
-                }
-                if (!plain) DrawOutline(bounds, 1, new Color(100, 119, 130));
-            }
-            if (ShadingRowSelected(true, style.Key))
-            {
-                DrawOutline(GenreTargetRowBounds(row, right: true), 2 * MappingEditorScale, OperationTargetColor);
-                DrawGenreCellHover(row, style.Pattern, true);
-            }
-        }
+        DrawShadingRows(rows, packageGenreScroll, true);
         if (packageGenreTable is not null && rows.Length == 0)
             Text("この表に行はありません。", MappingGridBounds(20, 142, 960, 46, right: true));
         var divider = MappingGridBounds(20, 102, 960, 390);
