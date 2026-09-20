@@ -118,6 +118,7 @@ public sealed partial class VenueEditorGame
         if (packageReadDialog is { } packageReader)
         {
             if (action == ModalDialogAction.Increase) { ChoosePackageReadDirectory(); return; }
+            if (action == PackageSelectFileAction) { ChoosePackageReadFile(); return; }
             if (action == ModalDialogAction.Decrease) { CreatePackageFromReader(); return; }
             if (action == PackageRenameAction) { RenamePackageFromReader(); return; }
             if (action == ModalDialogAction.Stop) { DeletePackageFromReader(); return; }

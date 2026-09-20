@@ -18,9 +18,10 @@ public sealed partial class VenueEditorGame
     private readonly int[] packageReadScroll = new int[2];
     private int packageReadFocus;
     private const int PackageReadRowHeight = 32;
-    private const int PackageReadButtonCount = 6;
+    private const int PackageReadButtonCount = 7;
     // Application-specific action, intercepted before the shared modal model handles it.
     private const ModalDialogAction PackageRenameAction = (ModalDialogAction)100;
+    private const ModalDialogAction PackageSelectFileAction = (ModalDialogAction)101;
 
     private void OpenPackageReadDialog()
         => OpenPackageReadDialog(null, null);
@@ -71,7 +72,8 @@ public sealed partial class VenueEditorGame
                 else ReadTable();
             }
             packageReadDialog = null;
-        }, [("フォルダーを選ぶ", ModalDialogAction.Increase), ("新規作成", ModalDialogAction.Decrease),
+        }, [("フォルダー選択", ModalDialogAction.Increase), ("ファイル選択", PackageSelectFileAction),
+            ("新規作成", ModalDialogAction.Decrease),
             ("リネーム", PackageRenameAction), ("削除", ModalDialogAction.Stop),
             ("キャンセル", ModalDialogAction.Cancel), ("読取", ModalDialogAction.Accept)]);
         packageReadDialog = new(json => EditorConnection.Current.ParsePortable(json), MappingMaterialKind);
@@ -106,43 +108,60 @@ public sealed partial class VenueEditorGame
         packageReadFolderError = null;
         try
         {
-            using var picker = new Forms.OpenFileDialog
+            using var picker = new Forms.FolderBrowserDialog
             {
-                Title = "パッケージを選択、またはファイル名を変えずに［開く］で現在のフォルダーを選択",
-                Filter = "パッケージ (*.package-csc.json)|*.package-csc.json",
-                InitialDirectory = model.DirectoryPath,
-                // A non-file placeholder also permits choosing an empty folder.
-                FileName = "このフォルダーを選択",
-                CheckFileExists = false,
-                CheckPathExists = true,
-                AddExtension = false,
-                Multiselect = false,
-                RestoreDirectory = true,
+                Description = "パッケージの保存フォルダーを選択",
+                UseDescriptionForTitle = true,
+                SelectedPath = model.DirectoryPath,
+                ShowNewFolderButton = true,
             };
             // DesktopGL's Window.Handle is an SDL_Window*, not a Windows HWND.
-            // Match the existing native file pickers: let WinForms resolve the owner.
             if (picker.ShowDialog() != Forms.DialogResult.OK) return;
-            // Preview a chosen package after opening its directory; do not import it.
-            var selectedPath = Path.GetFullPath(picker.FileName);
-            var directory = Directory.Exists(selectedPath) ? selectedPath : Path.GetDirectoryName(selectedPath);
-            if (directory is null || !Directory.Exists(directory))
+            var directory = Path.GetFullPath(picker.SelectedPath);
+            if (!Directory.Exists(directory))
                 throw new DirectoryNotFoundException("選択したフォルダーが見つかりません。");
             packageReadDirectory = directory;
             model.SetDirectory(directory);
             Array.Clear(packageReadScroll);
-            var selectedIndex = Array.FindIndex(model.Files,
-                path => string.Equals(Path.GetFullPath(path), selectedPath, StringComparison.OrdinalIgnoreCase));
-            if (selectedIndex >= 0)
-            {
-                SelectPackageReadRow(0, selectedIndex);
-                packageReadScroll[0] = Math.Min(selectedIndex, Math.Max(0, model.Files.Length - PackageReadPageSize));
-                packageReadFocus = PackageReadButtonCount + 1;
-                modalFocus = -1;
-            }
+            packageReadNotice = null;
+            packageReadFocus = PackageReadButtonCount;
+            modalFocus = -1;
         }
         catch (Exception ex)
         {
             packageReadFolderError = "フォルダー選択を開けませんでした：" + ex.Message;
+        }
+        finally { modalInputDrain = true; }
+    }
+
+    private void ChoosePackageReadFile()
+    {
+        if (packageReadDialog is not { } model) return;
+        packageReadFolderError = null;
+        try
+        {
+            using var picker = new Forms.OpenFileDialog
+            {
+                Title = "パッケージファイルを選択",
+                Filter = "パッケージ (*.package-csc.json)|*.package-csc.json",
+                InitialDirectory = model.DirectoryPath,
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Multiselect = false,
+                RestoreDirectory = true,
+            };
+            if (picker.ShowDialog() != Forms.DialogResult.OK) return;
+            model.SelectPath(picker.FileName);
+            packageReadDirectory = model.DirectoryPath;
+            Array.Clear(packageReadScroll);
+            packageReadScroll[0] = Math.Max(0, Math.Min(model.FileIndex, model.Files.Length - PackageReadPageSize));
+            packageReadNotice = null;
+            packageReadFocus = PackageReadButtonCount + 1;
+            modalFocus = -1;
+        }
+        catch (Exception ex)
+        {
+            packageReadFolderError = "ファイルを選択できませんでした：" + ex.Message;
         }
         finally { modalInputDrain = true; }
     }
