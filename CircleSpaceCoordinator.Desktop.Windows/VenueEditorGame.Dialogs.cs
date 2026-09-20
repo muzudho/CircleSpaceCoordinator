@@ -34,6 +34,7 @@ public sealed partial class VenueEditorGame
         underlineEditor = null;
         weightCommentFeatureId = null;
         selectionLabels = null;
+        packageReadDialog = null;
         selectionDirect = false;
         exportColumnDraft = null;
         exportPlanChoices = null;
@@ -67,6 +68,7 @@ public sealed partial class VenueEditorGame
         }
         if (modalDialog is null) return false;
         EnsureModalButtons();
+        if (UpdatePackageReadDialog(keyboard, mouse)) return true;
         if (UpdateEvaluationBreakdown(keyboard, mouse)) return true;
         if (modalDialog.Kind == ModalDialogKind.Text) return UpdateUnderlineInput(keyboard, mouse);
         if (UpdateExportColumns(keyboard, mouse)) return true;
@@ -111,6 +113,11 @@ public sealed partial class VenueEditorGame
     private void ApplyModalAction(ModalDialogAction action)
     {
         if (modalDialog is null) return;
+        if (packageReadDialog is { } packageReader)
+        {
+            if (action == ModalDialogAction.Increase) { ChoosePackageReadDirectory(); return; }
+            if (action == ModalDialogAction.Accept && !packageReader.CanRead) return;
+        }
         if (exportColumnDraft is { IsComplete: false } && action == ModalDialogAction.Accept) return;
         if (selectionLabels is { Length: 0 } && action == ModalDialogAction.Accept) return;
         // Custom choices use the existing model's closing transition; preserve the chosen result.
@@ -138,7 +145,7 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle ModalBounds()
     {
         var availableHeight = GraphicsDevice.Viewport.Height - WorkerBarHeight - (modalDialog?.Kind == ModalDialogKind.Text ? TextInputHelpHeight : 0);
-        var large = selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null || evaluationRows is not null;
+        var large = packageReadDialog is not null || selectionLabels is not null || viewerLines is not null || previewSheet is not null || exportColumnDraft is not null || evaluationRows is not null;
         var width = Math.Min(exportPlanChoices is not null ? 1200d : large ? 1000d : 720d, GraphicsDevice.Viewport.Width - 16d);
         var height = Math.Min(large ? 620d : weightCommentFeatureId is not null ? 460d : 350d, Math.Max(1, availableHeight - 16d));
         return new ScreenRectangle((GraphicsDevice.Viewport.Width - width) / 2d,
@@ -172,7 +179,7 @@ public sealed partial class VenueEditorGame
             for (var index = 0; index < choices.Length; index++)
                 Add(choices[index].Label, choices[index].Action,
                     bounds.X + 20 + index * (choiceWidth + 12), bottom, choiceWidth);
-            if (initializeFocus) modalFocus = selectionLabels is not null ? 1 : Math.Max(0, Array.FindIndex(choices, choice => choice.Action == ModalDialogAction.Cancel));
+            if (initializeFocus) modalFocus = packageReadDialog is not null ? packageReadFocus : selectionLabels is not null ? 1 : Math.Max(0, Array.FindIndex(choices, choice => choice.Action == ModalDialogAction.Cancel));
             return;
         }
         if (modalDialog.Kind == ModalDialogKind.Minutes)
@@ -226,11 +233,12 @@ public sealed partial class VenueEditorGame
         DrawEvaluationBreakdown();
         DrawTablePreview();
         DrawExportColumns();
+        DrawPackageReadDialog();
         for (var index = 0; index < modalButtons.Count; index++)
         {
             var button = modalButtons[index].Button;
             button.IsSelected = false;
-            button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
+            button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false } || packageReadDialog is { CanRead: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
             OperationButtonRenderer.Draw(button,
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)),

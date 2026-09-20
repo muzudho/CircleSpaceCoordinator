@@ -39,9 +39,10 @@ public sealed partial class VenueEditorGame
             mappingFocus = -1;
             mappingWidth = -1;
             pressedMappingButton = null;
+            OpenPackageReadDialog();
         }, Tooltip: GenreGridSplit
-            ? "データの読み書き：FullWidth（全幅表示）に切り替えます。"
-            : "データの読み書き：SplitPane（左右分割）に切り替えます。"));
+            ? "FullWidth（全幅表示）に切り替えて、パッケージ読込ダイアログを開きます。"
+            : "SplitPane（左右分割）に切り替えて、パッケージ読込ダイアログを開きます。"));
     }
 
     private void DrawGenreGridShip(ScreenRectangle bounds, Color color)

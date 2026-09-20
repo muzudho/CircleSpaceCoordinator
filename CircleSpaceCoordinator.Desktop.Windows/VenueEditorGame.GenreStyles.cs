@@ -16,6 +16,7 @@ public sealed partial class VenueEditorGame
         mappingGenreCodeOrderComment = targetWorkspace.Project.GenreCodeOrderComment;
         genreCodeSort = mappingGenreCodeOrder.Length > 0;
         genreSpaceSort = false;
+        genreOrdinalSort = false;
         if (genreCodeSort) draft.Mapping.ReorderRows(mappingGenreCodeOrder);
         OpenStyleMappingEditor(draft.Mapping, "ジャンルコード", "ジャンルが設定されたサークルはありません。",
             (styles, log, handle, date) => targetWorkspace.Execute(new SetGenreStyles(styles.Select(style =>
