@@ -24,6 +24,7 @@ public sealed partial class VenueEditorGame
     private void ShowPackageGenreTable(PortableMaterial table)
     {
         packageGenreTable = table;
+        selectedPackageGenreKey = null;
         packageGenreScroll = 0;
         genrePageTab = 0;
         genreGridLayoutMode = GenreGridLayoutMode.SplitPane;
@@ -66,6 +67,7 @@ public sealed partial class VenueEditorGame
             if (mappingComposition.Length > 0) return;
             SetMappingTextFocus(false);
             genreGridLayoutMode = GenreGridSplit ? GenreGridLayoutMode.FullWidth : GenreGridLayoutMode.SplitPane;
+            if (!GenreGridSplit) selectedPackageGenreKey = null;
             mappingFocus = -1;
             mappingWidth = -1;
             pressedMappingButton = null;
@@ -149,6 +151,8 @@ public sealed partial class VenueEditorGame
                 }
                 if (!plain) DrawOutline(bounds, 1, new Color(100, 119, 130));
             }
+            if (style.GenreId == selectedPackageGenreKey)
+                DrawOutline(MappingGridBounds(20, 142 + row * 52, 960, 46, right: true), 2 * MappingEditorScale, OperationTargetColor);
         }
         if (packageGenreTable is not null && rows.Length == 0)
             Text("この表にジャンルはありません。", MappingGridBounds(20, 142, 960, 46, right: true));

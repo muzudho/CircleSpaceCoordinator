@@ -125,4 +125,20 @@ public sealed class StyleMappingDraft
 
     public void SetKnowledgeComment(int index, string? value) => rows[index] = rows[index] with
     { KnowledgeComment = GenreStyleDefinition.NormalizeKnowledgeComment(value) };
+
+    public void CopyRow(StyleMappingEntry source, string key, bool overwrite)
+    {
+        key = PersonCredits.NormalizeChangeLog(key);
+        if (otherStyles.Any(row => row.Key == key))
+            throw new InvalidOperationException("編集対象外に同じコードの設定があります。");
+        var index = rows.FindIndex(row => row.Key == key);
+        if ((index >= 0) != overwrite)
+            throw new InvalidOperationException(index >= 0 ? "同じジャンルコードが既にあります。" : "上書き先がありません。");
+        var copy = source with { Key = key, Pattern = NormalizePattern(source.Pattern),
+            KnowledgeComment = GenreStyleDefinition.NormalizeKnowledgeComment(source.KnowledgeComment) };
+        // Validate before replacing a row so a rejected copy leaves the draft untouched.
+        _ = new StyleMappingDraft([key], [copy]).Build();
+        if (index >= 0) rows[index] = copy;
+        else rows.Add(copy);
+    }
 }

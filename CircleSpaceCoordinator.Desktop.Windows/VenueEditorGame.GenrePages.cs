@@ -33,6 +33,7 @@ public sealed partial class VenueEditorGame
     {
         if (mappingDraft is not { } draft) return;
         selectedGenreKey = key;
+        selectedPackageGenreKey = null;
         var row = draft.Rows.ToList().FindIndex(style => style.Key == key);
         if (row < 0) return; // Unassigned participants have no editable genre code.
         mappingRow = row;

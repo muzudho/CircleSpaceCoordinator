@@ -64,6 +64,7 @@ public sealed partial class VenueEditorGame
         packageGenreTable = null;
         packageGenreScroll = 0;
         selectedGenreKey = null;
+        selectedPackageGenreKey = null;
         genrePieExpanded = false;
         mappingKeyLabel = keyLabel;
         mappingEmptyMessage = emptyMessage;
@@ -309,6 +310,9 @@ public sealed partial class VenueEditorGame
             }
             if (GenreGridSplit)
             {
+                Add("反対側へコピー", MappingBounds(444, 606, 220, 34), CopyGenreToOtherPane,
+                    packageGenreTable is not null && (selectedGenreKey is not null || selectedPackageGenreKey is not null),
+                    tooltip: "対象のジャンルを反対側の表へコピーします。右側の変更は作業中の表に保持します。");
                 Add("前へ", MappingGridBounds(20, 460, 160, 32, right: true), () => ScrollPackageGenreRows(-MappingVisibleRows), packageGenreScroll > 0,
                     tooltip: "パッケージのジャンルコード表の前のページを表示します。");
                 Add("次へ", MappingGridBounds(192, 460, 160, 32, right: true), () => ScrollPackageGenreRows(MappingVisibleRows), packageGenreScroll + MappingVisibleRows < (packageGenreTable?.GenreStyles?.Length ?? 0),
@@ -383,6 +387,15 @@ public sealed partial class VenueEditorGame
                 : IsPressed(keyboard, Keys.Down) ? columns : IsPressed(keyboard, Keys.Up) ? -columns : 0;
             mappingFocus = Math.Clamp(mappingFocus + offset, 0, mappingEditorButtons.Count - 1);
         }
+        else if (mappingFocus < 0 && !GenreChartVisible && GenreGridSplit && selectedPackageGenreKey is { } packageKey)
+        {
+            var rows = PackageGenreRows();
+            var index = Array.FindIndex(rows, row => row.GenreId == packageKey);
+            var delta = IsPressed(keyboard, Keys.Up) ? -1 : IsPressed(keyboard, Keys.Down) ? 1 : 0;
+            if (delta != 0 && rows.Length > 0) SelectPackageGenreTarget(rows[Math.Clamp(index + delta, 0, rows.Length - 1)].GenreId);
+            if (IsPressed(keyboard, Keys.PageUp)) ScrollPackageGenreRows(-MappingVisibleRows);
+            if (IsPressed(keyboard, Keys.PageDown)) ScrollPackageGenreRows(MappingVisibleRows);
+        }
         else if (mappingFocus < 0 && !GenreChartVisible)
         {
             if (IsPressed(keyboard, Keys.Left)) mappingColumn = mappingKnowledgeComments
@@ -395,7 +408,11 @@ public sealed partial class VenueEditorGame
             if (IsPressed(keyboard, Keys.Down)) mappingRow = Math.Min(Math.Max(0, draft.Rows.Count - 1), mappingRow + 1);
             if (IsPressed(keyboard, Keys.Up) || IsPressed(keyboard, Keys.Down))
             {
-                if (mappingKnowledgeComments && draft.Rows.Count > 0) selectedGenreKey = draft.Rows[mappingRow].Key;
+                if (mappingKnowledgeComments && draft.Rows.Count > 0)
+                {
+                    selectedGenreKey = draft.Rows[mappingRow].Key;
+                    selectedPackageGenreKey = null;
+                }
                 mappingScroll = mappingRow / MappingVisibleRows * MappingVisibleRows;
                 mappingWidth = -1;
             }
@@ -404,7 +421,7 @@ public sealed partial class VenueEditorGame
         }
         if (IsPressed(keyboard, Keys.Enter) || IsPressed(keyboard, Keys.Space))
         {
-            if (mappingFocus < 0 && !GenreChartVisible) OpenMappingPicker(mappingRow, mappingColumn);
+            if (mappingFocus < 0 && !GenreChartVisible && selectedPackageGenreKey is null) OpenMappingPicker(mappingRow, mappingColumn);
             else if (mappingFocus >= 0 && mappingEditorButtons[mappingFocus].Button.IsEnabled) mappingEditorButtons[mappingFocus].Execute();
             return;
         }
@@ -426,6 +443,16 @@ public sealed partial class VenueEditorGame
         {
             if (mappingKnowledgeComments && mappingPickerColumn == 0)
             {
+                if (GenreGridSplit)
+                {
+                    var rows = PackageGenreRows();
+                    for (var row = 0; row < MappingVisibleRows && packageGenreScroll + row < rows.Length; row++)
+                        if (Contains(MappingCell(row, 1, right: true), pointer))
+                        {
+                            SelectPackageGenreTarget(rows[packageGenreScroll + row].GenreId);
+                            return;
+                        }
+                }
                 if (genrePageTab == 1)
                 {
                     var groups = BuildGenrePreviewGroups();
@@ -528,7 +555,7 @@ public sealed partial class VenueEditorGame
                             new(bounds.X, bounds.Y + bounds.Height * 0.58, bounds.Width, bounds.Height * 0.4), 12);
                     }
                     if (!plainCell) DrawOutline(bounds, 1, new Color(100, 119, 130));
-                    if (mappingPickerColumn == 0 && mappingFocus < 0 && mappingRow == mappingScroll + row && mappingColumn == column)
+                    if (mappingPickerColumn == 0 && mappingFocus < 0 && selectedGenreKey is null && selectedPackageGenreKey is null && mappingRow == mappingScroll + row && mappingColumn == column)
                     {
                         if (plainCell)
                             DrawLine(new(bounds.X + 6, bounds.Y + bounds.Height - 7), new(bounds.X + bounds.Width - 6, bounds.Y + bounds.Height - 7), 2, OperationTargetColor);
