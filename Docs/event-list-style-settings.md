@@ -1,21 +1,24 @@
 # イベント一覧のスタイル設定
 
-イベント一覧ページの下部にある「スタイル設定のオートリロード：有効／無効」をクリックすると切り替わります。Tab でボタンを選び、Enter または Space でも操作できます。初期値は有効です。
+開発用の Debug ビルドでは、イベント一覧ページの下部にある「スタイル設定のオートリロード：有効／無効」をクリックすると切り替わります。Tab でボタンを選び、Enter または Space でも操作できます。初期値は有効です。Release ビルドは埋め込み設定を使うため、このボタンは開発時専用と表示して無効にします。
 
 設定はユーザー設定フォルダーの `application-settings.json` の `styleAutoReload` に保存します。再起動後も維持し、保存に失敗した場合は切り替えずエラーを表示します。
 
 ## 編集するファイル
 
-Windows の標準保存先：
+スタイル設定の原本はリポジトリー内に置き、Git で管理します：
 
 ```text
-%LOCALAPPDATA%\CircleSpaceCoordinator\events.stationery-style.json
-%LOCALAPPDATA%\CircleSpaceCoordinator\application-settings.json
+App_Doc/events.style-settings.md
 ```
 
-画面下部にも実際のスタイルファイルのパスを表示します。スタイル設定エディターでこの JSON を開いて編集してください。アプリケーション設定ファイルの保存先を指定して起動する場合は、その隣にスタイルファイルを作成します。
+拡張子は `.style-settings.md` ですが、中身は文房具 UI が読み込む JSON です。Markdown の見出しやコードフェンスは付けないでください。テキストエディターで編集できます。文房具 UI のエディターを使う場合は、そのファイル選択がこの拡張子を扱えることを確認してください。
 
-起動時、スタイルファイルが存在しない場合だけ埋め込みの既定設定を作成します。既存の編集内容は再起動・再ビルド・配布更新で上書きしません。起動時には無効設定でも一度読み込みます。有効中は約500ms間隔で監視し、同じ内容を2回読めたら反映します。無効中の変更は、有効へ戻した後に反映します。
+Debug ではビルド時に記録した原本の絶対パスを使用します。起動時のカレントディレクトリーに依存せず、画面下部にも実際のパスを表示します。起動時には無効設定でも一度読み込みます。有効中は約500ms間隔で監視し、同じ内容を2回読めたら反映します。無効中の変更は、有効へ戻した後に反映します。ファイルを新規作成・上書きする処理はありません。
+
+Release では原本をアセンブリーのリソースへ埋め込み、外部ファイルを読まずに使用します。スタイルファイルの同梱やユーザーフォルダーへの展開は不要です。設定変更をリリースへ反映するには、原本を編集して Release を再ビルドします。
+
+オートリロードの選択は従来どおり `%LOCALAPPDATA%\CircleSpaceCoordinator\application-settings.json` の `styleAutoReload` に保存します。以前の実装がユーザー設定フォルダーに作成した `events.stationery-style.json` は読み込みません。そこで調整した内容があれば、必要な変更を原本へ移してください。
 
 JSON の解析や必須モデルの検証に失敗した場合は、直前の正常な配置を維持し、ページ下部へエラーを表示します。初回から不正な場合は埋め込みの既定配置を使います。壊れたファイル自体は書き換えません。
 
@@ -46,7 +49,7 @@ JSON の解析や必須モデルの検証に失敗した場合は、直前の正
 
 ## 実装・配布
 
-既定設定は `CircleSpaceCoordinator.Desktop.Core/Styles/events.stationery-style.json`。埋め込みリソースと build / publish の `Styles` 配下に含めます。実行中に編集するのはユーザー設定フォルダー側です。
+原本は `App_Doc/events.style-settings.md`。`CircleSpaceCoordinator.Desktop.Core.csproj` がこれを `CircleSpaceCoordinator.EventListStyle.json` というリソース名で埋め込みます。Debug でも読み込み失敗時のフォールバック用に埋め込みます。外部スタイルファイルは build / publish の出力にコピーしません。Release には開発マシンの原本パスを示す AssemblyMetadata も含めません。
 
 配置計算には文房具 UI の `StationeryStyleSettings` と `StationeryLayoutEngine` を使用します。監視は `EventListStyle` が担当し、既存のアプリケーション設定を唯一の有効／無効設定として参照します。文房具 UI の `StationeryStyleFile` が読む別の `*.stationery-config.json` は作成しません。画面操作で即座に監視方針を反映し、二重管理を避けています。
 

@@ -49,6 +49,7 @@ public sealed partial class VenueEditorGame
 
     private void ToggleStyleAutoReload()
     {
+        if (!eventStyle.CanAutoReload) return;
         settings!.SaveStyleAutoReload(!settings.Current.StyleAutoReload);
         eventStyle.Update(TimeSpan.Zero, settings.Current.StyleAutoReload);
         eventWidth = -1;
@@ -104,8 +105,10 @@ public sealed partial class VenueEditorGame
         Add("一覧から除外", RemoveEvent, selected is not null);
         Add("終了", Exit);
         eventButtons.Add((new IconButtonModel(layout.Area("reload"),
-            "スタイル設定のオートリロード：" + (settings!.Current.StyleAutoReload ? "有効" : "無効"))
-            { IsEnabled = !eventStartupLoading }, ToggleStyleAutoReload));
+            eventStyle.CanAutoReload
+                ? "スタイル設定のオートリロード：" + (settings!.Current.StyleAutoReload ? "有効" : "無効")
+                : "スタイル設定：埋め込み（オートリロードは開発時のみ）")
+            { IsEnabled = !eventStartupLoading && eventStyle.CanAutoReload }, ToggleStyleAutoReload));
         if (eventFocus >= eventButtons.Count) eventFocus = -1;
     }
 
@@ -217,7 +220,7 @@ public sealed partial class VenueEditorGame
         Text($"{eventProjects.Count} 件　↑↓：選択　Enter：開く　Tab：操作へ移動　ホイール：スクロール",
             EventLayout.Area("footer"), 16);
         Text(eventStyle.LastError is { } error ? "スタイル設定エラー（直前の配置を維持）：" + error
-            : "スタイル設定：" + eventStyle.FilePath, EventLayout.Area("error"), 13);
+            : eventStyle.FilePath is { } path ? "スタイル設定：" + path : "ビルド時のスタイル設定を使用しています。", EventLayout.Area("error"), 13);
         if (eventStartupLoading) DrawEventStartupSpinner();
     }
 

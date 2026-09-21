@@ -14,7 +14,8 @@ public sealed class EventListStyle
     private TimeSpan elapsed;
     private bool wasEnabled;
 
-    public string FilePath { get; }
+    public string? FilePath { get; }
+    public bool CanAutoReload => FilePath is not null;
     public StationeryStyleSettings Current { get; private set; }
     public string? LastError { get; private set; }
     public int Revision { get; private set; }
@@ -32,28 +33,30 @@ public sealed class EventListStyle
         }
     }
 
-    public EventListStyle(string filePath)
+    public static EventListStyle CreateForApplication()
     {
-        FilePath = Path.GetFullPath(filePath);
-        var fallback = DefaultJson;
-        Current = StationeryStyleSettings.Parse(fallback);
+#if DEBUG
+        var source = System.Reflection.CustomAttributeExtensions
+            .GetCustomAttributes<System.Reflection.AssemblyMetadataAttribute>(typeof(EventListStyle).Assembly)
+            .Single(attribute => attribute.Key == "EventListStyleSource").Value!;
+        return new(source);
+#else
+        return new();
+#endif
+    }
+
+    // An explicit path is for development and tests; Release uses only embedded data.
+    public EventListStyle(string? filePath = null)
+    {
+        FilePath = filePath is null ? null : Path.GetFullPath(filePath);
+        Current = StationeryStyleSettings.Parse(DefaultJson);
         Validate(Current);
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            if (!File.Exists(FilePath))
-            {
-                using var stream = new FileStream(FilePath, FileMode.CreateNew, FileAccess.Write);
-                using var writer = new StreamWriter(stream);
-                writer.Write(fallback);
-            }
-        }
-        catch (Exception ex) when (IsReadError(ex)) { LastError = ex.Message; }
-        Read(stable: false); // Startup always reads the saved style, even when monitoring is disabled.
+        if (CanAutoReload) Read(stable: false);
     }
 
     public bool Update(TimeSpan delta, bool enabled)
     {
+        if (!CanAutoReload) return false;
         if (enabled != wasEnabled)
         {
             pendingText = null;
@@ -71,7 +74,7 @@ public sealed class EventListStyle
     {
         try
         {
-            var text = File.ReadAllText(FilePath);
+            var text = File.ReadAllText(FilePath!);
             if (text == acceptedText) { pendingText = null; LastError = null; return false; }
             if (stable && text != pendingText) { pendingText = text; return false; }
             var next = StationeryStyleSettings.Parse(text);

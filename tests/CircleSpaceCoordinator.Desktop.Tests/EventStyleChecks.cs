@@ -22,7 +22,11 @@ internal static partial class Program
             AssertEqual("style tester", settings.Current.Handle);
             AssertEqual(false, JsonNode.Parse(File.ReadAllText(settingsPath))!["styleAutoReload"]!.GetValue<bool>());
 
-            var path = Path.Combine(root, "events.stationery-style.json");
+            var path = Path.Combine(root, "events.style-settings.md");
+            var missing = new EventListStyle(path);
+            AssertEqual(false, File.Exists(path)); // Loading never creates or overwrites source files.
+            AssertEqual(true, missing.LastError is not null);
+            File.WriteAllText(path, EventListStyle.DefaultJson);
             var style = new EventListStyle(path);
             AssertEqual(true, File.Exists(path));
             AssertEqual<string?>(null, style.LastError);
@@ -83,6 +87,27 @@ internal static partial class Program
             AssertEqual<string?>(null, style.LastError);
             settings.SaveStyleAutoReload(true);
             AssertEqual(true, CreateIsolatedSettings(settingsPath).Current.StyleAutoReload);
+
+            var embedded = new EventListStyle();
+            AssertEqual<string?>(null, embedded.FilePath);
+            AssertEqual(false, embedded.CanAutoReload);
+            AssertEqual(false, embedded.Update(TimeSpan.FromSeconds(2), true));
+            AssertEqual<string?>(null, embedded.LastError);
+            AssertEqual(24d, embedded.Arrange(1280, 800, 40).Area("title").X);
+            var application = EventListStyle.CreateForApplication();
+#if DEBUG
+            AssertEqual(true, application.CanAutoReload);
+            AssertEqual(true, Path.IsPathFullyQualified(application.FilePath!));
+            AssertEqual(true, application.FilePath!.EndsWith(Path.Combine("App_Doc", "events.style-settings.md")));
+            AssertEqual(EventListStyle.DefaultJson, File.ReadAllText(application.FilePath));
+#else
+            AssertEqual(false, application.CanAutoReload);
+            AssertEqual<string?>(null, application.FilePath);
+            AssertEqual(false, application.Update(TimeSpan.FromSeconds(2), true));
+            AssertEqual(false, typeof(EventListStyle).Assembly.GetCustomAttributes(false)
+                .OfType<System.Reflection.AssemblyMetadataAttribute>().Any(attribute => attribute.Key == "EventListStyleSource"));
+#endif
+            AssertEqual<string?>(null, application.LastError);
 
             // A failed settings write must leave the visible toggle and runtime policy unchanged.
             File.Delete(settingsPath);

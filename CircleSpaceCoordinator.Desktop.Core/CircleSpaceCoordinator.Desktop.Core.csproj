@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <EmbeddedResource Include="Styles/events.stationery-style.json" LogicalName="CircleSpaceCoordinator.EventListStyle.json" />
-    <None Update="Styles/events.stationery-style.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="../App_Doc/events.style-settings.md" Link="App_Doc/events.style-settings.md" LogicalName="CircleSpaceCoordinator.EventListStyle.json" />
+    <AssemblyMetadata Include="EventListStyleSource" Value="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../App_Doc/events.style-settings.md'))" Condition="'$(Configuration)' == 'Debug'" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../CircleSpaceCoordinator.EditorClient/CircleSpaceCoordinator.EditorClient.csproj" />
