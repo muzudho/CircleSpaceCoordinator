@@ -53,4 +53,4 @@ JSON の解析や必須モデルの検証に失敗した場合は、直前の正
 
 配置計算には文房具 UI の `StationeryStyleSettings` と `StationeryLayoutEngine` を使用します。監視は `EventListStyle` が担当し、既存のアプリケーション設定を唯一の有効／無効設定として参照します。文房具 UI の `StationeryStyleFile` が読む別の `*.stationery-config.json` は作成しません。画面操作で即座に監視方針を反映し、二重管理を避けています。
 
-コアの StationeryUI はコミット `5130fff6a5cf18aa2559f33388bcc104b3aa1d05` から作ったローカルパッケージ `0.1.2-csc.5130fff` に固定しています。MonoGame / Windows の既存ホストは移行対象でないため0.1.1のままです。
+StationeryUI / MonoGame / Windows はコミット `5130fff6a5cf18aa2559f33388bcc104b3aa1d05` から作ったローカルパッケージ `0.1.2-csc.5130fff` に固定しています。F12 で既存の文房具 UI 開発者ウィンドウを開き、モデルの Id・完全パス・実画面の座標を確認できます。[開発者ウィンドウの説明](Dev/StyleSettings/developer-window.md)を参照してください。

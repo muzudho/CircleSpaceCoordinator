@@ -22,6 +22,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <None Update="ThirdParty/StationeryUI-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="application-settings.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>
   <Target Name="ReportSmartAppControlSigningConfiguration" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT'">
@@ -32,7 +33,7 @@
           Condition="'$(SmartAppControlSigningEnabled)' == 'true'">
     <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\ForSmartAppControl\Sign-BuildOutput.ps1&quot; -Path &quot;$(TargetDir).&quot;" />
   </Target>
-  <ItemGroup><PackageReference Include="StationeryUI.Windows" Version="0.1.1" /></ItemGroup>
-  <ItemGroup><PackageReference Include="StationeryUI.MonoGame" Version="0.1.1" /></ItemGroup>
+  <ItemGroup><PackageReference Include="StationeryUI.Windows" Version="0.1.2-csc.5130fff" /></ItemGroup>
+  <ItemGroup><PackageReference Include="StationeryUI.MonoGame" Version="0.1.2-csc.5130fff" /></ItemGroup>
   <Import Project="../scripts/Build/EngineHosting.targets" />
 </Project>

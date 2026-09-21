@@ -35,9 +35,22 @@ internal static partial class Program
             AssertEqual(62d, normal.Area("title").Y);
             AssertEqual(224d, normal.Area("body/actions").Width);
             AssertEqual(normal.Area("body/actions/open").X, normal.Area("body/actions/create").X);
+            var inspection = normal.Inspect(true);
+            AssertEqual(inspection.Count, inspection.Select(entry => entry.Path).Distinct().Count());
+            var open = inspection.Single(entry => entry.Path == "/events/regular/body/actions/open");
+            AssertEqual(true, open.Visible);
+            AssertEqual("button", open.Kind);
+            AssertEqual("/events/regular/body/actions", open.ParentPath);
+            AssertEqual(normal.Area("body/actions/open"), open.WindowBounds!.Value);
+            AssertEqual(false, inspection.Single(entry => entry.Path == "/events/compact/body/actions/open").Visible);
+            AssertEqual(false, inspection.Single(entry => entry.Path == "/events/rowTemplate/item").Visible);
+            AssertEqual(true, inspection.Single(entry => entry.Path == "/events/rowTemplate/item").WindowBounds is null);
+            AssertEqual(true, normal.Inspect(false).All(entry => !entry.Visible && entry.WindowBounds is null));
             var compact = style.Arrange(800, 500, 40);
             AssertEqual(compact.Area("body/actions/open").Y, compact.Area("body/actions/create").Y);
             AssertEqual(true, compact.Area("body/actions/create").X > compact.Area("body/actions/open").X);
+            AssertEqual(true, compact.Inspect(true).Single(entry => entry.Path == "/events/compact/body/actions/open").Visible);
+            AssertEqual(false, compact.Inspect(true).Single(entry => entry.Path == "/events/regular/body/actions/open").Visible);
             foreach (var size in new[] { (1280d, 800d), (800d, 500d), (100d, 100d), (0d, 0d) })
             {
                 var layout = style.Arrange(size.Item1, size.Item2, 40);
@@ -66,6 +79,8 @@ internal static partial class Program
             AssertEqual(false, style.Update(TimeSpan.FromMilliseconds(500), true));
             AssertEqual(true, style.Update(TimeSpan.FromMilliseconds(500), true));
             AssertEqual(60d, style.Arrange(1280, 800, 40).Area("title").X);
+            AssertEqual(60d, style.Arrange(1280, 800, 40).Inspect(true)
+                .Single(entry => entry.Path == "/events/regular/title").WindowBounds!.Value.X);
             AssertEqual(60d, new EventListStyle(path).Arrange(1280, 800, 40).Area("title").X);
 
             foreach (var bad in new[] { "{", changed.Replace("\"open\"", "\"missingOpen\""),

@@ -203,6 +203,7 @@ public sealed partial class VenueEditorGame : Game
         using var updateTiming = performance?.Measure("update");
         statusHintTime = gameTime.TotalGameTime.TotalSeconds;
         eventStyle.Update(gameTime.ElapsedGameTime, settings!.Current.StyleAutoReload);
+        UpdateDeveloperWindow(gameTime, Keyboard.GetState(), IsActive);
         pollBackgroundOperation?.Invoke();
         if (!ShowsStatusHintTimer) statusHintContext = null;
         try
@@ -4050,6 +4051,7 @@ public sealed partial class VenueEditorGame : Game
     {
         if (disposing)
         {
+            developerWindow.Dispose();
             FinishBackgroundOperation();
             textInputService?.Dispose();
             DisposeOptimization();

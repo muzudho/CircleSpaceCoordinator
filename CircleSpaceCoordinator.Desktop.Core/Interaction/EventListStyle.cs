@@ -1,6 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 using System.Text.Json;
+using StationeryUI.Inspection;
 using StationeryUI.Canvas;
 using StationeryUI.Styling;
 
@@ -146,6 +147,39 @@ public sealed class EventListStyle
 
 public sealed class EventListLayout(EventListStyle style, StationeryLayoutResult result, string root, double top)
 {
+    private static readonly IReadOnlyDictionary<string, string> InspectionLabels = new Dictionary<string, string>
+    {
+        [""] = "イベント一覧", ["title"] = "見出し", ["description"] = "説明", ["body"] = "本文",
+        ["body/list"] = "イベント一覧の表示領域", ["body/actions"] = "操作欄",
+        ["reload"] = "スタイル設定のオートリロード", ["error"] = "スタイル設定の状態", ["footer"] = "操作案内",
+        ["body/actions/open"] = "開く", ["body/actions/create"] = "新規作成", ["body/actions/edit"] = "編集",
+        ["body/actions/register"] = "既存ファイルを登録", ["body/actions/duplicate"] = "複製",
+        ["body/actions/confidential"] = "マル秘に設定", ["body/actions/up"] = "上へ", ["body/actions/down"] = "下へ",
+        ["body/actions/remove"] = "一覧から除外", ["body/actions/exit"] = "終了",
+    };
+
+    /// <summary>Report registered models; inactive variants and templates have no live screen bounds.</summary>
+    public IReadOnlyList<StationeryInspectionEntry> Inspect(bool pageVisible)
+    {
+        var entries = new List<StationeryInspectionEntry>();
+        void Visit(StationeryNode node)
+        {
+            var isRoot = node.Path == "/events";
+            var inVariant = node.Path == root || node.Path.StartsWith(root + "/", StringComparison.Ordinal);
+            var relative = inVariant ? node.Path[root.Length..].TrimStart('/') : "";
+            var connected = isRoot || inVariant && InspectionLabels.ContainsKey(relative);
+            var visible = pageVisible && connected;
+            ScreenRectangle? bounds = visible ? result.ContentBounds[node.Path] with { Y = result.ContentBounds[node.Path].Y + top } : null;
+            var label = isRoot ? "イベント一覧（登録済みモデル）" : inVariant && InspectionLabels.TryGetValue(relative, out var name)
+                ? name : node.Path.StartsWith("/events/rowTemplate", StringComparison.Ordinal)
+                    ? node.Id + "（行のひな型・表示実体なし）" : node.Id;
+            entries.Add(new(node.Id, node.Path, node.Parent?.Path, node.Kind, label, visible, bounds));
+            foreach (var child in node.Children) Visit(child);
+        }
+        Visit(style.Current.Models[0].CreateTree());
+        return entries;
+    }
+
     private readonly StationeryLayoutResult rowTemplate = StationeryLayoutEngine.Arrange(style.Current,
         result.ContentBounds[root + "/body/list"].Width, style.RowStride);
     public ScreenRectangle Area(string name)
