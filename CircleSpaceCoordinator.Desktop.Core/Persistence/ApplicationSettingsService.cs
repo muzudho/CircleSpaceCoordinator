@@ -36,6 +36,7 @@ public sealed record ApplicationSettings(
     public string? BackupDirectory { get; init; }
     public int BackupGenerations { get; init; } = 10;
     public string Handle { get; init; } = "";
+    public bool StyleAutoReload { get; init; } = true;
     // Read the previous settings key; subsequent saves use only "handle".
     [JsonPropertyName("workerName")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -64,6 +65,14 @@ public sealed class ApplicationSettingsService
     }
 
     public ApplicationSettings Current { get; private set; }
+    public string DirectoryPath => Path.GetDirectoryName(settingsPath)!;
+
+    public void SaveStyleAutoReload(bool enabled)
+    {
+        var next = Current with { StyleAutoReload = enabled };
+        SavePointStore.AtomicWrite(settingsPath, JsonSerializer.Serialize(next, JsonOptions));
+        Current = next;
+    }
     public void SaveHandle(string name)
     {
         name = CircleSpaceCoordinator.Core.Model.PersonCredits.NormalizeHandle(name);
@@ -237,6 +246,7 @@ public sealed class ApplicationSettingsService
             {
                 SchemaVersion = "1.1",
                 Handle = NormalizeHandle(loaded.Handle),
+                StyleAutoReload = loaded.StyleAutoReload,
                 BackupDirectory = string.IsNullOrWhiteSpace(loaded.BackupDirectory) ? null : Path.GetFullPath(loaded.BackupDirectory),
                 BackupGenerations = loaded.BackupGenerations is >= 1 and <= 1000 ? loaded.BackupGenerations : 10,
             };

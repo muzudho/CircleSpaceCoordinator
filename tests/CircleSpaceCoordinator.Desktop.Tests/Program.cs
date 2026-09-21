@@ -24,6 +24,7 @@ internal static partial class Program
         CircleSpaceCoordinator.EditorClient.EditorConnection.Current = connection;
         var tests = new (string Name, Action Run)[]
         {
+            ("Event styles resize, reload safely, preserve edits and persist the reload policy", EventStyleReloadAndSettings),
             ("Startup timing reports disjoint stages totaling 100 percent exactly once", StartupRecording),
             ("Performance diagnostics record nested phases, memory and timing aggregates without UI file I/O", PerformanceRecording),
             ("Event metadata loads only selected files, caches per session and retries failures", LazyEventMetadata),

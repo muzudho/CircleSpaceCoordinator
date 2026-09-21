@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <EmbeddedResource Include="Styles/events.stationery-style.json" LogicalName="CircleSpaceCoordinator.EventListStyle.json" />
+    <None Update="Styles/events.stationery-style.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../CircleSpaceCoordinator.EditorClient/CircleSpaceCoordinator.EditorClient.csproj" />
     <ProjectReference Include="../CircleSpaceCoordinator.TableIO/CircleSpaceCoordinator.TableIO.csproj" />
     <ProjectReference Include="../CircleSpaceCoordinator.StationeryUI/CircleSpaceCoordinator.StationeryUI.csproj" />

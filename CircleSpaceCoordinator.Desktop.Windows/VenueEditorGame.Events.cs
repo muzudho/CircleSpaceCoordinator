@@ -24,11 +24,35 @@ public sealed partial class VenueEditorGame
     private DateTime lastEventClickAt;
     private EventProjectCatalogService EventCatalog => new(settings!);
     private EventListEntry? SelectedEvent => eventProjects.ElementAtOrDefault(eventSelection);
-    private int EventRows => Math.Max(1, (GraphicsDevice.Viewport.Height - WorkerBarHeight - 220) / 64);
-    private int EventActionColumns => GraphicsDevice.Viewport.Height < 560 ? 2 : 1;
-    private double EventSidebarWidth => EventActionColumns == 2 ? 280 : 188;
-    private ScreenRectangle EventRowBounds(int row) => new(24, 108 + WorkerBarHeight + row * 64,
-        Math.Max(100, GraphicsDevice.Viewport.Width - EventSidebarWidth - 72), 58);
+    private EventListStyle eventStyle = null!;
+    private EventListLayout? eventLayout;
+    private int eventLayoutWidth = -1, eventLayoutHeight = -1, eventLayoutRevision = -1;
+    private EventListLayout EventLayout
+    {
+        get
+        {
+            var width = GraphicsDevice.Viewport.Width;
+            var height = GraphicsDevice.Viewport.Height;
+            if (eventLayout is null || eventLayoutWidth != width || eventLayoutHeight != height || eventLayoutRevision != eventStyle.Revision)
+            {
+                eventLayout = eventStyle.Arrange(width, height, WorkerBarHeight);
+                eventLayoutWidth = width;
+                eventLayoutHeight = height;
+                eventLayoutRevision = eventStyle.Revision;
+                eventWidth = -1;
+            }
+            return eventLayout;
+        }
+    }
+    private int EventRows => EventLayout.VisibleRows;
+    private ScreenRectangle EventRowBounds(int row) => EventLayout.Row(row);
+
+    private void ToggleStyleAutoReload()
+    {
+        settings!.SaveStyleAutoReload(!settings.Current.StyleAutoReload);
+        eventStyle.Update(TimeSpan.Zero, settings.Current.StyleAutoReload);
+        eventWidth = -1;
+    }
 
     private void RefreshEventProjects(string? selectedPath = null)
     {
@@ -55,6 +79,7 @@ public sealed partial class VenueEditorGame
 
     private void EnsureEventButtons()
     {
+        var layout = EventLayout;
         if (eventWidth == GraphicsDevice.Viewport.Width && eventHeight == GraphicsDevice.Viewport.Height) return;
         eventWidth = GraphicsDevice.Viewport.Width;
         eventHeight = GraphicsDevice.Viewport.Height;
@@ -65,12 +90,7 @@ public sealed partial class VenueEditorGame
         var usable = selected is { Exists: true, Error: null };
         void Add(string label, Action execute, bool enabled = true)
         {
-            var columns = EventActionColumns;
-            var rows = (10 + columns - 1) / columns;
-            var step = Math.Clamp((eventHeight - WorkerBarHeight - 164d) / rows, 30, 44);
-            var width = (EventSidebarWidth - (columns - 1) * 12) / columns;
-            var bounds = new ScreenRectangle(eventWidth - 24 - EventSidebarWidth + (eventButtons.Count % columns) * (width + 12),
-                108 + WorkerBarHeight + eventButtons.Count / columns * step, width, step - 6);
+            var bounds = layout.Area("body/actions/" + EventListStyle.Actions[eventButtons.Count]);
             eventButtons.Add((new IconButtonModel(bounds, label) { IsEnabled = enabled && !eventStartupLoading }, execute));
         }
         Add("開く", () => { if (SelectedEvent is { } item) OpenEventProject(item.Project.Path); }, usable);
@@ -83,6 +103,9 @@ public sealed partial class VenueEditorGame
         Add("下へ", () => MoveEvent(1), eventSelection < eventProjects.Count - 1);
         Add("一覧から除外", RemoveEvent, selected is not null);
         Add("終了", Exit);
+        eventButtons.Add((new IconButtonModel(layout.Area("reload"),
+            "スタイル設定のオートリロード：" + (settings!.Current.StyleAutoReload ? "有効" : "無効"))
+            { IsEnabled = !eventStartupLoading }, ToggleStyleAutoReload));
         if (eventFocus >= eventButtons.Count) eventFocus = -1;
     }
 
@@ -109,7 +132,7 @@ public sealed partial class VenueEditorGame
             {
                 eventSelection = next;
                 InspectSelectedEvent();
-                eventScroll = Math.Clamp(eventScroll, Math.Max(0, next - EventRows + 1), next);
+                eventScroll = Math.Clamp(eventScroll, Math.Max(0, next - Math.Max(1, EventRows) + 1), next);
                 eventWidth = -1;
                 EnsureEventButtons();
             }
@@ -156,8 +179,8 @@ public sealed partial class VenueEditorGame
         EnsureEventButtons();
         void Text(string text, ScreenRectangle bounds, int size = 18, bool bold = false) =>
             textRenderer?.Draw(text, ToRectangle(bounds), Color.White, size, bold);
-        Text("イベントプロジェクト一覧", new(24, 22 + WorkerBarHeight, GraphicsDevice.Viewport.Width - 48, 42), 28, true);
-        Text("この版から編集は自動保存されます。［プロジェクト］の［すぐ保存］／［セーブポイント］も利用できます。", new(24, 68 + WorkerBarHeight, GraphicsDevice.Viewport.Width - 48, 28));
+        Text("イベントプロジェクト一覧", EventLayout.Area("title"), 28, true);
+        Text("この版から編集は自動保存されます。［プロジェクト］の［すぐ保存］／［セーブポイント］も利用できます。", EventLayout.Area("description"));
         for (var row = 0; row < EventRows && eventScroll + row < eventProjects.Count; row++)
         {
             var index = eventScroll + row;
@@ -169,18 +192,18 @@ public sealed partial class VenueEditorGame
                 (area, color) => DrawRectangle(area, ToButtonColor(color)),
                 (area, thickness, color) => DrawOutline(area, thickness, ToButtonColor(color)), (_, _) => { });
             if (!eventStartupLoading && eventFocus < 0 && index == eventSelection) DrawOutline(bounds, 2, OperationTargetColor);
-            Text((item.Confidential == true ? "（秘） " : "") + item.Project.DisplayName, new(bounds.X + 10, bounds.Y + 5, bounds.Width - 20, 24), 19, true);
+            Text((item.Confidential == true ? "（秘） " : "") + item.Project.DisplayName, EventLayout.Row(row, "/title"), 19, true);
             var detail = !item.Exists ? "ファイルが見つかりません：" + item.Project.Path : item.Error ?? (item.Confidential is null ? "未確認：" : "") + item.Project.Path;
-            var maxCharacters = Math.Max(12, (int)((bounds.Width - 20) / 8));
+            var maxCharacters = Math.Max(12, (int)(EventLayout.Row(row, "/detail").Width / 8));
             if (detail.Length > maxCharacters)
             {
                 var prefix = maxCharacters / 3;
                 detail = detail[..prefix] + "…" + detail[^(maxCharacters - prefix - 1)..];
             }
             Text(detail,
-                new(bounds.X + 10, bounds.Y + 31, bounds.Width - 20, 20), 13);
+                EventLayout.Row(row, "/detail"), 13);
         }
-        if (eventProjects.Count == 0) Text("イベントはまだありません。［新規作成］または［既存ファイルを登録］を選んでください。", EventRowBounds(0));
+        if (eventProjects.Count == 0) Text("イベントはまだありません。［新規作成］または［既存ファイルを登録］を選んでください。", EventLayout.Area("body/list"));
         for (var index = 0; index < eventButtons.Count; index++)
         {
             var button = eventButtons[index].Button;
@@ -192,15 +215,15 @@ public sealed partial class VenueEditorGame
             if (eventFocus == index && button.IsEnabled) DrawOutline(button.Bounds, 2, OperationTargetColor);
         }
         Text($"{eventProjects.Count} 件　↑↓：選択　Enter：開く　Tab：操作へ移動　ホイール：スクロール",
-            new(24, GraphicsDevice.Viewport.Height - 48, GraphicsDevice.Viewport.Width - 48, 28), 16);
+            EventLayout.Area("footer"), 16);
+        Text(eventStyle.LastError is { } error ? "スタイル設定エラー（直前の配置を維持）：" + error
+            : "スタイル設定：" + eventStyle.FilePath, EventLayout.Area("error"), 13);
         if (eventStartupLoading) DrawEventStartupSpinner();
     }
 
     private void DrawEventStartupSpinner()
     {
-        var firstRow = EventRowBounds(0);
-        var area = new ScreenRectangle(firstRow.X, firstRow.Y, firstRow.Width,
-            Math.Max(58, GraphicsDevice.Viewport.Height - 64 - firstRow.Y));
+        var area = EventLayout.Area("body/list");
         DrawRectangle(area, new Color(12, 18, 28, 150));
         var center = new ScreenPoint(area.X + area.Width / 2, area.Y + area.Height / 2 - 16);
         // A time-based ring keeps animating while engine startup runs on the worker thread.

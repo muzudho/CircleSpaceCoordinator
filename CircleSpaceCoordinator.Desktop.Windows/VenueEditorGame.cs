@@ -128,6 +128,7 @@ public sealed partial class VenueEditorGame : Game
         this.projectSavePath = projectSavePath;
         // Names and paths are available before the engines; decode projects only on selection.
         this.settings = settings ?? new ApplicationSettingsService(UserSettingsPaths.PrepareFile("application-settings.json"), deferProjectMetadata: true);
+        eventStyle = new EventListStyle(Path.Combine(this.settings.DirectoryPath, "events.stationery-style.json"));
         dragController = workspace is null ? null : new DeskDragController(workspace, viewport);
         commandController = workspace is null ? null : new EditorCommandController(workspace);
         participantController = workspace is null ? null : new ParticipantPlacementController(workspace);
@@ -201,6 +202,7 @@ public sealed partial class VenueEditorGame : Game
             : modalDialog?.Kind == ModalDialogKind.Text ? "text" : workspace is null ? "events" : "editor");
         using var updateTiming = performance?.Measure("update");
         statusHintTime = gameTime.TotalGameTime.TotalSeconds;
+        eventStyle.Update(gameTime.ElapsedGameTime, settings!.Current.StyleAutoReload);
         pollBackgroundOperation?.Invoke();
         if (!ShowsStatusHintTimer) statusHintContext = null;
         try
