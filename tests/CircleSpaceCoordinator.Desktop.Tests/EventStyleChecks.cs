@@ -30,6 +30,12 @@ internal static partial class Program
             AssertEqual(true, missing.LastError is not null);
             File.WriteAllText(path, EventListStyle.DefaultJson);
             var style = new EventListStyle(path);
+            using var flatStream = typeof(Program).Assembly.GetManifestResourceStream("EventsFlat.json")!;
+            using var flatReader = new StreamReader(flatStream);
+            var flatPath = Path.Combine(root, "flat.json");
+            File.WriteAllText(flatPath, flatReader.ReadToEnd());
+            var flat = new EventListStyle(flatPath);
+            AssertEqual<string?>(null, flat.LastError);
             AssertEqual(true, File.Exists(path));
             AssertEqual<string?>(null, style.LastError);
             var normal = style.Arrange(1280, 800, 40);
@@ -68,9 +74,21 @@ internal static partial class Program
             AssertEqual(true, compact.Area("body/actions/create").X > compact.Area("body/actions/open").X);
             AssertEqual(true, compact.Inspect(true).Single(entry => entry.Path == "/events/compact/body/actions/open").Visible);
             AssertEqual(false, compact.Inspect(true).Single(entry => entry.Path == "/events/regular/body/actions/open").Visible);
-            foreach (var size in new[] { (1280d, 800d), (800d, 500d), (100d, 100d), (0d, 0d) })
+            AssertEqual("regularPanel.page.body", style.Current.Layouts.Single(node => node.Path == "regularPanel.page.body.actions").ParentPath);
+            AssertEqual("compactPanel.page.body", style.Current.Layouts.Single(node => node.Path == "compactPanel.page.body.actions").ParentPath);
+            AssertEqual("eventRow.padding", style.Current.Layouts.Single(node => node.Path == "eventRow.padding.text").ParentPath);
+            foreach (var size in new[] { (1920d, 1080d), (1280d, 800d), (1280d, 714d), (1280d, 713d), (800d, 500d), (100d, 100d), (0d, 0d) })
             {
                 var layout = style.Arrange(size.Item1, size.Item2, 40);
+                var before = flat.Arrange(size.Item1, size.Item2, 40);
+                AssertEqual(before.VisibleRows, layout.VisibleRows);
+                foreach (var area in new[] { "title", "description", "body", "body/list", "body/actions", "reload", "error", "footer" }
+                    .Concat(EventListStyle.Actions.Select(action => "body/actions/" + action)))
+                    SameBounds(before.Area(area), layout.Area(area));
+                foreach (var part in new[] { "", "/title", "/detail" })
+                    SameBounds(before.Row(2, part), layout.Row(2, part));
+                foreach (var entry in layout.Inspect(true).Where(entry => entry.Visible))
+                    SameBounds(before.Inspect(true).Single(old => old.Path == entry.Path).WindowBounds!.Value, entry.WindowBounds!.Value);
                 AssertEqual(true, layout.VisibleRows >= 0);
                 if (layout.VisibleRows > 0)
                 {
@@ -100,8 +118,25 @@ internal static partial class Program
                 .Single(entry => entry.Path == "/events/regular/title").WindowBounds!.Value.X);
             AssertEqual(60d, new EventListStyle(path).Arrange(1280, 800, 40).Area("title").X);
 
+            // Editing a nested parent's track moves its buttons and their inspection bounds.
+            var body = panel["children"]![0]!["children"]![0]!;
+            body["column-definitions"]![2] = "260px";
+            File.WriteAllText(path, json.ToJsonString());
+            AssertEqual(false, style.Update(TimeSpan.FromMilliseconds(500), true));
+            AssertEqual(true, style.Update(TimeSpan.FromMilliseconds(500), true));
+            var resized = style.Arrange(1280, 800, 40);
+            AssertEqual(260d, resized.Area("body/actions").Width);
+            AssertEqual(260d, resized.Area("body/actions/open").Width);
+            SameBounds(resized.Area("body/actions/open"), resized.Inspect(true)
+                .Single(entry => entry.Path == "/events/regular/body/actions/open").WindowBounds!.Value);
+            body["column-definitions"]![2] = "224px";
+            body["row"] = 0; // Overlaps the title cell; reject without replacing the live layout.
+            var overlapping = json.ToJsonString();
+            body["row"] = 4;
+
             foreach (var bad in new[] { "{", changed.Replace("\"open\"", "\"missingOpen\""),
-                changed.Replace("\"58px\"", "\"0px\"") })
+                changed.Replace("\"58px\"", "\"0px\""), overlapping,
+                changed.Replace("regularPanel.page.body.actions", "regularPanel.page.missing.actions") })
             {
                 previous = style.Current;
                 File.WriteAllText(path, bad);
@@ -115,6 +150,7 @@ internal static partial class Program
             AssertEqual(24d, fallback.Arrange(1280, 800, 40).Area("title").X);
             AssertEqual(true, File.ReadAllText(path) != EventListStyle.DefaultJson); // Invalid user edits are never overwritten.
             File.WriteAllText(path, changed);
+            style.Update(TimeSpan.FromMilliseconds(500), true);
             style.Update(TimeSpan.FromMilliseconds(500), true);
             AssertEqual<string?>(null, style.LastError);
             settings.SaveStyleAutoReload(true);
@@ -151,5 +187,12 @@ internal static partial class Program
             AssertEqual(true, settings.Current.StyleAutoReload);
         }
         finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private static void SameBounds(StationeryUI.Canvas.ScreenRectangle expected, StationeryUI.Canvas.ScreenRectangle actual)
+    {
+        if (Math.Abs(expected.X - actual.X) > .000001 || Math.Abs(expected.Y - actual.Y) > .000001 ||
+            Math.Abs(expected.Width - actual.Width) > .000001 || Math.Abs(expected.Height - actual.Height) > .000001)
+            throw new Exception($"Layout changed: expected {expected}, actual {actual}.");
     }
 }

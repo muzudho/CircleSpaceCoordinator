@@ -26,16 +26,20 @@ JSON の解析や必須モデルの検証に失敗した場合は、直前の正
 
 形式は文房具 UI の `models` / `layouts` / `bindings` です。最初は `layouts` だけを編集してください。
 
-| layout の Id | 調整対象 |
+| layout の完全パス | 調整対象 |
 | --- | --- |
 | `regularPanel` / `compactPanel` | ページ外周の余白 |
-| `regularPage` / `compactPage` | 見出し・説明・本文・リロードボタン・状態表示・下部案内の高さと間隔 |
-| `regularBody` / `compactBody` | 一覧と操作欄の幅、両者の間隔 |
-| `regularActions` / `compactActions` | 操作ボタンの寸法、行・列の間隔 |
+| `regularPanel.page` / `compactPanel.page` | 見出し・説明・本文・リロードボタン・状態表示・下部案内の高さと間隔 |
+| `regularPanel.page.body` / `compactPanel.page.body` | 一覧と操作欄の幅、両者の間隔 |
+| `regularPanel.page.body.actions` / `compactPanel.page.body.actions` | 操作ボタンの寸法、行・列の間隔 |
 | `eventRow` | 一覧の行高と行間（2行とも px 指定。先頭は1px以上） |
-| `eventRowPadding` / `eventRowText` | 一覧行内部の余白と、イベント名・パスの配置 |
+| `eventRow.padding` / `eventRow.padding.text` | 一覧行内部の余白と、イベント名・パスの配置 |
 
-例えば通常表示の操作欄の幅は、`regularBody` の `column-definitions` の末尾にある `224px` を変更します。外周の左余白は `regularPanel.padding.left` です。
+例えば通常表示の操作欄の幅は、`regularPanel` → `children` の `page` → `children` の `body` にある `column-definitions` の末尾の `224px` を変更します。外周の左余白は `regularPanel.padding.left` です。
+
+StationeryUI v0.2.0 の `children` でレイアウトをネストしています。トップレベルは通常表示・コンパクト表示・行ひな型の3本です。ボックスの子は余白の内側を使い、グリッドの子は自身の `row` / `col` で親のセルを指定します。`page` の本文は4行目、本文の操作欄は2列目です（いずれも0始まり）。行ひな型の `padding` は `eventRow` の0行目を使います。
+
+`bindings.layout` はドット区切りの完全パスを指定します。同じレイアウトツリーの binding は `parentModel` を揃え、通常表示なら `/events/regular`、コンパクト表示なら `/events/compact` を基準に、`body/actions/open` などの子孫へ接続します。子レイアウトが使うセルにモデルも重ねて配置するとエラーになります。`body`・`actions`・行の `item` の領域は、アプリが対応する子レイアウトの計算結果から取得します。
 
 通常配置の操作欄の高さが固定行の合計に足りない場合、`compact` の配置を使用します。両方の配置を編集してください。`rowTemplate` は一覧行のひな型で、C# が表示可能な行数だけ繰り返して配置します。
 
@@ -53,4 +57,4 @@ JSON の解析や必須モデルの検証に失敗した場合は、直前の正
 
 配置計算には文房具 UI の `StationeryStyleSettings` と `StationeryLayoutEngine` を使用します。監視は `EventListStyle` が担当し、既存のアプリケーション設定を唯一の有効／無効設定として参照します。文房具 UI の `StationeryStyleFile` が読む別の `*.stationery-config.json` は作成しません。画面操作で即座に監視方針を反映し、二重管理を避けています。
 
-StationeryUI / MonoGame / Windows はコミット `5130fff6a5cf18aa2559f33388bcc104b3aa1d05` から作ったローカルパッケージ `0.1.2-csc.5130fff` に固定しています。F12 で既存の文房具 UI 開発者ウィンドウを開き、モデルの Id・完全パス・実画面の座標を確認できます。[開発者ウィンドウの説明](Dev/StyleSettings/developer-window.md)を参照してください。
+StationeryUI / MonoGame / Windows は NuGet.org 公開版 `0.2.0` を使用します。F12 で文房具 UI 開発者ウィンドウを開き、モデルの Id・完全パス・実画面の座標を確認できます。[開発者ウィンドウの説明](Dev/StyleSettings/developer-window.md)を参照してください。

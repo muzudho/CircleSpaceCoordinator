@@ -110,24 +110,29 @@ public sealed class EventListStyle
         {
             var path = "/events/" + variant;
             Require(path, "container", false);
-            foreach (var child in new[] { "title", "description", "body", "body/list", "body/actions", "error", "footer" }) Require(path + "/" + child, "container");
+            foreach (var child in new[] { "title", "description", "body/list", "error", "footer" }) Require(path + "/" + child, "container");
+            Require(path + "/body", "container", false);
+            Require(path + "/body/actions", "container", false);
             Require(path + "/reload", "button");
             foreach (var action in Actions) Require(path + "/body/actions/" + action, "button");
-            if (!style.Bindings.Any(binding => binding.ModelPath == path + "/body/actions" &&
-                style.Layouts.Any(layout => layout.Path == binding.Layout && layout.Type == "grid-layout")))
-                throw new JsonException($"操作欄の grid-layout が必要です: {path}/body/actions");
+            _ = GroupLayout(style, path + "/body/list");
+            _ = GroupLayout(style, path + "/body/actions/open");
         }
         Require("/events/rowTemplate", "container", false);
-        foreach (var child in new[] { "item", "item/title", "item/detail" }) Require("/events/rowTemplate/" + child, "container");
+        Require("/events/rowTemplate/item", "container", false);
+        foreach (var child in new[] { "item/title", "item/detail" }) Require("/events/rowTemplate/" + child, "container");
         var rows = style.Layouts.SingleOrDefault(layout => layout.Path == "eventRow");
         if (rows is null || rows.Type != "grid-layout" || rows.Rows.Count != 2 || rows.Rows.Any(row => row.IsRate) ||
             rows.Rows[0].Value < 1 || !double.IsFinite(rows.Rows.Sum(row => row.Value)) ||
-            !style.Bindings.Any(binding => binding.Layout == "eventRow" && binding.ModelPath == "/events/rowTemplate" &&
-                binding.Children.Any(child => child.ModelPath == "/events/rowTemplate/item" && child.Row == 0)))
+            !(style.Bindings.Any(binding => binding.Layout == "eventRow" && binding.ModelPath == "/events/rowTemplate" &&
+                binding.Children.Any(child => child.ModelPath == "/events/rowTemplate/item" && child.Row == 0)) ||
+              rows.Children is [ { Type: "box-layout", Row: 0, Column: 0, RowSpan: 1, ColumnSpan: 1 } padding ] &&
+              GroupLayout(style, "/events/rowTemplate/item/title") is var rowText &&
+              rowText.Binding.ModelPath == "/events/rowTemplate" && rowText.Layout.ParentPath == padding.Path))
             throw new JsonException("eventRow は行の高さ (1px 以上) と行間の2行を px で指定してください。");
         foreach (var size in new[] { (1280d, 680d), (800d, 480d), (0d, 0d) })
         {
-            var result = StationeryLayoutEngine.Arrange(style, size.Item1, size.Item2);
+            var result = ArrangeModels(style, size.Item1, size.Item2);
             if (result.Bounds.Values.Concat(result.ContentBounds.Values).Any(box =>
                 !double.IsFinite(box.X) || !double.IsFinite(box.Y) || !double.IsFinite(box.Width) || !double.IsFinite(box.Height)))
                 throw new JsonException("配置寸法が大きすぎます。");
@@ -136,12 +141,49 @@ public sealed class EventListStyle
 
     public EventListLayout Arrange(double width, double height, double top)
     {
-        var result = StationeryLayoutEngine.Arrange(Current, Math.Max(0, width), Math.Max(0, height - top));
-        var actions = Current.Bindings.Single(binding => binding.ModelPath == "/events/regular/body/actions" &&
-            Current.Layouts.Any(layout => layout.Path == binding.Layout && layout.Type == "grid-layout"));
-        var desiredHeight = Current.Layouts.Single(layout => layout.Path == actions.Layout).Rows.Where(row => !row.IsRate).Sum(row => row.Value);
+        var result = ArrangeModels(Current, Math.Max(0, width), Math.Max(0, height - top));
+        var actions = GroupLayout(Current, "/events/regular/body/actions/open").Layout;
+        var desiredHeight = actions.Rows.Where(row => !row.IsRate).Sum(row => row.Value);
         return new(this, result, result.ContentBounds["/events/regular/body/actions"].Height < desiredHeight
             ? "/events/compact" : "/events/regular", top);
+    }
+
+    private static (StationeryLayoutBinding Binding, StationeryLayoutNode Layout) GroupLayout(StationeryStyleSettings style, string childPath)
+    {
+        var binding = style.Bindings.SingleOrDefault(binding => binding.Children.Any(child => child.ModelPath == childPath))
+            ?? throw new JsonException($"配置がありません: {childPath}");
+        var layout = style.Layouts.Single(layout => layout.Path == binding.Layout);
+        if (layout.Type != "grid-layout") throw new JsonException($"grid-layout が必要です: {childPath}");
+        return (binding, layout);
+    }
+
+    // Nested layouts place leaf models directly. Give the application's grouping models
+    // the matching layout rectangles too, for hit testing, scrolling and F12 inspection.
+    internal static StationeryLayoutResult ArrangeModels(StationeryStyleSettings style, double width, double height)
+    {
+        var result = StationeryLayoutEngine.Arrange(style, width, height);
+        var bounds = result.Bounds.ToDictionary();
+        var contents = result.ContentBounds.ToDictionary();
+        void Group(string path, string child, bool padded = false)
+        {
+            if (style.Bindings.Any(binding => binding.Children.Any(cell => cell.ModelPath == path))) return; // Flat settings.
+            var (binding, layout) = GroupLayout(style, path + "/" + child);
+            if (padded)
+                layout = style.Layouts.SingleOrDefault(candidate => candidate.Path == layout.ParentPath && candidate.Type == "box-layout")
+                    ?? throw new JsonException($"行の box-layout が必要です: {path}");
+            if (layout.ParentPath is null || binding.ModelPath == path)
+                throw new JsonException($"ネストした配置が必要です: {path}");
+            var key = binding.ModelPath + ":" + layout.Path;
+            bounds[path] = result.LayoutBounds[key];
+            contents[path] = result.LayoutContentBounds[key];
+        }
+        foreach (var variant in new[] { "regular", "compact" })
+        {
+            Group($"/events/{variant}/body", "list");
+            Group($"/events/{variant}/body/actions", "open");
+        }
+        Group("/events/rowTemplate/item", "title", padded: true);
+        return result with { Bounds = bounds, ContentBounds = contents };
     }
 }
 
@@ -180,7 +222,7 @@ public sealed class EventListLayout(EventListStyle style, StationeryLayoutResult
         return entries;
     }
 
-    private readonly StationeryLayoutResult rowTemplate = StationeryLayoutEngine.Arrange(style.Current,
+    private readonly StationeryLayoutResult rowTemplate = EventListStyle.ArrangeModels(style.Current,
         result.ContentBounds[root + "/body/list"].Width, style.RowStride);
     public ScreenRectangle Area(string name)
     {

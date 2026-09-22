@@ -9,4 +9,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures/events-flat.json" LogicalName="EventsFlat.json" />
+  </ItemGroup>
 </Project>
