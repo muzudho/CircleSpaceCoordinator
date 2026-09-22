@@ -193,296 +193,284 @@
   ],
   "layouts": [
     {
-      "id": "regularPanel",
-      "type": "box-layout",
+      "id": "regularPage",
+      "type": "grid-layout",
+      "row-definitions": [
+        "42px",
+        "4px",
+        "28px",
+        "12px",
+        "1rate",
+        "12px",
+        "38px",
+        "6px",
+        "24px",
+        "28px"
+      ],
+      "column-definitions": [
+        "1rate"
+      ],
+      "cells": [
+        {
+          "row": 0,
+          "col": 0
+        },
+        {
+          "row": 2,
+          "col": 0
+        },
+        {
+          "row": 4,
+          "col": 0
+        },
+        {
+          "row": 6,
+          "col": 0
+        },
+        {
+          "row": 8,
+          "col": 0
+        },
+        {
+          "row": 9,
+          "col": 0
+        }
+      ],
       "padding": {
         "top": "22px",
         "right": "24px",
         "bottom": "20px",
         "left": "24px"
-      },
-      "children": [
+      }
+    },
+    {
+      "id": "regularBody",
+      "type": "grid-layout",
+      "row-definitions": [
+        "1rate"
+      ],
+      "column-definitions": [
+        "1rate",
+        "24px",
+        "224px"
+      ],
+      "cells": [
         {
-          "id": "page",
-          "type": "grid-layout",
-          "row-definitions": [
-            "42px",
-            "4px",
-            "28px",
-            "12px",
-            "1rate",
-            "12px",
-            "38px",
-            "6px",
-            "24px",
-            "28px"
-          ],
-          "column-definitions": [
-            "1rate"
-          ],
-          "children": [
-            {
-              "id": "body",
-              "type": "grid-layout",
-              "row-definitions": [
-                "1rate"
-              ],
-              "column-definitions": [
-                "1rate",
-                "24px",
-                "224px"
-              ],
-              "row": 4,
-              "col": 0,
-              "children": [
-                {
-                  "id": "actions",
-                  "type": "grid-layout",
-                  "row-definitions": [
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "1rate"
-                  ],
-                  "column-definitions": [
-                    "1rate"
-                  ],
-                  "row": 0,
-                  "col": 2,
-                  "cells": [
-                    {
-                      "row": 0,
-                      "col": 0
-                    },
-                    {
-                      "row": 2,
-                      "col": 0
-                    },
-                    {
-                      "row": 4,
-                      "col": 0
-                    },
-                    {
-                      "row": 6,
-                      "col": 0
-                    },
-                    {
-                      "row": 8,
-                      "col": 0
-                    },
-                    {
-                      "row": 10,
-                      "col": 0
-                    },
-                    {
-                      "row": 12,
-                      "col": 0
-                    },
-                    {
-                      "row": 14,
-                      "col": 0
-                    },
-                    {
-                      "row": 16,
-                      "col": 0
-                    },
-                    {
-                      "row": 18,
-                      "col": 0
-                    }
-                  ]
-                }
-              ],
-              "cells": [
-                {
-                  "row": 0,
-                  "col": 0
-                }
-              ]
-            }
-          ],
-          "cells": [
-            {
-              "row": 0,
-              "col": 0
-            },
-            {
-              "row": 2,
-              "col": 0
-            },
-            {
-              "row": 6,
-              "col": 0
-            },
-            {
-              "row": 8,
-              "col": 0
-            },
-            {
-              "row": 9,
-              "col": 0
-            }
-          ]
+          "row": 0,
+          "col": 0
+        },
+        {
+          "row": 0,
+          "col": 2
         }
       ]
     },
     {
-      "id": "compactPanel",
-      "type": "box-layout",
+      "id": "regularActions",
+      "type": "grid-layout",
+      "row-definitions": [
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "1rate"
+      ],
+      "column-definitions": [
+        "1rate"
+      ],
+      "cells": [
+        {
+          "row": 0,
+          "col": 0
+        },
+        {
+          "row": 2,
+          "col": 0
+        },
+        {
+          "row": 4,
+          "col": 0
+        },
+        {
+          "row": 6,
+          "col": 0
+        },
+        {
+          "row": 8,
+          "col": 0
+        },
+        {
+          "row": 10,
+          "col": 0
+        },
+        {
+          "row": 12,
+          "col": 0
+        },
+        {
+          "row": 14,
+          "col": 0
+        },
+        {
+          "row": 16,
+          "col": 0
+        },
+        {
+          "row": 18,
+          "col": 0
+        }
+      ]
+    },
+    {
+      "id": "compactPage",
+      "type": "grid-layout",
+      "row-definitions": [
+        "42px",
+        "4px",
+        "28px",
+        "12px",
+        "1rate",
+        "12px",
+        "38px",
+        "6px",
+        "24px",
+        "28px"
+      ],
+      "column-definitions": [
+        "1rate"
+      ],
+      "cells": [
+        {
+          "row": 0,
+          "col": 0
+        },
+        {
+          "row": 2,
+          "col": 0
+        },
+        {
+          "row": 4,
+          "col": 0
+        },
+        {
+          "row": 6,
+          "col": 0
+        },
+        {
+          "row": 8,
+          "col": 0
+        },
+        {
+          "row": 9,
+          "col": 0
+        }
+      ],
       "padding": {
         "top": "22px",
         "right": "24px",
         "bottom": "20px",
         "left": "24px"
-      },
-      "children": [
+      }
+    },
+    {
+      "id": "compactBody",
+      "type": "grid-layout",
+      "row-definitions": [
+        "1rate"
+      ],
+      "column-definitions": [
+        "1rate",
+        "24px",
+        "344px"
+      ],
+      "cells": [
         {
-          "id": "page",
-          "type": "grid-layout",
-          "row-definitions": [
-            "42px",
-            "4px",
-            "28px",
-            "12px",
-            "1rate",
-            "12px",
-            "38px",
-            "6px",
-            "24px",
-            "28px"
-          ],
-          "column-definitions": [
-            "1rate"
-          ],
-          "children": [
-            {
-              "id": "body",
-              "type": "grid-layout",
-              "row-definitions": [
-                "1rate"
-              ],
-              "column-definitions": [
-                "1rate",
-                "24px",
-                "344px"
-              ],
-              "row": 4,
-              "col": 0,
-              "children": [
-                {
-                  "id": "actions",
-                  "type": "grid-layout",
-                  "row-definitions": [
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "38px",
-                    "6px",
-                    "1rate"
-                  ],
-                  "column-definitions": [
-                    "1rate",
-                    "12px",
-                    "1rate"
-                  ],
-                  "row": 0,
-                  "col": 2,
-                  "cells": [
-                    {
-                      "row": 0,
-                      "col": 0
-                    },
-                    {
-                      "row": 0,
-                      "col": 2
-                    },
-                    {
-                      "row": 2,
-                      "col": 0
-                    },
-                    {
-                      "row": 2,
-                      "col": 2
-                    },
-                    {
-                      "row": 4,
-                      "col": 0
-                    },
-                    {
-                      "row": 4,
-                      "col": 2
-                    },
-                    {
-                      "row": 6,
-                      "col": 0
-                    },
-                    {
-                      "row": 6,
-                      "col": 2
-                    },
-                    {
-                      "row": 8,
-                      "col": 0
-                    },
-                    {
-                      "row": 8,
-                      "col": 2
-                    }
-                  ]
-                }
-              ],
-              "cells": [
-                {
-                  "row": 0,
-                  "col": 0
-                }
-              ]
-            }
-          ],
-          "cells": [
-            {
-              "row": 0,
-              "col": 0
-            },
-            {
-              "row": 2,
-              "col": 0
-            },
-            {
-              "row": 6,
-              "col": 0
-            },
-            {
-              "row": 8,
-              "col": 0
-            },
-            {
-              "row": 9,
-              "col": 0
-            }
-          ]
+          "row": 0,
+          "col": 0
+        },
+        {
+          "row": 0,
+          "col": 2
+        }
+      ]
+    },
+    {
+      "id": "compactActions",
+      "type": "grid-layout",
+      "row-definitions": [
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "38px",
+        "6px",
+        "1rate"
+      ],
+      "column-definitions": [
+        "1rate",
+        "12px",
+        "1rate"
+      ],
+      "cells": [
+        {
+          "row": 0,
+          "col": 0
+        },
+        {
+          "row": 0,
+          "col": 2
+        },
+        {
+          "row": 2,
+          "col": 0
+        },
+        {
+          "row": 2,
+          "col": 2
+        },
+        {
+          "row": 4,
+          "col": 0
+        },
+        {
+          "row": 4,
+          "col": 2
+        },
+        {
+          "row": 6,
+          "col": 0
+        },
+        {
+          "row": 6,
+          "col": 2
+        },
+        {
+          "row": 8,
+          "col": 0
+        },
+        {
+          "row": 8,
+          "col": 2
         }
       ]
     },
@@ -496,57 +484,45 @@
       "column-definitions": [
         "1rate"
       ],
-      "children": [
+      "cells": [
         {
-          "id": "padding",
-          "type": "box-layout",
-          "padding": {
-            "top": "5px",
-            "right": "10px",
-            "bottom": "7px",
-            "left": "10px"
-          },
           "row": 0,
-          "col": 0,
-          "children": [
-            {
-              "id": "text",
-              "type": "grid-layout",
-              "row-definitions": [
-                "24px",
-                "2px",
-                "20px"
-              ],
-              "column-definitions": [
-                "1rate"
-              ],
-              "cells": [
-                {
-                  "row": 0,
-                  "col": 0
-                },
-                {
-                  "row": 2,
-                  "col": 0
-                }
-              ]
-            }
-          ]
+          "col": 0
         }
       ]
+    },
+    {
+      "id": "eventRowText",
+      "type": "grid-layout",
+      "row-definitions": [
+        "24px",
+        "2px",
+        "20px"
+      ],
+      "column-definitions": [
+        "1rate"
+      ],
+      "cells": [
+        {
+          "row": 0,
+          "col": 0
+        },
+        {
+          "row": 2,
+          "col": 0
+        }
+      ],
+      "padding": {
+        "top": "5px",
+        "right": "10px",
+        "bottom": "7px",
+        "left": "10px"
+      }
     }
   ],
   "bindings": [
     {
-      "layout": "/compactPanel",
-      "model": "/events/compact"
-    },
-    {
-      "layout": "/regularPanel",
-      "model": "/events/regular"
-    },
-    {
-      "layout": "/regularPanel/page",
+      "layout": "/regularPage",
       "parentModel": "/events/regular",
       "childrenModel": [
         {
@@ -560,6 +536,13 @@
           "model": "description",
           "cell": {
             "row": 3,
+            "col": 1
+          }
+        },
+        {
+          "model": "body",
+          "cell": {
+            "row": 5,
             "col": 1
           }
         },
@@ -587,87 +570,94 @@
       ]
     },
     {
-      "layout": "/regularPanel/page/body",
-      "parentModel": "/events/regular",
+      "layout": "/regularBody",
+      "parentModel": "/events/regular/body",
       "childrenModel": [
         {
-          "model": "body/list",
-          "cell": {
-            "row": 1,
-            "col": 1
-          }
-        }
-      ]
-    },
-    {
-      "layout": "/regularPanel/page/body/actions",
-      "parentModel": "/events/regular",
-      "childrenModel": [
-        {
-          "model": "body/actions/open",
+          "model": "list",
           "cell": {
             "row": 1,
             "col": 1
           }
         },
         {
-          "model": "body/actions/create",
+          "model": "actions",
+          "cell": {
+            "row": 1,
+            "col": 3
+          }
+        }
+      ]
+    },
+    {
+      "layout": "/regularActions",
+      "parentModel": "/events/regular/body/actions",
+      "childrenModel": [
+        {
+          "model": "open",
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
+        },
+        {
+          "model": "create",
           "cell": {
             "row": 3,
             "col": 1
           }
         },
         {
-          "model": "body/actions/edit",
+          "model": "edit",
           "cell": {
             "row": 5,
             "col": 1
           }
         },
         {
-          "model": "body/actions/register",
+          "model": "register",
           "cell": {
             "row": 7,
             "col": 1
           }
         },
         {
-          "model": "body/actions/duplicate",
+          "model": "duplicate",
           "cell": {
             "row": 9,
             "col": 1
           }
         },
         {
-          "model": "body/actions/confidential",
+          "model": "confidential",
           "cell": {
             "row": 11,
             "col": 1
           }
         },
         {
-          "model": "body/actions/up",
+          "model": "up",
           "cell": {
             "row": 13,
             "col": 1
           }
         },
         {
-          "model": "body/actions/down",
+          "model": "down",
           "cell": {
             "row": 15,
             "col": 1
           }
         },
         {
-          "model": "body/actions/remove",
+          "model": "remove",
           "cell": {
             "row": 17,
             "col": 1
           }
         },
         {
-          "model": "body/actions/exit",
+          "model": "exit",
           "cell": {
             "row": 19,
             "col": 1
@@ -676,7 +666,7 @@
       ]
     },
     {
-      "layout": "/compactPanel/page",
+      "layout": "/compactPage",
       "parentModel": "/events/compact",
       "childrenModel": [
         {
@@ -690,6 +680,13 @@
           "model": "description",
           "cell": {
             "row": 3,
+            "col": 1
+          }
+        },
+        {
+          "model": "body",
+          "cell": {
+            "row": 5,
             "col": 1
           }
         },
@@ -717,107 +714,127 @@
       ]
     },
     {
-      "layout": "/compactPanel/page/body",
-      "parentModel": "/events/compact",
+      "layout": "/compactBody",
+      "parentModel": "/events/compact/body",
       "childrenModel": [
         {
-          "model": "body/list",
-          "cell": {
-            "row": 1,
-            "col": 1
-          }
-        }
-      ]
-    },
-    {
-      "layout": "/compactPanel/page/body/actions",
-      "parentModel": "/events/compact",
-      "childrenModel": [
-        {
-          "model": "body/actions/open",
+          "model": "list",
           "cell": {
             "row": 1,
             "col": 1
           }
         },
         {
-          "model": "body/actions/create",
+          "model": "actions",
           "cell": {
             "row": 1,
-            "col": 3
-          }
-        },
-        {
-          "model": "body/actions/edit",
-          "cell": {
-            "row": 3,
-            "col": 1
-          }
-        },
-        {
-          "model": "body/actions/register",
-          "cell": {
-            "row": 3,
-            "col": 3
-          }
-        },
-        {
-          "model": "body/actions/duplicate",
-          "cell": {
-            "row": 5,
-            "col": 1
-          }
-        },
-        {
-          "model": "body/actions/confidential",
-          "cell": {
-            "row": 5,
-            "col": 3
-          }
-        },
-        {
-          "model": "body/actions/up",
-          "cell": {
-            "row": 7,
-            "col": 1
-          }
-        },
-        {
-          "model": "body/actions/down",
-          "cell": {
-            "row": 7,
-            "col": 3
-          }
-        },
-        {
-          "model": "body/actions/remove",
-          "cell": {
-            "row": 9,
-            "col": 1
-          }
-        },
-        {
-          "model": "body/actions/exit",
-          "cell": {
-            "row": 9,
             "col": 3
           }
         }
       ]
     },
     {
-      "layout": "/eventRow/padding/text",
+      "layout": "/compactActions",
+      "parentModel": "/events/compact/body/actions",
+      "childrenModel": [
+        {
+          "model": "open",
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
+        },
+        {
+          "model": "create",
+          "cell": {
+            "row": 1,
+            "col": 3
+          }
+        },
+        {
+          "model": "edit",
+          "cell": {
+            "row": 3,
+            "col": 1
+          }
+        },
+        {
+          "model": "register",
+          "cell": {
+            "row": 3,
+            "col": 3
+          }
+        },
+        {
+          "model": "duplicate",
+          "cell": {
+            "row": 5,
+            "col": 1
+          }
+        },
+        {
+          "model": "confidential",
+          "cell": {
+            "row": 5,
+            "col": 3
+          }
+        },
+        {
+          "model": "up",
+          "cell": {
+            "row": 7,
+            "col": 1
+          }
+        },
+        {
+          "model": "down",
+          "cell": {
+            "row": 7,
+            "col": 3
+          }
+        },
+        {
+          "model": "remove",
+          "cell": {
+            "row": 9,
+            "col": 1
+          }
+        },
+        {
+          "model": "exit",
+          "cell": {
+            "row": 9,
+            "col": 3
+          }
+        }
+      ]
+    },
+    {
+      "layout": "/eventRow",
       "parentModel": "/events/rowTemplate",
       "childrenModel": [
         {
-          "model": "item/title",
+          "model": "item",
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
+        }
+      ]
+    },
+    {
+      "layout": "/eventRowText",
+      "parentModel": "/events/rowTemplate/item",
+      "childrenModel": [
+        {
+          "model": "title",
           "cell": {
             "row": 1,
             "col": 1
           }
         },
         {
-          "model": "item/detail",
+          "model": "detail",
           "cell": {
             "row": 3,
             "col": 1
