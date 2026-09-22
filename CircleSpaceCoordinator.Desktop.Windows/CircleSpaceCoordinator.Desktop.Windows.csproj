@@ -33,7 +33,7 @@
           Condition="'$(SmartAppControlSigningEnabled)' == 'true'">
     <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\ForSmartAppControl\Sign-BuildOutput.ps1&quot; -Path &quot;$(TargetDir).&quot;" />
   </Target>
-  <ItemGroup><PackageReference Include="StationeryUI.Windows" Version="0.2.0" /></ItemGroup>
-  <ItemGroup><PackageReference Include="StationeryUI.MonoGame" Version="0.2.0" /></ItemGroup>
+  <ItemGroup><PackageReference Include="StationeryUI.Windows" Version="0.3.0" /></ItemGroup>
+  <ItemGroup><PackageReference Include="StationeryUI.MonoGame" Version="0.3.0" /></ItemGroup>
   <Import Project="../scripts/Build/EngineHosting.targets" />
 </Project>

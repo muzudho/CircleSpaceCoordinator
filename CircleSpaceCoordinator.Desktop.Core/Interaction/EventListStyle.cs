@@ -1,6 +1,7 @@
 namespace CircleSpaceCoordinator.Desktop.Core.Interaction;
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using StationeryUI.Inspection;
 using StationeryUI.Canvas;
 using StationeryUI.Styling;
@@ -22,7 +23,7 @@ public sealed class EventListStyle
     public int Revision { get; private set; }
     public double RowHeight => RowTracks[0].Value;
     public double RowStride => RowTracks.Sum(track => track.Value);
-    private IReadOnlyList<LayoutTrack> RowTracks => Current.Layouts.Single(layout => layout.Path == "eventRow").Rows;
+    private IReadOnlyList<LayoutTrack> RowTracks => Current.Layouts.Single(layout => layout.Path == "/eventRow").Rows;
 
     public static string DefaultJson
     {
@@ -50,7 +51,7 @@ public sealed class EventListStyle
     public EventListStyle(string? filePath = null)
     {
         FilePath = filePath is null ? null : Path.GetFullPath(filePath);
-        Current = StationeryStyleSettings.Parse(DefaultJson);
+        Current = ParseSettings(DefaultJson);
         Validate(Current);
         if (CanAutoReload) Read(stable: false);
     }
@@ -78,7 +79,7 @@ public sealed class EventListStyle
             var text = File.ReadAllText(FilePath!);
             if (text == acceptedText) { pendingText = null; LastError = null; return false; }
             if (stable && text != pendingText) { pendingText = text; return false; }
-            var next = StationeryStyleSettings.Parse(text);
+            var next = ParseSettings(text);
             Validate(next);
             Current = next;
             acceptedText = text;
@@ -96,6 +97,47 @@ public sealed class EventListStyle
     }
 
     private static bool IsReadError(Exception ex) => ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException;
+
+    private static StationeryStyleSettings ParseSettings(string text)
+    {
+        var settings = JsonNode.Parse(text)?.AsObject() ?? throw new JsonException("スタイル設定は JSON オブジェクトである必要があります。");
+        var layouts = settings["layouts"]?.AsArray() ?? throw new JsonException("layouts が必要です。");
+        foreach (var binding in settings["bindings"]?.AsArray().OfType<JsonObject>() ?? [])
+        {
+            var path = binding["layout"]?.GetValue<string>() ?? throw new JsonException("bindings.layout が必要です。");
+            if (!path.StartsWith('/')) { path = "/" + path.Replace('.', '/'); binding["layout"] = path; }
+            var layout = FindLayout(layouts, path[1..].Split('/'));
+            foreach (var child in binding["childrenModel"]?.AsArray().OfType<JsonObject>() ?? [])
+            {
+                if (child["row"] is not JsonValue rowNode || child["column"] is not JsonValue columnNode) continue;
+                var legacyRow = rowNode.GetValue<int>();
+                var legacyColumn = columnNode.GetValue<int>();
+                // Layout cells retain their zero-based grid coordinates; binding cell keys are one-based.
+                var row = legacyRow + 1;
+                var column = legacyColumn + 1;
+                var cells = layout["cells"]?.AsArray() ?? new JsonArray();
+                layout["cells"] = cells;
+                if (!cells.OfType<JsonObject>().Any(cell => cell["row"]?.GetValue<int>() == legacyRow && cell["col"]?.GetValue<int>() == legacyColumn))
+                    cells.Add(new JsonObject { ["row"] = legacyRow, ["col"] = legacyColumn });
+                child.Remove("row"); child.Remove("column");
+                child["cell"] = new JsonObject { ["row"] = row, ["col"] = column };
+            }
+        }
+        return StationeryStyleSettings.Parse(settings.ToJsonString());
+    }
+
+    private static JsonObject FindLayout(JsonArray layouts, IReadOnlyList<string> path)
+    {
+        JsonArray current = layouts;
+        JsonObject? found = null;
+        foreach (var segment in path)
+        {
+            found = current.OfType<JsonObject>().SingleOrDefault(layout => layout["id"]?.GetValue<string>() == segment)
+                ?? throw new JsonException($"layout がありません: /{string.Join('/', path)}");
+            current = found["children"]?.AsArray() ?? [];
+        }
+        return found!;
+    }
 
     public static void Validate(StationeryStyleSettings style)
     {
@@ -121,14 +163,9 @@ public sealed class EventListStyle
         Require("/events/rowTemplate", "container", false);
         Require("/events/rowTemplate/item", "container", false);
         foreach (var child in new[] { "item/title", "item/detail" }) Require("/events/rowTemplate/" + child, "container");
-        var rows = style.Layouts.SingleOrDefault(layout => layout.Path == "eventRow");
+        var rows = style.Layouts.SingleOrDefault(layout => layout.Path == "/eventRow");
         if (rows is null || rows.Type != "grid-layout" || rows.Rows.Count != 2 || rows.Rows.Any(row => row.IsRate) ||
-            rows.Rows[0].Value < 1 || !double.IsFinite(rows.Rows.Sum(row => row.Value)) ||
-            !(style.Bindings.Any(binding => binding.Layout == "eventRow" && binding.ModelPath == "/events/rowTemplate" &&
-                binding.Children.Any(child => child.ModelPath == "/events/rowTemplate/item" && child.Row == 0)) ||
-              rows.Children is [ { Type: "box-layout", Row: 0, Column: 0, RowSpan: 1, ColumnSpan: 1 } padding ] &&
-              GroupLayout(style, "/events/rowTemplate/item/title") is var rowText &&
-              rowText.Binding.ModelPath == "/events/rowTemplate" && rowText.Layout.ParentPath == padding.Path))
+            rows.Rows[0].Value < 1 || !double.IsFinite(rows.Rows.Sum(row => row.Value)))
             throw new JsonException("eventRow は行の高さ (1px 以上) と行間の2行を px で指定してください。");
         foreach (var size in new[] { (1280d, 680d), (800d, 480d), (0d, 0d) })
         {
@@ -171,7 +208,7 @@ public sealed class EventListStyle
             if (padded)
                 layout = style.Layouts.SingleOrDefault(candidate => candidate.Path == layout.ParentPath && candidate.Type == "box-layout")
                     ?? throw new JsonException($"行の box-layout が必要です: {path}");
-            if (layout.ParentPath is null || binding.ModelPath == path)
+            if (layout.ParentPath is null)
                 throw new JsonException($"ネストした配置が必要です: {path}");
             var key = binding.ModelPath + ":" + layout.Path;
             bounds[path] = result.LayoutBounds[key];
