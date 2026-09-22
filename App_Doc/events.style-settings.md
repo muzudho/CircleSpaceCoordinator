@@ -265,9 +265,79 @@
                     "1rate"
                   ],
                   "row": 0,
-                  "col": 2
+                  "col": 2,
+                  "cells": [
+                    {
+                      "row": 0,
+                      "col": 0
+                    },
+                    {
+                      "row": 2,
+                      "col": 0
+                    },
+                    {
+                      "row": 4,
+                      "col": 0
+                    },
+                    {
+                      "row": 6,
+                      "col": 0
+                    },
+                    {
+                      "row": 8,
+                      "col": 0
+                    },
+                    {
+                      "row": 10,
+                      "col": 0
+                    },
+                    {
+                      "row": 12,
+                      "col": 0
+                    },
+                    {
+                      "row": 14,
+                      "col": 0
+                    },
+                    {
+                      "row": 16,
+                      "col": 0
+                    },
+                    {
+                      "row": 18,
+                      "col": 0
+                    }
+                  ]
+                }
+              ],
+              "cells": [
+                {
+                  "row": 0,
+                  "col": 0
                 }
               ]
+            }
+          ],
+          "cells": [
+            {
+              "row": 0,
+              "col": 0
+            },
+            {
+              "row": 2,
+              "col": 0
+            },
+            {
+              "row": 6,
+              "col": 0
+            },
+            {
+              "row": 8,
+              "col": 0
+            },
+            {
+              "row": 9,
+              "col": 0
             }
           ]
         }
@@ -338,9 +408,79 @@
                     "1rate"
                   ],
                   "row": 0,
-                  "col": 2
+                  "col": 2,
+                  "cells": [
+                    {
+                      "row": 0,
+                      "col": 0
+                    },
+                    {
+                      "row": 0,
+                      "col": 2
+                    },
+                    {
+                      "row": 2,
+                      "col": 0
+                    },
+                    {
+                      "row": 2,
+                      "col": 2
+                    },
+                    {
+                      "row": 4,
+                      "col": 0
+                    },
+                    {
+                      "row": 4,
+                      "col": 2
+                    },
+                    {
+                      "row": 6,
+                      "col": 0
+                    },
+                    {
+                      "row": 6,
+                      "col": 2
+                    },
+                    {
+                      "row": 8,
+                      "col": 0
+                    },
+                    {
+                      "row": 8,
+                      "col": 2
+                    }
+                  ]
+                }
+              ],
+              "cells": [
+                {
+                  "row": 0,
+                  "col": 0
                 }
               ]
+            }
+          ],
+          "cells": [
+            {
+              "row": 0,
+              "col": 0
+            },
+            {
+              "row": 2,
+              "col": 0
+            },
+            {
+              "row": 6,
+              "col": 0
+            },
+            {
+              "row": 8,
+              "col": 0
+            },
+            {
+              "row": 9,
+              "col": 0
             }
           ]
         }
@@ -379,6 +519,16 @@
               ],
               "column-definitions": [
                 "1rate"
+              ],
+              "cells": [
+                {
+                  "row": 0,
+                  "col": 0
+                },
+                {
+                  "row": 2,
+                  "col": 0
+                }
               ]
             }
           ]
@@ -388,214 +538,290 @@
   ],
   "bindings": [
     {
-      "layout": "regularPanel.page",
+      "layout": "/compactPanel",
+      "model": "/events/compact"
+    },
+    {
+      "layout": "/regularPanel",
+      "model": "/events/regular"
+    },
+    {
+      "layout": "/regularPanel/page",
       "parentModel": "/events/regular",
       "childrenModel": [
         {
           "model": "title",
-          "row": 0,
-          "column": 0
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
         },
         {
           "model": "description",
-          "row": 2,
-          "column": 0
+          "cell": {
+            "row": 3,
+            "col": 1
+          }
         },
         {
           "model": "reload",
-          "row": 6,
-          "column": 0
+          "cell": {
+            "row": 7,
+            "col": 1
+          }
         },
         {
           "model": "error",
-          "row": 8,
-          "column": 0
+          "cell": {
+            "row": 9,
+            "col": 1
+          }
         },
         {
           "model": "footer",
-          "row": 9,
-          "column": 0
+          "cell": {
+            "row": 10,
+            "col": 1
+          }
         }
       ]
     },
     {
-      "layout": "regularPanel.page.body",
+      "layout": "/regularPanel/page/body",
       "parentModel": "/events/regular",
       "childrenModel": [
         {
           "model": "body/list",
-          "row": 0,
-          "column": 0
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
         }
       ]
     },
     {
-      "layout": "regularPanel.page.body.actions",
+      "layout": "/regularPanel/page/body/actions",
       "parentModel": "/events/regular",
       "childrenModel": [
         {
           "model": "body/actions/open",
-          "row": 0,
-          "column": 0
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/create",
-          "row": 2,
-          "column": 0
+          "cell": {
+            "row": 3,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/edit",
-          "row": 4,
-          "column": 0
+          "cell": {
+            "row": 5,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/register",
-          "row": 6,
-          "column": 0
+          "cell": {
+            "row": 7,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/duplicate",
-          "row": 8,
-          "column": 0
+          "cell": {
+            "row": 9,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/confidential",
-          "row": 10,
-          "column": 0
+          "cell": {
+            "row": 11,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/up",
-          "row": 12,
-          "column": 0
+          "cell": {
+            "row": 13,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/down",
-          "row": 14,
-          "column": 0
+          "cell": {
+            "row": 15,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/remove",
-          "row": 16,
-          "column": 0
+          "cell": {
+            "row": 17,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/exit",
-          "row": 18,
-          "column": 0
+          "cell": {
+            "row": 19,
+            "col": 1
+          }
         }
       ]
     },
     {
-      "layout": "compactPanel.page",
+      "layout": "/compactPanel/page",
       "parentModel": "/events/compact",
       "childrenModel": [
         {
           "model": "title",
-          "row": 0,
-          "column": 0
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
         },
         {
           "model": "description",
-          "row": 2,
-          "column": 0
+          "cell": {
+            "row": 3,
+            "col": 1
+          }
         },
         {
           "model": "reload",
-          "row": 6,
-          "column": 0
+          "cell": {
+            "row": 7,
+            "col": 1
+          }
         },
         {
           "model": "error",
-          "row": 8,
-          "column": 0
+          "cell": {
+            "row": 9,
+            "col": 1
+          }
         },
         {
           "model": "footer",
-          "row": 9,
-          "column": 0
+          "cell": {
+            "row": 10,
+            "col": 1
+          }
         }
       ]
     },
     {
-      "layout": "compactPanel.page.body",
+      "layout": "/compactPanel/page/body",
       "parentModel": "/events/compact",
       "childrenModel": [
         {
           "model": "body/list",
-          "row": 0,
-          "column": 0
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
         }
       ]
     },
     {
-      "layout": "compactPanel.page.body.actions",
+      "layout": "/compactPanel/page/body/actions",
       "parentModel": "/events/compact",
       "childrenModel": [
         {
           "model": "body/actions/open",
-          "row": 0,
-          "column": 0
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/create",
-          "row": 0,
-          "column": 2
+          "cell": {
+            "row": 1,
+            "col": 3
+          }
         },
         {
           "model": "body/actions/edit",
-          "row": 2,
-          "column": 0
+          "cell": {
+            "row": 3,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/register",
-          "row": 2,
-          "column": 2
+          "cell": {
+            "row": 3,
+            "col": 3
+          }
         },
         {
           "model": "body/actions/duplicate",
-          "row": 4,
-          "column": 0
+          "cell": {
+            "row": 5,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/confidential",
-          "row": 4,
-          "column": 2
+          "cell": {
+            "row": 5,
+            "col": 3
+          }
         },
         {
           "model": "body/actions/up",
-          "row": 6,
-          "column": 0
+          "cell": {
+            "row": 7,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/down",
-          "row": 6,
-          "column": 2
+          "cell": {
+            "row": 7,
+            "col": 3
+          }
         },
         {
           "model": "body/actions/remove",
-          "row": 8,
-          "column": 0
+          "cell": {
+            "row": 9,
+            "col": 1
+          }
         },
         {
           "model": "body/actions/exit",
-          "row": 8,
-          "column": 2
+          "cell": {
+            "row": 9,
+            "col": 3
+          }
         }
       ]
     },
     {
-      "layout": "eventRow.padding.text",
+      "layout": "/eventRow/padding/text",
       "parentModel": "/events/rowTemplate",
       "childrenModel": [
         {
           "model": "item/title",
-          "row": 0,
-          "column": 0
+          "cell": {
+            "row": 1,
+            "col": 1
+          }
         },
         {
           "model": "item/detail",
-          "row": 2,
-          "column": 0
+          "cell": {
+            "row": 3,
+            "col": 1
+          }
         }
       ]
     }
