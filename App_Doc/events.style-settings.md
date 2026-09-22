@@ -220,10 +220,6 @@
           "col": 0
         },
         {
-          "row": 4,
-          "col": 0
-        },
-        {
           "row": 6,
           "col": 0
         },
@@ -241,99 +237,103 @@
         "right": "24px",
         "bottom": "20px",
         "left": "24px"
-      }
-    },
-    {
-      "id": "regularBody",
-      "type": "grid-layout",
-      "row-definitions": [
-        "1rate"
-      ],
-      "column-definitions": [
-        "1rate",
-        "24px",
-        "224px"
-      ],
-      "cells": [
+      },
+      "children": [
         {
-          "row": 0,
-          "col": 0
-        },
-        {
-          "row": 0,
-          "col": 2
-        }
-      ]
-    },
-    {
-      "id": "regularActions",
-      "type": "grid-layout",
-      "row-definitions": [
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "1rate"
-      ],
-      "column-definitions": [
-        "1rate"
-      ],
-      "cells": [
-        {
-          "row": 0,
-          "col": 0
-        },
-        {
-          "row": 2,
-          "col": 0
-        },
-        {
+          "id": "regularBody",
+          "type": "grid-layout",
+          "row-definitions": [
+            "1rate"
+          ],
+          "column-definitions": [
+            "1rate",
+            "24px",
+            "224px"
+          ],
+          "cells": [
+            {
+              "row": 0,
+              "col": 0
+            }
+          ],
           "row": 4,
-          "col": 0
-        },
-        {
-          "row": 6,
-          "col": 0
-        },
-        {
-          "row": 8,
-          "col": 0
-        },
-        {
-          "row": 10,
-          "col": 0
-        },
-        {
-          "row": 12,
-          "col": 0
-        },
-        {
-          "row": 14,
-          "col": 0
-        },
-        {
-          "row": 16,
-          "col": 0
-        },
-        {
-          "row": 18,
-          "col": 0
+          "col": 0,
+          "children": [
+            {
+              "id": "regularActions",
+              "type": "grid-layout",
+              "row-definitions": [
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "1rate"
+              ],
+              "column-definitions": [
+                "1rate"
+              ],
+              "cells": [
+                {
+                  "row": 0,
+                  "col": 0
+                },
+                {
+                  "row": 2,
+                  "col": 0
+                },
+                {
+                  "row": 4,
+                  "col": 0
+                },
+                {
+                  "row": 6,
+                  "col": 0
+                },
+                {
+                  "row": 8,
+                  "col": 0
+                },
+                {
+                  "row": 10,
+                  "col": 0
+                },
+                {
+                  "row": 12,
+                  "col": 0
+                },
+                {
+                  "row": 14,
+                  "col": 0
+                },
+                {
+                  "row": 16,
+                  "col": 0
+                },
+                {
+                  "row": 18,
+                  "col": 0
+                }
+              ],
+              "row": 0,
+              "col": 2
+            }
+          ]
         }
       ]
     },
@@ -365,10 +365,6 @@
           "col": 0
         },
         {
-          "row": 4,
-          "col": 0
-        },
-        {
           "row": 6,
           "col": 0
         },
@@ -386,91 +382,95 @@
         "right": "24px",
         "bottom": "20px",
         "left": "24px"
-      }
-    },
-    {
-      "id": "compactBody",
-      "type": "grid-layout",
-      "row-definitions": [
-        "1rate"
-      ],
-      "column-definitions": [
-        "1rate",
-        "24px",
-        "344px"
-      ],
-      "cells": [
+      },
+      "children": [
         {
-          "row": 0,
-          "col": 0
-        },
-        {
-          "row": 0,
-          "col": 2
-        }
-      ]
-    },
-    {
-      "id": "compactActions",
-      "type": "grid-layout",
-      "row-definitions": [
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "38px",
-        "6px",
-        "1rate"
-      ],
-      "column-definitions": [
-        "1rate",
-        "12px",
-        "1rate"
-      ],
-      "cells": [
-        {
-          "row": 0,
-          "col": 0
-        },
-        {
-          "row": 0,
-          "col": 2
-        },
-        {
-          "row": 2,
-          "col": 0
-        },
-        {
-          "row": 2,
-          "col": 2
-        },
-        {
+          "id": "compactBody",
+          "type": "grid-layout",
+          "row-definitions": [
+            "1rate"
+          ],
+          "column-definitions": [
+            "1rate",
+            "24px",
+            "344px"
+          ],
+          "cells": [
+            {
+              "row": 0,
+              "col": 0
+            }
+          ],
           "row": 4,
-          "col": 0
-        },
-        {
-          "row": 4,
-          "col": 2
-        },
-        {
-          "row": 6,
-          "col": 0
-        },
-        {
-          "row": 6,
-          "col": 2
-        },
-        {
-          "row": 8,
-          "col": 0
-        },
-        {
-          "row": 8,
-          "col": 2
+          "col": 0,
+          "children": [
+            {
+              "id": "compactActions",
+              "type": "grid-layout",
+              "row-definitions": [
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "38px",
+                "6px",
+                "1rate"
+              ],
+              "column-definitions": [
+                "1rate",
+                "12px",
+                "1rate"
+              ],
+              "cells": [
+                {
+                  "row": 0,
+                  "col": 0
+                },
+                {
+                  "row": 0,
+                  "col": 2
+                },
+                {
+                  "row": 2,
+                  "col": 0
+                },
+                {
+                  "row": 2,
+                  "col": 2
+                },
+                {
+                  "row": 4,
+                  "col": 0
+                },
+                {
+                  "row": 4,
+                  "col": 2
+                },
+                {
+                  "row": 6,
+                  "col": 0
+                },
+                {
+                  "row": 6,
+                  "col": 2
+                },
+                {
+                  "row": 8,
+                  "col": 0
+                },
+                {
+                  "row": 8,
+                  "col": 2
+                }
+              ],
+              "row": 0,
+              "col": 2
+            }
+          ]
         }
       ]
     },
@@ -540,13 +540,6 @@
           }
         },
         {
-          "model": "body",
-          "cell": {
-            "row": 5,
-            "col": 1
-          }
-        },
-        {
           "model": "reload",
           "cell": {
             "row": 7,
@@ -570,7 +563,7 @@
       ]
     },
     {
-      "layout": "/regularBody",
+      "layout": "/regularPage/regularBody",
       "parentModel": "/events/regular/body",
       "childrenModel": [
         {
@@ -579,18 +572,11 @@
             "row": 1,
             "col": 1
           }
-        },
-        {
-          "model": "actions",
-          "cell": {
-            "row": 1,
-            "col": 3
-          }
         }
       ]
     },
     {
-      "layout": "/regularActions",
+      "layout": "/regularPage/regularBody/regularActions",
       "parentModel": "/events/regular/body/actions",
       "childrenModel": [
         {
@@ -684,13 +670,6 @@
           }
         },
         {
-          "model": "body",
-          "cell": {
-            "row": 5,
-            "col": 1
-          }
-        },
-        {
           "model": "reload",
           "cell": {
             "row": 7,
@@ -714,7 +693,7 @@
       ]
     },
     {
-      "layout": "/compactBody",
+      "layout": "/compactPage/compactBody",
       "parentModel": "/events/compact/body",
       "childrenModel": [
         {
@@ -723,18 +702,11 @@
             "row": 1,
             "col": 1
           }
-        },
-        {
-          "model": "actions",
-          "cell": {
-            "row": 1,
-            "col": 3
-          }
         }
       ]
     },
     {
-      "layout": "/compactActions",
+      "layout": "/compactPage/compactBody/compactActions",
       "parentModel": "/events/compact/body/actions",
       "childrenModel": [
         {
