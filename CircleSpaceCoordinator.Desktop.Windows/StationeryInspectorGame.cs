@@ -27,6 +27,7 @@ internal sealed class StationeryInspectorGame : Game
     private WindowsTextInputService? input;
     private StationeryDeveloperView? view;
     private long showSequence = -1;
+    private long captureSequence;
     private bool shown = true;
     private bool waitForCloseKeyRelease = true;
     private KeyboardState previous;
@@ -82,6 +83,11 @@ internal sealed class StationeryInspectorGame : Game
         {
             view!.Refresh(packet.Message.Entries);
             if (showSequence < 0) view.Restore(packet.Message.RestoreState);
+            if (packet.Message.CaptureSequence != captureSequence)
+            {
+                if (packet.Message.CapturePath is { } path) view.SelectCaptured(path);
+                captureSequence = packet.Message.CaptureSequence;
+            }
             if (packet.Message.ShowSequence != showSequence)
             {
                 shown = true;

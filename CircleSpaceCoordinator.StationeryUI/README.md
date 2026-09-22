@@ -1,4 +1,4 @@
-2026-09-08: Reusable controls, viewport and text editing now come from the StationeryUI 0.1.0 package: https://github.com/muzudho/StationeryUI. This project is a compatibility reference point and contains no copied control implementation. Windows input and rasterization use StationeryUI.Windows 0.1.0. The initial packages are in LocalPackages/StationeryUI; NuGet.Config enables clean restoration without a sibling repository.
+2026-09-22: StationeryUI / StationeryUI.Windows / StationeryUI.MonoGame は NuGet.org 公開版 0.2.0 を使用します。NuGet.Config から旧ローカルフィードを外し、隣のリポジトリーや同梱パッケージなしで復元できます。このプロジェクトは共通パッケージへの参照窓口とアプリ側の追加部品を保持します。
 # StationeryUI library
 
 ## 変更タグコンポーネント（2026-09-19）
@@ -9,7 +9,7 @@
 
 ## リングメニューの共通ライブラリー利用
 
-2026-09-13: リング配置計算は StationeryUI リポジトリーの `src/StationeryUI/Controls/RingMenuLayout.cs` に集約しました。現在は同梱パッケージ `StationeryUI` 0.1.1 の `StationeryUI.Controls.RingMenuLayout.Create(anchor, width, height, count)` を使用します。円形の等間隔配置・正方形の寸法・画面端への補正を担当し、MonoGame・Windows・会場モデルには依存しません。返された `Center`・`Radius`・`Buttons` は囲碁などの別アプリからも利用できます。ローカルの重複実装は削除しました。
+2026-09-13: リング配置計算は StationeryUI リポジトリーの `src/StationeryUI/Controls/RingMenuLayout.cs` に集約しました。現在は公開パッケージ `StationeryUI` 0.2.0 の `StationeryUI.Controls.RingMenuLayout.Create(anchor, width, height, count)` を使用します。円形の等間隔配置・正方形の寸法・画面端への補正を担当し、MonoGame・Windows・会場モデルには依存しません。返された `Center`・`Radius`・`Buttons` は囲碁などの別アプリからも利用できます。ローカルの重複実装は削除しました。
 
 デスクトップ側の `VenueEditorGame.ToolRing.cs` は机・柱の操作定義を共通の入力・描画処理へ渡します。操作、ラベル、説明を定義し、キャンセルは操作なしの項目として扱います。暗幕・入力遮断・入力解放待ち・撮影例外・下部説明はホスト側の責任です。将来のパッケージ化では、入力状態と帯の描画も抽出し、アイコン描画と操作実行はホストのコールバックとして接続する方針です。
 
@@ -30,3 +30,7 @@ MonoGame上のテキスト入力、IME合成表示、ボタン、ダイアログ
 `Controls/IconButtonModel.cs` は、文房具UIの方針を参考に、位置、アクセシブル名、有効・選択・ホバー・押下状態、クリック判定を所有します。描画はホスト側へ委譲し、MonoGameには依存しません。
 
 共通リングの定義には CloseAfterAction 設定があります（既定は true）。机・柱は実行後に閉じ、会場サイズは false で開いたまま連続実行します。キャンセル項目と Esc はこの設定に関係なく閉じます。
+
+## v0.2.0 への対応（2026-09-22）
+
+イベント一覧のスタイル設定は grid-layout / box-layout を使用し、検証と配置の検索を新しい型名・レイアウトパスへ合わせました。旧 floating-layout / panel のユーザー設定もパッケージの互換読み込みを通して利用できます。F12 開発者ウィンドウにはキャプチャー選択の通信を接続し、キャプチャー中のクリックは通常の編集操作へ渡しません。選択対象は既存の登録済みモデル（イベント一覧）です。

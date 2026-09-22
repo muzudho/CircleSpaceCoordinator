@@ -3,6 +3,8 @@ namespace CircleSpaceCoordinator.Desktop.Tests;
 using System.Text.Json.Nodes;
 using CircleSpaceCoordinator.Desktop.Core.Interaction;
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
+using StationeryUI.Inspection;
+using StationeryUI.Styling;
 
 internal static partial class Program
 {
@@ -42,6 +44,21 @@ internal static partial class Program
             AssertEqual("button", open.Kind);
             AssertEqual("/events/regular/body/actions", open.ParentPath);
             AssertEqual(normal.Area("body/actions/open"), open.WindowBounds!.Value);
+            var openBounds = open.WindowBounds.Value;
+            AssertEqual(open.Path, DeveloperCapture.HitTest(inspection,
+                openBounds.X + openBounds.Width / 2, openBounds.Y + openBounds.Height / 2)!.Path);
+            AssertEqual<StationeryInspectionEntry?>(null, DeveloperCapture.HitTest(normal.Inspect(false),
+                openBounds.X + openBounds.Width / 2, openBounds.Y + openBounds.Height / 2));
+
+            // v0.2.0 normalizes legacy JSON names; existing user files must still load.
+            var legacyJson = EventListStyle.DefaultJson.Replace("\"grid-layout\"", "\"floating-layout\"")
+                .Replace("\"box-layout\"", "\"panel\"");
+            EventListStyle.Validate(StationeryStyleSettings.Parse(legacyJson));
+            File.WriteAllText(path, legacyJson);
+            var legacy = new EventListStyle(path);
+            AssertEqual<string?>(null, legacy.LastError);
+            AssertEqual(normal.Area("body/actions/open"), legacy.Arrange(1280, 800, 40).Area("body/actions/open"));
+            File.WriteAllText(path, EventListStyle.DefaultJson);
             AssertEqual(false, inspection.Single(entry => entry.Path == "/events/compact/body/actions/open").Visible);
             AssertEqual(false, inspection.Single(entry => entry.Path == "/events/rowTemplate/item").Visible);
             AssertEqual(true, inspection.Single(entry => entry.Path == "/events/rowTemplate/item").WindowBounds is null);

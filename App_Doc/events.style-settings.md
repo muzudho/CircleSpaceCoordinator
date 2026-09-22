@@ -194,7 +194,7 @@
   "layouts": [
     {
       "id": "regularPanel",
-      "type": "panel",
+      "type": "box-layout",
       "padding": {
         "top": "22px",
         "right": "24px",
@@ -204,7 +204,7 @@
     },
     {
       "id": "regularPage",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "42px",
         "4px",
@@ -223,7 +223,7 @@
     },
     {
       "id": "regularBody",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "1rate"
       ],
@@ -235,7 +235,7 @@
     },
     {
       "id": "regularActions",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "38px",
         "6px",
@@ -265,7 +265,7 @@
     },
     {
       "id": "compactPanel",
-      "type": "panel",
+      "type": "box-layout",
       "padding": {
         "top": "22px",
         "right": "24px",
@@ -275,7 +275,7 @@
     },
     {
       "id": "compactPage",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "42px",
         "4px",
@@ -294,7 +294,7 @@
     },
     {
       "id": "compactBody",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "1rate"
       ],
@@ -306,7 +306,7 @@
     },
     {
       "id": "compactActions",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "38px",
         "6px",
@@ -328,7 +328,7 @@
     },
     {
       "id": "eventRow",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "58px",
         "6px"
@@ -339,7 +339,7 @@
     },
     {
       "id": "eventRowPadding",
-      "type": "panel",
+      "type": "box-layout",
       "padding": {
         "top": "5px",
         "right": "10px",
@@ -349,7 +349,7 @@
     },
     {
       "id": "eventRowText",
-      "type": "floating-layout",
+      "type": "grid-layout",
       "row-definitions": [
         "24px",
         "2px",

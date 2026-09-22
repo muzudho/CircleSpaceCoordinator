@@ -237,6 +237,23 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
+        if (developerWindow.CaptureEnabled)
+        {
+            CancelInProgressPointerInteraction();
+            ResetUnderlineKeyRepeat();
+            if (mouse.LeftButton == ButtonState.Pressed && previousMouse.LeftButton == ButtonState.Released &&
+                modalDialog is null && !projectMenuOpen)
+            {
+                var hit = StationeryUI.Inspection.DeveloperCapture.HitTest(InspectStationery(), mouse.X, mouse.Y);
+                if (hit is not null) developerWindow.SelectCaptured(hit.Path);
+            }
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
+
         if (UpdateWorkerBar(keyboard, mouse)) { previousKeyboard = keyboard; base.Update(gameTime); return; }
 
         // Screen capture remains available while either overlay owns input.

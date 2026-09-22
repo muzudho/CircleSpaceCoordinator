@@ -22,7 +22,7 @@ public sealed class EventListStyle
     public int Revision { get; private set; }
     public double RowHeight => RowTracks[0].Value;
     public double RowStride => RowTracks.Sum(track => track.Value);
-    private IReadOnlyList<LayoutTrack> RowTracks => Current.Layouts.Single(layout => layout.Id == "eventRow").Rows;
+    private IReadOnlyList<LayoutTrack> RowTracks => Current.Layouts.Single(layout => layout.Path == "eventRow").Rows;
 
     public static string DefaultJson
     {
@@ -114,13 +114,13 @@ public sealed class EventListStyle
             Require(path + "/reload", "button");
             foreach (var action in Actions) Require(path + "/body/actions/" + action, "button");
             if (!style.Bindings.Any(binding => binding.ModelPath == path + "/body/actions" &&
-                style.Layouts.Any(layout => layout.Id == binding.Layout && layout.Type == "floating-layout")))
-                throw new JsonException($"操作欄の floating-layout が必要です: {path}/body/actions");
+                style.Layouts.Any(layout => layout.Path == binding.Layout && layout.Type == "grid-layout")))
+                throw new JsonException($"操作欄の grid-layout が必要です: {path}/body/actions");
         }
         Require("/events/rowTemplate", "container", false);
         foreach (var child in new[] { "item", "item/title", "item/detail" }) Require("/events/rowTemplate/" + child, "container");
-        var rows = style.Layouts.SingleOrDefault(layout => layout.Id == "eventRow");
-        if (rows is null || rows.Type != "floating-layout" || rows.Rows.Count != 2 || rows.Rows.Any(row => row.IsRate) ||
+        var rows = style.Layouts.SingleOrDefault(layout => layout.Path == "eventRow");
+        if (rows is null || rows.Type != "grid-layout" || rows.Rows.Count != 2 || rows.Rows.Any(row => row.IsRate) ||
             rows.Rows[0].Value < 1 || !double.IsFinite(rows.Rows.Sum(row => row.Value)) ||
             !style.Bindings.Any(binding => binding.Layout == "eventRow" && binding.ModelPath == "/events/rowTemplate" &&
                 binding.Children.Any(child => child.ModelPath == "/events/rowTemplate/item" && child.Row == 0)))
@@ -138,8 +138,8 @@ public sealed class EventListStyle
     {
         var result = StationeryLayoutEngine.Arrange(Current, Math.Max(0, width), Math.Max(0, height - top));
         var actions = Current.Bindings.Single(binding => binding.ModelPath == "/events/regular/body/actions" &&
-            Current.Layouts.Any(layout => layout.Id == binding.Layout && layout.Type == "floating-layout"));
-        var desiredHeight = Current.Layouts.Single(layout => layout.Id == actions.Layout).Rows.Where(row => !row.IsRate).Sum(row => row.Value);
+            Current.Layouts.Any(layout => layout.Path == binding.Layout && layout.Type == "grid-layout"));
+        var desiredHeight = Current.Layouts.Single(layout => layout.Path == actions.Layout).Rows.Where(row => !row.IsRate).Sum(row => row.Value);
         return new(this, result, result.ContentBounds["/events/regular/body/actions"].Height < desiredHeight
             ? "/events/compact" : "/events/regular", top);
     }
