@@ -30,7 +30,7 @@ public sealed partial class VenueEditorGame
         var height = venue.Height * cellSize + FrameGridBorderPadding * 2d;
         static double Constrain(double origin, double size, double start, double available) =>
             size <= available
-                ? start + (available - size) / 2d
+                ? Math.Clamp(origin, start, start + available - size)
                 : Math.Clamp(origin, start + available - size, start);
         var x = Constrain(viewport.Origin.X - FrameGridBorderPadding, width, area.X, area.Width) + FrameGridBorderPadding;
         var y = Constrain(viewport.Origin.Y - FrameGridBorderPadding, height, area.Y, area.Height) + FrameGridBorderPadding;
