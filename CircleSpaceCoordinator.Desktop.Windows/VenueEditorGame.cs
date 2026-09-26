@@ -276,6 +276,8 @@ public sealed partial class VenueEditorGame : Game
             base.Update(gameTime);
             return;
         }
+
+        KeepFrameGridInCanvas();
         if (projectMenuOpen || projectMenuDrain)
         {
             PollOptimization();
@@ -480,6 +482,7 @@ public sealed partial class VenueEditorGame : Game
         if (mouse.MiddleButton == ButtonState.Pressed && previousMouse.MiddleButton == ButtonState.Pressed)
         {
             viewport.PanBy(mouse.X - previousMouse.X, mouse.Y - previousMouse.Y);
+            KeepFrameGridInCanvas();
             LogPointer("viewport_pan", pointer, true,
                 $"deltaX={mouse.X - previousMouse.X};deltaY={mouse.Y - previousMouse.Y}");
         }
@@ -492,6 +495,7 @@ public sealed partial class VenueEditorGame : Game
                 GridViewport.MinimumZoom,
                 GridViewport.MaximumZoom);
             viewport.ZoomAt(pointer, zoom);
+            KeepFrameGridInCanvas();
             LogPointer("viewport_zoom", pointer, true, $"zoom={zoom:0.###}");
         }
 
@@ -665,6 +669,7 @@ public sealed partial class VenueEditorGame : Game
             else if (leftPanActive)
             {
                 viewport.PanBy(mouse.X - previousMouse.X, mouse.Y - previousMouse.Y);
+                KeepFrameGridInCanvas();
                 LogPointer("viewport_pan", pointer, true,
                     $"button=left;deltaX={mouse.X - previousMouse.X};deltaY={mouse.Y - previousMouse.Y}");
             }
@@ -1023,6 +1028,7 @@ public sealed partial class VenueEditorGame : Game
                 dotSize,
                 dotSize), CanvasGridColor);
         }
+        DrawFrameGridOutline(width, height);
     }
 
     private IReadOnlyList<RankedPlan> GetDisplayedPlans()
@@ -2522,6 +2528,22 @@ public sealed partial class VenueEditorGame : Game
             return false;
 
         const double margin = 24d;
+        if (editorMode == EditorMode.DeskPlacement)
+        {
+            var area = FramePlacementCanvasBounds;
+            var frameWidth = Math.Max(1d, area.Width - margin * 2d - FrameGridBorderPadding * 2d);
+            var frameHeight = Math.Max(1d, area.Height - margin * 2d - FrameGridBorderPadding * 2d);
+            var frameVenue = workspace.Project.Venue;
+            var frameZoom = Math.Clamp(Math.Min(
+                frameWidth / (frameVenue.Width * viewport.BaseCellSize),
+                frameHeight / (frameVenue.Height * viewport.BaseCellSize)),
+                GridViewport.MinimumZoom, GridViewport.MaximumZoom);
+            viewport.SetView(frameZoom, new ScreenPoint(
+                area.X + (area.Width - frameVenue.Width * viewport.BaseCellSize * frameZoom) / 2d,
+                area.Y + (area.Height - frameVenue.Height * viewport.BaseCellSize * frameZoom) / 2d));
+            KeepFrameGridInCanvas();
+            return true;
+        }
         const double rightPanelWidth = 288d;
         var venue = workspace.Project.Venue;
         var availableWidth = GraphicsDevice.PresentationParameters.BackBufferWidth - rightPanelWidth - margin * 2d;

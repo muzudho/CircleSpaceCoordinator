@@ -359,7 +359,7 @@ public sealed partial class VenueEditorGame
             PromptEventPath("新規イベントの保存先", SuggestedEventPath(name), path =>
                 RefreshEventProjects(EventCatalog.Create(path, name, choice == ModalDialogAction.Accept).Path));
         }, [("マル秘にする", ModalDialogAction.Accept), ("通常", ModalDialogAction.Decrease), ("キャンセル", ModalDialogAction.Cancel)]);
-    }, "イベント名を入力してください（100 文字まで）。");
+    }, "イベント名を入力してください（100 文字まで）。", characterLimit: 100);
 
     private void RegisterEventProject() => PromptEventPath("既存ファイルを登録", settings!.Current.ProjectsDirectory + Path.DirectorySeparatorChar,
         path => RefreshEventProjects(EventCatalog.Register(path).Path));
