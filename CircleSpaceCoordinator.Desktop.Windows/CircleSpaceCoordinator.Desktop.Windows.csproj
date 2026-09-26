@@ -4,7 +4,6 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\long-table-app-icon.ico</ApplicationIcon>
-    <SmartAppControlSigningEnabled Condition="'$(SmartAppControlSigningEnabled)' == '' and '$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT'">true</SmartAppControlSigningEnabled>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../CircleSpaceCoordinator.EditorClient/CircleSpaceCoordinator.EditorClient.csproj" />
@@ -25,14 +24,6 @@
     <None Update="ThirdParty/StationeryUI-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="application-settings.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>
-  <Target Name="ReportSmartAppControlSigningConfiguration" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT'">
-    <Message Text="Smart App Control diagnostic: automatic signing is $(SmartAppControlSigningEnabled)." Importance="high" />
-  </Target>
-  <Target Name="SignBuildOutputForSmartAppControl"
-          AfterTargets="Build"
-          Condition="'$(SmartAppControlSigningEnabled)' == 'true'">
-    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\ForSmartAppControl\Sign-BuildOutput.ps1&quot; -Path &quot;$(TargetDir).&quot;" />
-  </Target>
   <ItemGroup><PackageReference Include="StationeryUI.Windows" Version="0.3.0" /></ItemGroup>
   <ItemGroup><PackageReference Include="StationeryUI.MonoGame" Version="0.3.0" /></ItemGroup>
   <Import Project="../scripts/Build/EngineHosting.targets" />

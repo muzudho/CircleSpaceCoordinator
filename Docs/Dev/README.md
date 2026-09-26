@@ -7,13 +7,11 @@
 Windows と .NET 10 SDK が必要です。リポジトリーのルートで PowerShell を開き、次のコマンドを実行します。
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build\Build.ps1 -Configuration Release -SmartAppControlSigningEnabled false
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build\Build.ps1 -Configuration Release
 dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release --no-build
 ```
 
-署名設定と開発 PC の運用は [Smart App Control](Troubleshooting/SmartAppControl/README.md) にまとめています。
-
-`scripts/Build/Build.ps1` は、ソリューション内の全プロジェクトの `bin` と `obj` を削除してから、NuGet の復元を含むビルドを実行します。既定は Debug です。アプリとエンジンを停止し、ほかのビルドが走っていない状態で実行してください。削除に失敗した場合はビルドを中止します。配布用の `Publish-AndSign.ps1`（`New-ReleaseZip.ps1` 経由も含む）も、publish 開始前に同じ削除処理を実行します。
+`scripts/Build/Build.ps1` は NuGet の復元を含む通常のビルドを実行します。既定は Debug です。事前の `bin`・`obj` 削除と自動署名は行いません。
 
 テストの実行方法は [テスト手順](../../tests/README.md) にまとめています。
 
@@ -41,11 +39,12 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release --no-buil
 | `tools/CircleSpaceCoordinator.ProjectCli/` | コマンドラインツール |
 | `tools/CircleSpaceCoordinator.EditorCli/` | エディターエンジン用 gRPC CLI |
 | `examples/`, `schemas/` | 架空サンプルと JSON スキーマ |
-| `scripts/ForSmartAppControl/` | 署名・配布用スクリプト |
+| `scripts/Packaging/` | 署名なしの発行・ZIP 作成・配布内容検査 |
+| `scripts/Archive/RetiredSmartAppControl/` | 廃止した署名・事前削除スクリプトの記録 |
 
-## 署名・リリース
+## リリース
 
-現在の方針と手順は [配布に関する知見](配布/README.md) を参照してください。開発用証明書の作成スクリプトは、実行した PC の証明書ストアと信頼設定を変更します。自己署名の検証に成功しても、一般配布先での実行を保証するものではありません。
+現在の方針と手順は [リリース手順](配布/リリース手順.md) を参照してください。旧自己署名の処理は[廃止記録](Archive/RetiredSmartAppControl/README.md)に保存しています。
 
 ## 公開リポジトリーでの作業
 
@@ -57,7 +56,7 @@ dotnet run --project CircleSpaceCoordinator.Desktop.Windows -c Release --no-buil
 
 | 資料 | 内容 |
 | --- | --- |
-| [配布](配布/README.md) | 署名、リリース、ソース配布の知見 |
+| [配布](配布/README.md) | リリース、ソース配布、旧署名調査の知見 |
 | [トラブルシューティング](Troubleshooting/README.md) | 起動・開発中の問題、調査結果、当面の対処方法 |
 | [運用](運用/) | 運用作業の手順 |
 | [最新の開発日誌（2026年9月）](Log/2026/09.md) | 月ごとの開発の経緯、改善点、確認結果 |

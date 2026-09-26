@@ -21,7 +21,7 @@ if (Get-ChildItem -LiteralPath $releaseRoot -Recurse -Force -Directory |
 }
 foreach ($file in Get-ChildItem -LiteralPath $releaseRoot -Recurse -Force -File) {
     $relative = $file.FullName.Substring($releaseRoot.Length + 1).Replace('\', '/')
-    # Accept only runtime binaries and the two explicitly shipped assets.
+    # Accept only runtime binaries and explicitly shipped assets.
     # This is a packaging check, not an audit of compiled or signed metadata.
     if ($relative -match '(^|/)(logs|projects|private|\.git)(/|$)' -or
         ($file.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
@@ -31,6 +31,10 @@ foreach ($file in Get-ChildItem -LiteralPath $releaseRoot -Recurse -Force -File)
     if ($file.Extension -in '.dll', '.exe') { continue }
     if ($relative -in $allowedJson) { continue }
     if ($relative -eq 'Assets/long-table-app-icon.png') { continue }
+    if ($relative -eq 'ThirdParty/StationeryUI-LICENSE.txt') {
+        $expected = Join-Path $repositoryRoot 'CircleSpaceCoordinator.Desktop.Windows/ThirdParty/StationeryUI-LICENSE.txt'
+        if ((Get-FileHash -LiteralPath $file.FullName).Hash -eq (Get-FileHash -LiteralPath $expected).Hash) { continue }
+    }
     if ($relative -eq 'examples/circle-space-project-v1.example.json') {
         $expected = Join-Path $repositoryRoot 'examples/circle-space-project-v1.example.json'
         if ((Get-FileHash -LiteralPath $file.FullName).Hash -eq (Get-FileHash -LiteralPath $expected).Hash) { continue }

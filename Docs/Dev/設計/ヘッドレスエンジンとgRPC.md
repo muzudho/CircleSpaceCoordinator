@@ -81,7 +81,7 @@ GUI起動時は編集エンジンだけを非表示で起動する。編集エ�
 通常の GUI ビルドでは `engines/editor/` と `engines/thinking/` に必要なファイルをコピーし、publish では２つのエンジンも publish します。このサブフォルダーも一緒に配布してください。
 
 ```powershell
-dotnet publish CircleSpaceCoordinator.Desktop.Windows -c Release -r win-x64 --self-contained true -p:SmartAppControlSigningEnabled=false -p:DebugType=None -p:DebugSymbols=false -o artifacts/headless-win-x64
+dotnet publish CircleSpaceCoordinator.Desktop.Windows -c Release -r win-x64 --self-contained true -p:DebugType=None -p:DebugSymbols=false -o artifacts/headless-win-x64
 ```
 
 起動時の Describe による版確認に加え、[`engine-api-v1-baseline.json`](../../../schemas/engine-api-v1-baseline.json) とテストで RPC・フィールド番号・操作の既存プロパティを検査します。破壊的変更は API の版を分けます。検査を通すためだけに基準ファイルを書き換えません。
@@ -92,7 +92,7 @@ GUI を表示せずに、同梱したエンジンの自動起動・編集・終�
 dotnet run --project tests/CircleSpaceCoordinator.Engine.Tests -c Release -- --runtime artifacts/headless-win-x64
 ```
 
-配布前は `scripts/ForSmartAppControl/Test-PublicReleaseContent.ps1 -Path <publishフォルダー>` も実行します。２つのエンジンの必須ファイルを確認し、設定・セッション・ログ・デバッグシンボルなどの混入を拒否します。GUI の起動確認で生成された設定とログは、配布用フォルダーから取り除いてください。
+配布前は `scripts/Packaging/Test-PublicReleaseContent.ps1 -Path <publishフォルダー>` も実行します。２つのエンジンの必須ファイルを確認し、設定・セッション・ログ・デバッグシンボルなどの混入を拒否します。GUI の起動確認で生成された設定とログは、配布用フォルダーから取り除いてください。
 
 ネットワーク公開用の認証・TLS、ジョブの再起動後再開、更新要求 ID による重複排除は、ローカルアプリ向けの今回の移行とは別の拡張事項です。
 
@@ -158,7 +158,7 @@ Editor は Open / Get / Edit / Optimize / Close を公開します。Edit は配
 .NET 10 SDK を使用します。以下はリポジトリールートでの PowerShell の例です。
 
 ```powershell
-dotnet build CircleSpaceCoordinator.slnx -c Release -p:SmartAppControlSigningEnabled=false
+dotnet build CircleSpaceCoordinator.slnx -c Release
 ```
 
 ２つのターミナルで、それぞれ起動します。

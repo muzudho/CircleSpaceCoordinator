@@ -17,7 +17,7 @@ v1.0.0 の ZIP・展開フォルダー・EXE は `CircleSpaceCoordinator.Desktop
 | その他の起動失敗 | エラー文、Windows のバージョン、アプリの版を開発者へ知らせてください。共有前に個人名・パス・業務データを伏せてください。 |
 
 
-ウィンドウが開いたら、[配置の決定稿を作る手順](Start.md) へ進んでください。ZIP 版の更新時の設定引き継ぎは [リリース手順の「利用PCでツールを更新する」](../../Dev/配布/リリース手順.md) を参照してください。
+ウィンドウが開いたら、[配置の決定稿を作る手順](Start.md) へ進んでください。ZIP 版を更新するときは新しい空フォルダーへ全体展開してください。設定は OS のユーザー専用フォルダーに保存されます。
 
 ## 別の方法：ソースコードからビルドする
 
@@ -76,12 +76,12 @@ Test-Path .\CircleSpaceCoordinator.slnx
 次のコマンドを実行します。
 
 ```powershell
-dotnet build .\CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordinator.Desktop.Windows.csproj -c Release -p:SmartAppControlSigningEnabled=false
+dotnet build .\CircleSpaceCoordinator.Desktop.Windows\CircleSpaceCoordinator.Desktop.Windows.csproj -c Release
 ```
 
 初回は必要なライブラリー（NuGet パッケージ）が自動的にダウンロードされます。完了まで待ち、ビルド成功と表示されたことを確認してください。失敗した場合は、下の「うまくいかないとき」を確認します。
 
-末尾の指定の意味は、開発者向けの [署名設定の説明](../../Dev/Troubleshooting/SmartAppControl/ソース配布とSmart%20App%20Control.md#ビルド起動方法)を参照してください。
+このビルドでは自己署名を行いません。旧署名処理の廃止は[開発者向けの記録](../../Dev/Archive/RetiredSmartAppControl/README.md)を参照してください。
 
 ## 5. アプリを起動する
 

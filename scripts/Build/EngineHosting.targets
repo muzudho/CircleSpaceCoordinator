@@ -3,7 +3,7 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.EditorEngine/CircleSpaceCoordinator.EditorEngine.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.ThinkingEngine/CircleSpaceCoordinator.ThinkingEngine.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
-  <Target Name="CopyHeadlessEngines" AfterTargets="Build" BeforeTargets="SignBuildOutputForSmartAppControl" Condition="'$(DesignTimeBuild)' != 'true'">
+  <Target Name="CopyHeadlessEngines" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <_EngineSuffix Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)/</_EngineSuffix>
       <_EditorBuildRoot>$(MSBuildThisFileDirectory)../../CircleSpaceCoordinator.EditorEngine/bin/$(Configuration)/net10.0/$(_EngineSuffix)</_EditorBuildRoot>

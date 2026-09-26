@@ -43,4 +43,17 @@ try { & $gate -Path $fixture | Out-Null }
 catch { $wasRejected = $true }
 if (-not $wasRejected) { throw 'Release gate accepted a modified example.' }
 $passed++
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'examples/circle-space-project-v1.example.json') -Destination $example -Force
+$licenseDirectory = Join-Path $fixture 'ThirdParty'
+New-Item -ItemType Directory -Path $licenseDirectory | Out-Null
+$license = Join-Path $licenseDirectory 'StationeryUI-LICENSE.txt'
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'CircleSpaceCoordinator.Desktop.Windows/ThirdParty/StationeryUI-LICENSE.txt') -Destination $license
+& $gate -Path $fixture | Out-Null
+$passed++
+[System.IO.File]::WriteAllText($license, 'modified-test-license')
+$wasRejected = $false
+try { & $gate -Path $fixture | Out-Null }
+catch { $wasRejected = $true }
+if (-not $wasRejected) { throw 'Release gate accepted a modified license.' }
+$passed++
 Write-Output "$passed/$passed release privacy checks passed."

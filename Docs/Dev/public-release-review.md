@@ -31,5 +31,5 @@
 
 ```powershell
 python scripts/audit_public_content.py --history
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ForSmartAppControl/Test-PublicReleaseContent.Tests.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Packaging/Test-PublicReleaseContent.Tests.ps1
 ```

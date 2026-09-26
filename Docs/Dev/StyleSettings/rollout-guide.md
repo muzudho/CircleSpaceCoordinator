@@ -78,8 +78,8 @@
 Debug と Release の両方で確認します。新しいページに応じたテストを追加した上で、既存の実行例は次のとおりです。
 
 ```powershell
-dotnet run --project tests/CircleSpaceCoordinator.Desktop.Tests -c Debug -p:SmartAppControlSigningEnabled=false
-dotnet run --project tests/CircleSpaceCoordinator.Desktop.Tests -c Release -p:SmartAppControlSigningEnabled=false
+dotnet run --project tests/CircleSpaceCoordinator.Desktop.Tests -c Debug
+dotnet run --project tests/CircleSpaceCoordinator.Desktop.Tests -c Release
 ```
 
 埋め込みは「ファイルをリソースとして含める」だけなので、不正な JSON でも通常のコンパイルは通り得ます。CI では対象ページの全原本を解析・契約検証するテストを実行することを勧めます。また、以前の出力フォルダーにコピーされたファイルが残っていると配布確認を誤るため、新規の publish 出力先で確認してください。

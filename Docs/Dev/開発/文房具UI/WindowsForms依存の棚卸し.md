@@ -165,9 +165,9 @@
 基本の確認コマンド（リポジトリールート、PowerShell）：
 
 ```powershell
-dotnet build CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.csproj -c Release -p:SmartAppControlSigningEnabled=false
-dotnet run --project tests/CircleSpaceCoordinator.StationeryUI.Tests -c Release -p:SmartAppControlSigningEnabled=false
-dotnet run --project tests/CircleSpaceCoordinator.Desktop.Tests -c Release -p:SmartAppControlSigningEnabled=false
+dotnet build CircleSpaceCoordinator.Desktop.Windows/CircleSpaceCoordinator.Desktop.Windows.csproj -c Release
+dotnet run --project tests/CircleSpaceCoordinator.StationeryUI.Tests -c Release
+dotnet run --project tests/CircleSpaceCoordinator.Desktop.Tests -c Release
 rg -n 'System\.Windows\.Forms|UseWindowsForms|MessageBox|ShowDialog' CircleSpaceCoordinator.Desktop.Windows
 ```
 
