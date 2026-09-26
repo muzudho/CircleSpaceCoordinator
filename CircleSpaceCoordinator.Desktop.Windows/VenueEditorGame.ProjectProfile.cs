@@ -14,8 +14,7 @@ public sealed partial class VenueEditorGame
         if (workspace is null || projectSavePath is null) return;
         var confidential = workspace.Project.IsConfidential || workspace.Project.DeskLayouts.Any(item => item.IsConfidential);
         var message = $"イベント：{workspace.Project.Name}\nスクリーンショット保存フォルダー：\n{CurrentScreenshotDirectory}\n" +
-            (confidential ? "（秘）PNGは暗号化されません。共有・同期先に注意してください。\n" : "") +
-            "以前に撮った画像は、従来の共通フォルダーに残っています。";
+            (confidential ? "（秘）PNGは暗号化されません。共有・同期先に注意してください。" : "");
         OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "プロジェクト・プロフィール", message), action =>
         {
             switch (action)
@@ -26,12 +25,9 @@ public sealed partial class VenueEditorGame
                 case ModalDialogAction.Increase:
                     EditScreenshotDirectory();
                     break;
-                case ModalDialogAction.Decrease:
-                    OpenScreenshotDirectory(ScreenshotPath.DefaultDirectory);
-                    break;
             }
-        }, [("保存フォルダーを開く", ModalDialogAction.Accept), ("保存先を変更", ModalDialogAction.Increase),
-            ("以前の保存先", ModalDialogAction.Decrease), ("戻る", ModalDialogAction.Cancel)]);
+        }, [("保存フォルダーを開く", ModalDialogAction.Accept), ("保存場所を変更する", ModalDialogAction.Increase),
+            ("戻る", ModalDialogAction.Cancel)]);
     }
 
     private void EditScreenshotDirectory() => OpenUnderlineInput(
