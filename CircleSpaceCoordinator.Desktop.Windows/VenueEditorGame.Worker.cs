@@ -66,7 +66,12 @@ public sealed partial class VenueEditorGame
         if (workerEditor is null) return true;
         if (save)
         {
-            try { settings!.SaveHandle(workerEditor.Text); }
+            try
+            {
+                var handle = CircleSpaceCoordinator.Core.Model.PersonCredits.NormalizeHandle(workerEditor.Text);
+                if (handle.Length == 0) throw new ArgumentException("作業者名を入力してください。");
+                settings!.SaveHandle(handle);
+            }
             catch (Exception ex) { workerError = ex.Message; return false; }
         }
         workerEditor = null;
@@ -103,7 +108,9 @@ public sealed partial class VenueEditorGame
             workerBarPressed = false;
             if (inside)
             {
-                if (mouse.X < Window.ClientBounds.Width - 160)
+                if (mappingDraft is null && frameDraft is null && Contains(UserProfileHeaderBounds, new(mouse.X, mouse.Y)))
+                    OpenUserProfile();
+                else if (mouse.X < Window.ClientBounds.Width - 160)
                 {
                     if (ShowWorkerLibrary && mouse.X >= Window.ClientBounds.Width - 310) ManageChannelKnowledge();
                     else if (Contains(WorkerInputBounds, new(mouse.X, mouse.Y))) EditHandle();
@@ -193,6 +200,13 @@ public sealed partial class VenueEditorGame
         var width = GraphicsDevice.Viewport.Width;
         var showLibrary = ShowWorkerLibrary;
         DrawRectangle(new ScreenRectangle(0, 0, width, WorkerBarHeight), new Color(27, 42, 52));
+        if (mappingDraft is null && frameDraft is null)
+        {
+            var profileBounds = UserProfileHeaderBounds;
+            DrawRectangle(profileBounds, userProfileOpen ? new Color(49, 83, 93) : new Color(38, 62, 73));
+            DrawOutline(profileBounds, 1, new Color(91, 137, 150));
+            textRenderer?.Draw("ユーザー・プロフィール", ToRectangle(profileBounds, 6), Color.White, 14, true);
+        }
         var bounds = WorkerInputBounds;
         textRenderer?.Draw("作業者", new Rectangle(Math.Max(0, (int)bounds.X - 64), 3, 60, 26), Color.White, 16);
         var editor = workerEditor;
@@ -215,7 +229,8 @@ public sealed partial class VenueEditorGame
             DrawRectangle(new(X(insertion), 4, 2, 21), new Color(147, 244, 200));
             if (workerComposition.Length > 0) DrawLine(new(X(insertion), 26), new(X(insertion + workerComposition.Length), 26), 2, Color.Gold);
             textInputService?.SetInputArea(new(X(insertion), 3, Math.Max(1, WorkerTextBounds.Right - X(insertion)), 26));
-            var help = workerError ?? "16文字以内／Enter：確定／Esc：取消";
+            var help = $"{editor.Text.EnumerateRunes().Count()}/{CircleSpaceCoordinator.Core.Model.PersonCredits.MaximumHandleLength}  " +
+                (workerError ?? "Enter：確定／Esc：取消");
             var helpBounds = new ScreenRectangle(Math.Max(0, bounds.X - 64), 32, bounds.Width + 64, 26);
             DrawRectangle(helpBounds, new Color(27, 42, 52));
             textRenderer?.Draw(help, ToRectangle(helpBounds), workerError is null ? Color.LightGray : Color.LightSalmon, 13);

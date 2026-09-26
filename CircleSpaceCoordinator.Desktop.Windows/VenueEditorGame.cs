@@ -128,6 +128,7 @@ public sealed partial class VenueEditorGame : Game
         this.projectSavePath = projectSavePath;
         // Names and paths are available before the engines; decode projects only on selection.
         this.settings = settings ?? new ApplicationSettingsService(UserSettingsPaths.PrepareFile("application-settings.json"), deferProjectMetadata: true);
+        userProfilePromptPending = string.IsNullOrWhiteSpace(this.settings.Current.Handle);
         eventStyle = EventListStyle.CreateForApplication();
         dragController = workspace is null ? null : new DeskDragController(workspace, viewport);
         commandController = workspace is null ? null : new EditorCommandController(workspace);
@@ -254,11 +255,27 @@ public sealed partial class VenueEditorGame : Game
             return;
         }
 
+        if (userProfilePromptPending && backgroundOperation is null && !eventStartupLoading && modalDialog is null && !projectMenuOpen)
+        {
+            userProfilePromptPending = false;
+            userProfileOpenedForStartup = true;
+            OpenUserProfile();
+        }
+
         if (UpdateWorkerBar(keyboard, mouse)) { previousKeyboard = keyboard; base.Update(gameTime); return; }
 
         // Screen capture remains available while either overlay owns input.
         if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.P))
             RequestScreenshot();
+        if (userProfileOpen)
+        {
+            if (!UpdateModalDialog(keyboard, mouse)) UpdateUserProfile(keyboard, mouse);
+            previousMouse = mouse;
+            previousKeyboard = keyboard;
+            UpdateWindowPresentation();
+            base.Update(gameTime);
+            return;
+        }
         if (projectMenuOpen || projectMenuDrain)
         {
             PollOptimization();
@@ -829,7 +846,12 @@ public sealed partial class VenueEditorGame : Game
 
         // Preserve antialiased text strokes when labels are scaled to fit their bounds.
         spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-        if (mappingDraft is not null)
+        if (userProfileOpen)
+        {
+            DrawUserProfile();
+            DrawModalDialog();
+        }
+        else if (mappingDraft is not null)
         {
             DrawStyleMappingEditor();
             DrawModalDialog();

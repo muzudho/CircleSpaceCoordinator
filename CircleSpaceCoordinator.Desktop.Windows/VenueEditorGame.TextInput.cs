@@ -33,11 +33,12 @@ public sealed partial class VenueEditorGame
     private Func<string, string?>? underlineValidation;
     private bool underlineTrimText = true;
     private bool underlineRequireValidInput;
+    private int? underlineCharacterLimit;
     private string underlineAcceptLabel = "確定";
 
     private void OpenUnderlineInput(string title, string initial, Action<string> accepted, string? message = null, int maxLength = 100,
         bool allowEmpty = false, Func<string, string?>? validate = null, Action? cancelled = null, bool trim = true,
-        string acceptLabel = "確定", bool requireValidInput = false)
+        string acceptLabel = "確定", bool requireValidInput = false, int? characterLimit = null)
     {
         var editor = new UnderlineTextEditor(initial, maxLength);
         OpenModal(new ModalDialogModel(ModalDialogKind.Text, title,
@@ -46,12 +47,13 @@ public sealed partial class VenueEditorGame
             if (action != ModalDialogAction.Accept) { cancelled?.Invoke(); return; }
             try { accepted(trim ? editor.Text.Trim() : editor.Text); }
             catch (Exception exception) { ShowNotice(title, exception.Message,
-                () => OpenUnderlineInput(title, editor.Text, accepted, message, maxLength, allowEmpty, validate, cancelled, trim, acceptLabel, requireValidInput)); }
+                () => OpenUnderlineInput(title, editor.Text, accepted, message, maxLength, allowEmpty, validate, cancelled, trim, acceptLabel, requireValidInput, characterLimit)); }
         });
         underlineEditor = editor;
         underlineTrimText = trim;
         underlineAcceptLabel = acceptLabel;
         underlineRequireValidInput = requireValidInput;
+        underlineCharacterLimit = characterLimit;
         underlineInputReceivedAt = 0;
         underlineValidation = validate ?? (value => CircleSpaceCoordinator.Desktop.Core.Interaction.EditorDialogValidation.Name(value, allowEmpty));
         compositionText = "";
@@ -289,6 +291,13 @@ public sealed partial class VenueEditorGame
         textRenderer?.Draw(display, UnderlineTextBounds(), Color.White, 22);
         DrawLine(new ScreenPoint(bounds.X, bounds.Y + bounds.Height), new ScreenPoint(bounds.X + bounds.Width, bounds.Y + bounds.Height),
             modalFocus == TextInputFocus ? 3 : 1, new Color(99, 223, 185));
+        if (underlineCharacterLimit is { } limit)
+        {
+            var count = display.EnumerateRunes().Count();
+            textRenderer?.Draw($"{count}/{limit}",
+                ToRectangle(new ScreenRectangle(bounds.X + bounds.Width - 110, bounds.Y + bounds.Height + 7, 110, 25)),
+                count > limit ? Color.LightSalmon : Color.LightGray, 16, true);
+        }
         var caretX = bounds.X + MeasureInput(editor.Text[..insertion]) * scale;
         if (compositionText.Length > 0)
             DrawLine(new ScreenPoint(caretX, y + textHeight), new ScreenPoint(bounds.X + MeasureInput(display[..(insertion + compositionText.Length)]) * scale, y + textHeight), 2, new Color(255, 225, 128));
