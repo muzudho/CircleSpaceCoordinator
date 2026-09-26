@@ -117,6 +117,7 @@ internal static partial class Program
             ("An empty project catalog recovers valid JSON files from its project directory", EmptyCatalogRecoversProjects),
             ("Application settings preserve project order and remove only registrations", SettingsManageProjectCatalog),
             ("Application settings preserve per-project working state", SettingsPreserveWorkingState),
+            ("Screenshot folders remain separate for each event project", ScreenshotFoldersRemainProjectSpecific),
             ("Event catalog creates a valid empty project", EventCatalogCreatesProject),
             ("Event catalog can mark a project confidential without an unmark operation", EventCatalogMarksProjectConfidential),
             ("Event catalog duplicates with a new event identity", EventCatalogDuplicatesProject),

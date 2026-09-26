@@ -24,10 +24,10 @@ public sealed partial class VenueEditorGame
         saved.Zoom == viewport.Zoom && saved.X == viewport.Origin.X && saved.Y == viewport.Origin.Y;
     private string ProjectMenuDescription(int index) => genreMenuOpen ? CurrentMenuLabels[index] : index == 1 && autoSaveError is not null ? "保存失敗：" + autoSaveError : !genreMenuOpen && index == 1 && IsCurrentProjectSaved
         ? "現在の変更は保存できています。変更すると再び保存できます。" : ProjectMenuDescriptions[index];
-    private bool IsProjectMenuEntryEnabled(int index) => genreMenuOpen ? workspace is not null : index == 6 || workspace is not null && optimizationTask is null &&
+    private bool IsProjectMenuEntryEnabled(int index) => genreMenuOpen ? workspace is not null : index == MenuCloseIndex || workspace is not null && optimizationTask is null &&
         (index != 1 || projectSavePath is not null && !IsCurrentProjectSaved);
     private static readonly string[] ProjectMenuLabels =
-        ["開く…（イベント一覧から選択）", "すぐ保存", "一部を書き出す…", "一部を取り込む…", "閉じる（イベント一覧へ）", "セーブポイント…", "×"];
+        ["開く…（イベント一覧から選択）", "すぐ保存", "一部を書き出す…", "一部を取り込む…", "閉じる（イベント一覧へ）", "セーブポイント…", "プロジェクト・プロフィール", "×"];
     private static readonly string[] ProjectMenuDescriptions =
     [
         "確定した編集を自動保存して閉じ、イベント一覧で開くプロジェクトを選びます。",
@@ -36,6 +36,7 @@ public sealed partial class VenueEditorGame
         "パッケージから選んだ内容を現在のイベントプロジェクトへ取り込みます。",
         "確定した編集を自動保存してプロジェクトを閉じ、イベント一覧へ移ります。",
         "セーブポイントの作成・復元・保護と、保存先・保持数を設定します。",
+        "このイベントのスクリーンショット保存先を確認・変更し、フォルダーを開きます。",
         "メニューを閉じて作業に戻ります。",
     ];
 
@@ -137,6 +138,7 @@ public sealed partial class VenueEditorGame
                 case 2: ExportPortable(); break;
                 case 3: ImportPortable(); break;
                 case 5: OpenSavePoints(); break;
+                case 6: projectMenuOpen = false; OpenProjectProfile(); break;
             }
         }
         catch (Exception ex) { ShowInAppMessage("プロジェクト", ex.Message); }

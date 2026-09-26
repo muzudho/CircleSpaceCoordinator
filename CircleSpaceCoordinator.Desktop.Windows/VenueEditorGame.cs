@@ -974,7 +974,7 @@ public sealed partial class VenueEditorGame : Game
         screenshotRequestedAt = 0;
         try
         {
-            var directory = ScreenshotPath.DefaultDirectory;
+            var directory = CurrentScreenshotDirectory;
             Directory.CreateDirectory(directory);
             var path = ScreenshotPath.Create(directory, DateTime.Now);
             var width = GraphicsDevice.PresentationParameters.BackBufferWidth;

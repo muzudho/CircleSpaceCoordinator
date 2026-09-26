@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 public sealed record EventProjectReference(string Path, string DisplayName);
+public sealed record ProjectScreenshotDirectory(string ProjectPath, string Directory);
 
 public sealed record ProjectWorkingState(
     string ProjectPath,
@@ -37,6 +38,7 @@ public sealed record ApplicationSettings(
     public int BackupGenerations { get; init; } = 10;
     public string Handle { get; init; } = "";
     public bool StyleAutoReload { get; init; } = true;
+    public IReadOnlyList<ProjectScreenshotDirectory>? ScreenshotDirectories { get; init; }
     // Read the previous settings key; subsequent saves use only "handle".
     [JsonPropertyName("workerName")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -142,6 +144,8 @@ public sealed class ApplicationSettingsService
             EventProjects = projects,
             ProjectWorkingStates = (Current.ProjectWorkingStates ?? [])
                 .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToArray(),
+            ScreenshotDirectories = (Current.ScreenshotDirectories ?? [])
+                .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToArray(),
         };
         TrySave();
     }
@@ -167,6 +171,29 @@ public sealed class ApplicationSettingsService
         });
         Current = Current with { ProjectWorkingStates = states };
         TrySave();
+    }
+
+    public string? GetScreenshotDirectory(string projectPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
+        var fullPath = Path.GetFullPath(projectPath);
+        return (Current.ScreenshotDirectories ?? []).LastOrDefault(item => PathsEqual(item.ProjectPath, fullPath))?.Directory;
+    }
+
+    public void SaveScreenshotDirectory(string projectPath, string directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        if (!Path.IsPathFullyQualified(directory))
+            throw new ArgumentException("スクリーンショットの保存先には絶対パスを指定してください。", nameof(directory));
+        var fullPath = Path.GetFullPath(projectPath);
+        var fullDirectory = Path.GetFullPath(directory);
+        var entries = (Current.ScreenshotDirectories ?? [])
+            .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToList();
+        entries.Add(new ProjectScreenshotDirectory(fullPath, fullDirectory));
+        var next = Current with { ScreenshotDirectories = entries };
+        SavePointStore.AtomicWrite(settingsPath, JsonSerializer.Serialize(next, JsonOptions));
+        Current = next;
     }
 
     public bool MoveProject(string projectPath, int offset)
@@ -235,6 +262,20 @@ public sealed class ApplicationSettingsService
                     double.IsFinite(item.OriginX) && double.IsFinite(item.OriginY))
                 .GroupBy(item => Path.GetFullPath(item.ProjectPath), StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.Last() with { ProjectPath = group.Key }).ToArray();
+            var screenshots = new List<ProjectScreenshotDirectory>();
+            foreach (var item in loaded.ScreenshotDirectories ?? [])
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(item.ProjectPath) || string.IsNullOrWhiteSpace(item.Directory) ||
+                        !Path.IsPathFullyQualified(item.Directory)) continue;
+                    var projectPath = Path.GetFullPath(item.ProjectPath);
+                    var screenshotDirectory = Path.GetFullPath(item.Directory);
+                    screenshots.RemoveAll(existing => PathsEqual(existing.ProjectPath, projectPath));
+                    screenshots.Add(new(projectPath, screenshotDirectory));
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException) { }
+            }
             return new ApplicationSettings(
                 directory,
                 lastPath,
@@ -249,6 +290,7 @@ public sealed class ApplicationSettingsService
                 StyleAutoReload = loaded.StyleAutoReload,
                 BackupDirectory = string.IsNullOrWhiteSpace(loaded.BackupDirectory) ? null : Path.GetFullPath(loaded.BackupDirectory),
                 BackupGenerations = loaded.BackupGenerations is >= 1 and <= 1000 ? loaded.BackupGenerations : 10,
+                ScreenshotDirectories = screenshots,
             };
         }
         catch (Exception) when (File.Exists(settingsPath))

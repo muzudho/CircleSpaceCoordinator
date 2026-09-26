@@ -2,9 +2,41 @@ namespace CircleSpaceCoordinator.Desktop.Tests;
 
 using System.Runtime.InteropServices;
 using CircleSpaceCoordinator.Desktop.Core.Persistence;
+using CircleSpaceCoordinator.Desktop.Core.Screenshots;
 
 internal static partial class Program
 {
+    private static void ScreenshotFoldersRemainProjectSpecific()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"csc-screenshot-settings-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var first = Path.Combine(root, "first.event-project-csc.json");
+            var second = Path.Combine(root, "second.event-project-csc.json");
+            var settingsPath = Path.Combine(root, "application-settings.json");
+            var settings = CreateIsolatedSettings(settingsPath);
+            AssertEqual(true, ScreenshotPath.ForProject("event-first") != ScreenshotPath.ForProject("event-second"));
+            AssertEqual(ScreenshotPath.ForProject("event-first"), ScreenshotPath.ForProject("event-first"));
+            AssertEqual<string?>(null, settings.GetScreenshotDirectory(first));
+
+            var chosen = Path.Combine(root, "private-images");
+            settings.SaveScreenshotDirectory(first, chosen);
+            var rejectedRelativePath = false;
+            try { settings.SaveScreenshotDirectory(second, "relative-images"); }
+            catch (ArgumentException) { rejectedRelativePath = true; }
+            AssertEqual(true, rejectedRelativePath);
+            settings.SaveWorkingState(new ProjectWorkingState(first, "plan-1", "DeskPlacement", 1, 0, 0));
+            var reloaded = CreateIsolatedSettings(settingsPath);
+            AssertEqual(chosen, reloaded.GetScreenshotDirectory(first)!);
+            AssertEqual<string?>(null, reloaded.GetScreenshotDirectory(second));
+
+            reloaded.RemoveProject(first);
+            AssertEqual<string?>(null, CreateIsolatedSettings(settingsPath).GetScreenshotDirectory(first));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     private static ApplicationSettingsService CreateIsolatedSettings(string path) =>
         new(path, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "discovery"));
 
