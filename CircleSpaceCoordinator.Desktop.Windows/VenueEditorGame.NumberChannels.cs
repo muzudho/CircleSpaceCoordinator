@@ -136,6 +136,6 @@ public sealed partial class VenueEditorGame
     {
         DrawRectangle(bounds, new Color(204, 38, 48, 92));
         DrawOutline(bounds, 2, new Color(255, 72, 80));
-        textRenderer?.Draw("!", ToRectangle(bounds), new Color(255, 235, 235), VenueTextSize(14), true);
+        DrawExclamationPoint(bounds);
     }
 }

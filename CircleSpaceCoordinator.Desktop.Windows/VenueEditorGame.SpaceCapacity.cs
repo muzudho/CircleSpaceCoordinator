@@ -52,7 +52,15 @@ public sealed partial class VenueEditorGame
     {
         DrawRectangle(mark, new Color(195, 35, 48));
         DrawOutline(mark, 1, new Color(255, 112, 120));
-        DrawRectangle(new ScreenRectangle(mark.X + 9, mark.Y + 4, 2, 8), Color.White);
-        DrawRectangle(new ScreenRectangle(mark.X + 9, mark.Y + 14, 2, 2), Color.White);
+        DrawExclamationPoint(mark);
+    }
+
+    private void DrawExclamationPoint(ScreenRectangle bounds)
+    {
+        // The same pixel glyph stays centered in both the list badge and a canvas cell.
+        var x = Math.Round(bounds.X + bounds.Width / 2) - 1;
+        var y = Math.Round(bounds.Y + bounds.Height / 2) - 6;
+        DrawRectangle(new ScreenRectangle(x, y, 2, 8), Color.White);
+        DrawRectangle(new ScreenRectangle(x, y + 10, 2, 2), Color.White);
     }
 }
