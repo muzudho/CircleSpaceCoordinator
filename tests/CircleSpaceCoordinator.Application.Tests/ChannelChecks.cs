@@ -92,8 +92,40 @@ internal static class ChannelChecks
             throw new Exception("Removed import columns kept their old channel mappings.");
         Execute(new UpsertChannel("other", "その他", "新しい列"));
         Equal(2, workspace.Project.Participants.Single(item => item.CircleId == "a").Features["other"]);
+        CheckMappedImport(project);
         CheckParticipantFieldColumns(project);
         CheckPlaceableCells(project);
+    }
+
+    private static void CheckMappedImport(CircleSpaceProject original)
+    {
+        var workspace = new ProjectWorkspace(original);
+        var keys = new[] { "識別子", "名前", "点数" };
+        var source = new ParticipantTableSource("circles.csv", "CSV", keys, keys)
+        { FieldColumns = new ParticipantFieldColumns("識別子", "名前", null, null, null) };
+        ParticipantImportRow Row(string id, string name, string score) => new(id, name, 1)
+        { SourceValues = new Dictionary<string, string>
+            { ["識別子"] = id, ["名前"] = name, ["点数"] = score } };
+        var feature = new EvaluationFeature("score", "得点", 1, 0, 1) { SourceColumn = "点数" };
+        void Execute(ParticipantImportRow[] rows)
+        {
+            EditorOperation operation = new ImportMappedParticipants(rows, source, [feature]);
+            workspace.Execute(WireJson.Read<EditorOperation>(WireJson.Write(operation)));
+        }
+        Execute([Row("a", "新しい名前", "2"), Row("b", "別の名前", "3")]);
+        if (workspace.Project.Participants.Single(item => item.CircleId == "a").DisplayName != "新しい名前" ||
+            workspace.Project.Participants.Single(item => item.CircleId == "a").Features["score"] != 2 ||
+            workspace.Project.ParticipantTableSource?.FieldColumns?.DisplayName != "名前")
+            throw new Exception("Mapped import did not update participants and channels together.");
+        var saved = WireJson.Write(workspace.Project);
+        try { Execute([Row("a", "新しい名前", "文字"), Row("b", "別の名前", "3")]);
+            throw new Exception("Invalid mapped import was accepted."); }
+        catch (ArgumentException) { }
+        if (WireJson.Write(workspace.Project) != saved)
+            throw new Exception("Rejected mapped import changed the event.");
+        workspace.Undo();
+        if (workspace.Project.Evaluation.Features.Count != 0 || workspace.Project.ParticipantTableSource is not null)
+            throw new Exception("Mapped import was not one undoable operation.");
     }
 
     private static void CheckParticipantFieldColumns(CircleSpaceProject original)

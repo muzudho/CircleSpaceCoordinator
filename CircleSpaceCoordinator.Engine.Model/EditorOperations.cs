@@ -51,6 +51,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(LayoutCatalogServiceMoveDeskLayout), "LayoutCatalogService.MoveDeskLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceRenameCircleLayout), "LayoutCatalogService.RenameCircleLayout")]
 [JsonDerivedType(typeof(ParticipantCatalogServiceReplaceParticipants), "ParticipantCatalogService.ReplaceParticipants")]
+[JsonDerivedType(typeof(ImportMappedParticipants), "ImportMappedParticipants")]
 [JsonDerivedType(typeof(SetParticipantFieldColumns), "SetParticipantFieldColumns")]
 [JsonDerivedType(typeof(SetParticipantMappingOrder), "SetParticipantMappingOrder")]
 [JsonDerivedType(typeof(PlanCatalogServiceCreatePlan), "PlanCatalogService.CreatePlan")]
@@ -133,6 +134,8 @@ public sealed record LayoutCatalogServiceMoveDeskLayout(string deskLayoutId, int
 public sealed record LayoutCatalogServiceRenameCircleLayout(string circleLayoutId, string name) : EditorOperation;
 public sealed record ParticipantCatalogServiceReplaceParticipants(IReadOnlyList<ParticipantImportRow> rows,
     ParticipantTableSource? source = null) : EditorOperation;
+public sealed record ImportMappedParticipants(IReadOnlyList<ParticipantImportRow> rows, ParticipantTableSource source,
+    IReadOnlyList<CircleSpaceCoordinator.Core.Evaluation.EvaluationFeature> features) : EditorOperation;
 public sealed record SetParticipantFieldColumns(ParticipantFieldColumns fields) : EditorOperation;
 public sealed record SetParticipantMappingOrder(IReadOnlyList<string> order) : EditorOperation;
 public sealed record PlanCatalogServiceCreatePlan(string newPlanId, string newPlanName, string? description = null) : EditorOperation;

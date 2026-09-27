@@ -1,10 +1,36 @@
 namespace CircleSpaceCoordinator.Application.Participants;
 
 using CircleSpaceCoordinator.Core.Model;
+using CircleSpaceCoordinator.Core.Evaluation;
+using CircleSpaceCoordinator.Core.Geometry;
 using CircleSpaceCoordinator.Core.Validation;
 
 public static class ParticipantCatalogService
 {
+    public static CircleSpaceProject ImportMapped(CircleSpaceProject project,
+        IReadOnlyList<ParticipantImportRow> rows, ParticipantTableSource source,
+        IReadOnlyList<EvaluationFeature> features)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(features);
+        if (features.Any(item => string.IsNullOrWhiteSpace(item.Id) || string.IsNullOrWhiteSpace(item.Name) || item.Name == "番地") ||
+            features.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != features.Count ||
+            features.Select(item => item.Name).Distinct(StringComparer.Ordinal).Count() != features.Count)
+            throw new ArgumentException("チャンネル名またはIDが重複しています。", nameof(features));
+        var keys = source.ColumnKeys.ToHashSet(StringComparer.Ordinal);
+        if (features.Any(item => item.SourceColumn is { } column && !keys.Contains(column)))
+            throw new ArgumentException("取込み表にない列がチャンネルへ対応しています。", nameof(features));
+        var maps = project.Evaluation.WeightMaps.ToList();
+        foreach (var feature in features.Where(item => maps.All(map => map.FeatureId != item.Id)))
+            maps.Add(new WeightMap(feature.Id, 0, new Dictionary<GridPosition, double>()));
+        var mapped = project with { Evaluation = project.Evaluation with
+        {
+            Features = features.ToArray(), WeightMaps = maps,
+        } };
+        return ReplaceParticipants(mapped, rows, source);
+    }
+
     public static CircleSpaceProject SetFieldColumns(CircleSpaceProject project, ParticipantFieldColumns fields)
     {
         ArgumentNullException.ThrowIfNull(project);
