@@ -48,6 +48,7 @@ public sealed partial class VenueEditorGame
                 if (Contains(ChannelButton(0), pointer)) return "評価値のチャンネルを追加する";
                 if (Contains(ChannelButton(1), pointer)) return "選択中のチャンネルの読込列・名前・チャンネルの重み・Commentを編集する";
                 if (Contains(ChannelButton(2), pointer)) return "選択中の評価値チャンネルを削除する";
+                if (Contains(ChannelButton(3), pointer)) return "読込列と評価チャンネルの対応を確認・変更する";
                 if (ShowsChannelFooterButton && Contains(BlockStyleButton(), pointer))
                     return ShowsBlockStyleButton ? "ブロック番号と色・網掛けパターンの対応を編集する"
                         : selectedNumberChannel == 1 ? "旗からの順番でフレーム番号を自動連番する"

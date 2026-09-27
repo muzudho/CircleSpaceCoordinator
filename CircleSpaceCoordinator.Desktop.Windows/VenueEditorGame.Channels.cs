@@ -34,7 +34,7 @@ public sealed partial class VenueEditorGame
     private ScreenRectangle ChannelButton(int index)
     {
         var panel = GetChannelPanelBounds();
-        return new ScreenRectangle(panel.X + 8 + index * 83, panel.Y + 34, 78, 26);
+        return new ScreenRectangle(panel.X + 8 + index * 61, panel.Y + 34, 58, 26);
     }
 
     private ScreenRectangle ChannelRow(int index)
@@ -80,6 +80,7 @@ public sealed partial class VenueEditorGame
         DrawLayoutButton(ChannelButton(0), "追加", false);
         DrawLayoutButton(ChannelButton(1), "編集", false, IsWeightChannelSelected);
         DrawLayoutButton(ChannelButton(2), "削除", false, IsWeightChannelSelected);
+        DrawLayoutButton(ChannelButton(3), "列対応", false);
         var evaluation = workspace.GetSelectedPlanSnapshot().Evaluation;
         var gaps = GetNumberChannelGaps();
         for (var rowIndex = 0; rowIndex < VisibleChannelRows; rowIndex++)
@@ -99,7 +100,7 @@ public sealed partial class VenueEditorGame
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
             textRenderer?.Draw(feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点",
                 new Rectangle((int)row.X + 6, (int)row.Y + 1, (int)row.Width - (missing ? 36 : 12), 27), Color.White, 15, selected);
-            textRenderer?.Draw(feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列" : $"チャンネル重み ×{feature.OverallWeight:G}：{feature.SourceColumn ?? "（対応なし）"}",
+            textRenderer?.Draw(feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列" : $"列：{feature.SourceColumn ?? "（対応なし）"}　重み ×{feature.OverallWeight:G}",
                 new Rectangle((int)row.X + 6, (int)row.Y + 26, (int)row.Width - 12, 20), new Color(184, 204, 214), 11);
         }
         DrawChannelScrollbar();
@@ -159,6 +160,7 @@ public sealed partial class VenueEditorGame
                     catch (Exception exception) { ShowChannelError(exception); }
                 });
             }
+            else if (Contains(ChannelButton(3), pointer)) OpenChannelColumnMapping();
             else
             {
                 for (var row = 0; row < VisibleChannelRows; row++)

@@ -64,8 +64,29 @@ public static class ParticipantCatalogService
                     assignment.OccupiedCells.Count == requiredCellsById[assignment.ParticipantId])
                 .ToArray(),
         }).ToArray();
-        var result = CircleSpaceCoordinator.Application.Editing.ChannelEditor.RefreshValues(
-            project with { Participants = participants, Plans = plans, ParticipantTableSource = source });
+        var result = project with { Participants = participants, Plans = plans, ParticipantTableSource = source };
+        if (source is not null)
+        {
+            var columns = source.ColumnKeys.ToHashSet(StringComparer.Ordinal);
+            var missingIds = result.Evaluation.Features
+                .Where(item => item.SourceColumn is not null && !columns.Contains(item.SourceColumn))
+                .Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+            if (missingIds.Count > 0)
+                result = result with
+                {
+                    Evaluation = result.Evaluation with
+                    {
+                        Features = result.Evaluation.Features.Select(item => missingIds.Contains(item.Id)
+                            ? item with { SourceColumn = null } : item).ToArray(),
+                    },
+                    Participants = result.Participants.Select(participant => participant with
+                    {
+                        Features = participant.Features.Where(pair => !missingIds.Contains(pair.Key))
+                            .ToDictionary(pair => pair.Key, pair => pair.Value),
+                    }).ToArray(),
+                };
+        }
+        result = CircleSpaceCoordinator.Application.Editing.ChannelEditor.RefreshValues(result);
         var projectIssues = ProjectValidator.Validate(result);
         if (projectIssues.Count > 0)
             throw new ProjectValidationException(projectIssues);

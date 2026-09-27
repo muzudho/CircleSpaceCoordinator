@@ -91,8 +91,11 @@ public sealed partial class VenueEditorGame
                     var mapping = new ParticipantColumnMapping(columns[0] ?? -1, columns[1] ?? -1, columns[2], columns[3], columns[4]);
                     RunBackground("取込み内容の確認", () => ParticipantTableMapper.Map(sheet, mapping), rows =>
                     {
+                        var incomingColumns = ParticipantTableMapper.GetColumnKeys(sheet.Headers).ToHashSet(StringComparer.Ordinal);
+                        var unboundCount = owner.Project.Evaluation.Features.Count(item => item.SourceColumn is not null && !incomingColumns.Contains(item.SourceColumn));
                         OpenModal(new ModalDialogModel(ModalDialogKind.Confirmation, "参加サークル一覧の確認",
-                            $"参加サークル {rows.Count} 件で一覧を更新します。\n一覧から消えたサークルの配置は解除されます。"), action =>
+                            $"参加サークル {rows.Count} 件で一覧を更新します。\n一覧から消えたサークルの配置は解除されます。" +
+                            (unboundCount == 0 ? "" : $"\n新しい表にない列を参照する {unboundCount} チャンネルは列対応を外します。取込後に結び直してください。")), action =>
                         {
                             if (action != ModalDialogAction.Accept) { ShowDraft(); return; }
                             try
@@ -101,7 +104,7 @@ public sealed partial class VenueEditorGame
                                 var source = new ParticipantTableSource(Path.GetFileName(path), sheet.Name, sheet.Headers.ToArray(), ParticipantTableMapper.GetColumnKeys(sheet.Headers));
                                 workspace.Execute(new ParticipantCatalogServiceReplaceParticipants(rows, source), selectedPlanEdit: false);
                                 Log("participant_import", true, $"participants={rows.Count}");
-                                ShowInAppMessage("取込み完了", $"参加サークル {rows.Count} 件を取り込みました。");
+                                OpenChannelColumnMapping($"参加サークル {rows.Count} 件を取り込みました。列とチャンネルの対応を確認してください。");
                             }
                             catch (Exception exception) { ShowNotice("取込みエラー", exception.Message, ShowDraft); }
                         }, [("キャンセル", ModalDialogAction.Cancel), ("取り込む", ModalDialogAction.Accept)]);

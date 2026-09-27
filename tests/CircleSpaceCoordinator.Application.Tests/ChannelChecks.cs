@@ -83,6 +83,15 @@ internal static class ChannelChecks
         Execute(new SetChannelWeights(workspace.SelectedPlanId, "books", [new(2, 0)], 0.25));
         Equal(0.25, workspace.Project.Evaluation.WeightMaps.Single(item => item.FeatureId == "books").GetWeight(new(2, 0)));
         Equal(1, workspace.Project.CircleLayouts.Count);
+        Execute(new UpsertChannel("books", "書籍", "書籍の有無"));
+        var newSource = new ParticipantTableSource("changed.csv", "CSV", ["新しい列"], ["新しい列"]);
+        Execute(new ParticipantCatalogServiceReplaceParticipants(
+            [new ParticipantImportRow("a", "a", 1) { SourceValues = new Dictionary<string, string> { ["新しい列"] = "2" } },
+             new ParticipantImportRow("b", "b", 1) { SourceValues = new Dictionary<string, string> { ["新しい列"] = "3" } }], newSource));
+        if (workspace.Project.Evaluation.Features.Any(item => (item.Id == "books" || item.Id == "other") && item.SourceColumn is not null))
+            throw new Exception("Removed import columns kept their old channel mappings.");
+        Execute(new UpsertChannel("other", "その他", "新しい列"));
+        Equal(2, workspace.Project.Participants.Single(item => item.CircleId == "a").Features["other"]);
         CheckPlaceableCells(project);
     }
 
