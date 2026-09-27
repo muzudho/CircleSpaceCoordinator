@@ -101,7 +101,15 @@ public sealed partial class VenueEditorGame
                             try
                             {
                                 if (workspace != owner) throw new InvalidOperationException("対象のイベントが変わりました。");
-                                var source = new ParticipantTableSource(Path.GetFileName(path), sheet.Name, sheet.Headers.ToArray(), ParticipantTableMapper.GetColumnKeys(sheet.Headers));
+                                var keys = ParticipantTableMapper.GetColumnKeys(sheet.Headers);
+                                var source = new ParticipantTableSource(Path.GetFileName(path), sheet.Name, sheet.Headers.ToArray(), keys)
+                                {
+                                    FieldColumns = new ParticipantFieldColumns(keys[mapping.CircleIdColumn], keys[mapping.DisplayNameColumn],
+                                        mapping.RequiredCellCountColumn is { } required ? keys[required] : null,
+                                        mapping.CombinedWithCircleIdColumn is { } combined ? keys[combined] : null,
+                                        mapping.GenreIdColumn is { } genre ? keys[genre] : null),
+                                    MappingOrder = owner.Project.ParticipantTableSource?.MappingOrder,
+                                };
                                 workspace.Execute(new ParticipantCatalogServiceReplaceParticipants(rows, source), selectedPlanEdit: false);
                                 Log("participant_import", true, $"participants={rows.Count}");
                                 OpenChannelColumnMapping($"参加サークル {rows.Count} 件を取り込みました。列とチャンネルの対応を確認してください。");

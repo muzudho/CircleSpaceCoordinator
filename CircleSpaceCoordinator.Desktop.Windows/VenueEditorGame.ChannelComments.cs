@@ -23,7 +23,7 @@ public sealed partial class VenueEditorGame
         if (editorMode != EditorMode.FrameChannels || workspace is null) return null;
         for (var row = 0; row < VisibleChannelRows; row++)
         {
-            var index = row + channelScroll - 3;
+            var index = row + channelScroll - ChannelFixedRowCount;
             if (index < 0 || index >= workspace.Project.Evaluation.Features.Count || !Contains(ChannelRow(row), pointer)) continue;
             var comment = workspace.Project.Evaluation.Features[index].CommentForChannel;
             return string.IsNullOrWhiteSpace(comment) ? null : "Comment  " + CommentExcerpt(comment);

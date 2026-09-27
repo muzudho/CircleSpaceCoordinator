@@ -18,7 +18,8 @@ public sealed partial class VenueEditorGame
 
     private (ScreenRectangle Track, ScreenRectangle Thumb, int Maximum) GetChannelScrollbar()
     {
-        var count = editorMode == EditorMode.CirclePlacement ? GetCircleDisplayChannels().Count : (workspace?.Project.Evaluation.Features.Count ?? 0) + 3;
+        var count = editorMode == EditorMode.CirclePlacement ? GetCircleDisplayChannels().Count :
+            (workspace?.Project.Evaluation.Features.Count ?? 0) + ChannelFixedRowCount;
         var visible = VisibleChannelRows;
         var maximum = Math.Max(0, count - visible);
         ChannelScrollPosition = Math.Clamp(ChannelScrollPosition, 0, maximum);

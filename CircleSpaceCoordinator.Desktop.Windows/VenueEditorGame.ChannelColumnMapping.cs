@@ -1,12 +1,26 @@
 namespace CircleSpaceCoordinator.Desktop.Windows;
 
+using CircleSpaceCoordinator.Core.Model;
 using CircleSpaceCoordinator.Engine.Model;
+using CircleSpaceCoordinator.Infrastructure.Tabular;
 using Forms = System.Windows.Forms;
 using Drawing = System.Drawing;
 
 public sealed partial class VenueEditorGame
 {
-    private sealed record ChannelMappingRow(string? ColumnKey, string? ChannelId, bool Linked, bool Fixed);
+    private sealed record ChannelMappingRow(string Id, string? ColumnKey, string? ChannelKey, string ChannelName, bool Fixed)
+    {
+        public bool Linked => ColumnKey is not null && ChannelKey is not null;
+    }
+
+    private sealed record ChannelMappingDrag(string Kind, string Value);
+
+    private static readonly (string Id, string Name)[] ParticipantFieldNames =
+    [
+        ("circleId", "サークルID"), ("displayName", "サークル名"),
+        ("requiredCellCount", "必要セル数"), ("combinedWithCircleId", "合体先サークルID"),
+        ("genreId", "ジャンルID"),
+    ];
 
     private void OpenChannelColumnMapping(string? openingStatus = null)
     {
@@ -14,149 +28,313 @@ public sealed partial class VenueEditorGame
         var owner = workspace;
         using var form = new Forms.Form
         {
-            Text = "列とチャンネルの対応付け",
-            ClientSize = new Drawing.Size(1000, 590),
+            Text = "列とチャンネルの対応付け", ClientSize = new Drawing.Size(1050, 545),
             StartPosition = Forms.FormStartPosition.CenterScreen,
             FormBorderStyle = Forms.FormBorderStyle.FixedDialog,
-            MaximizeBox = false,
-            MinimizeBox = false,
-            AutoScaleMode = Forms.AutoScaleMode.Dpi,
+            MaximizeBox = false, MinimizeBox = false, AutoScaleMode = Forms.AutoScaleMode.Dpi,
         };
         var help = new Forms.Label
         {
-            Left = 20, Top = 12, Width = 960, Height = 34,
-            Text = "左の列名と右の評価チャンネルを選んで紐づけます。固定の番号チャンネルは表の列と直接対応しません。",
+            Left = 20, Top = 12, Width = 1010, Height = 42,
+            Text = "列名をチャンネル名へドラッグすると対応します。行番号をドラッグすると行を並べ替えます。左右は６行ずつ表示します。",
         };
-        var grid = new Forms.DataGridView
+        Forms.DataGridView MakeGrid(int left)
         {
-            Left = 20, Top = 50, Width = 960, Height = 430,
-            ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false,
-            AllowUserToResizeRows = false, RowHeadersVisible = false,
-            MultiSelect = false, SelectionMode = Forms.DataGridViewSelectionMode.CellSelect,
-            AutoSizeColumnsMode = Forms.DataGridViewAutoSizeColumnsMode.Fill,
-            BackgroundColor = Drawing.Color.FromArgb(28, 35, 44),
-            BorderStyle = Forms.BorderStyle.FixedSingle,
-        };
-        grid.RowTemplate.Height = 32;
-        grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "データの列名", FillWeight = 47, SortMode = Forms.DataGridViewColumnSortMode.NotSortable });
-        grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "対応", FillWeight = 6, SortMode = Forms.DataGridViewColumnSortMode.NotSortable });
-        grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "チャンネル名", FillWeight = 47, SortMode = Forms.DataGridViewColumnSortMode.NotSortable });
-        var link = new Forms.Button { Left = 20, Top = 494, Width = 174, Height = 36, Text = "紐づける" };
-        var unlink = new Forms.Button { Left = 204, Top = 494, Width = 174, Height = 36, Text = "対応を外す" };
-        var add = new Forms.Button { Left = 388, Top = 494, Width = 190, Height = 36, Text = "チャンネルを追加" };
-        var close = new Forms.Button { Left = 820, Top = 494, Width = 160, Height = 36, Text = "閉じる", DialogResult = Forms.DialogResult.Cancel };
-        var status = new Forms.Label { Left = 20, Top = 543, Width = 960, Height = 28,
-            Text = openingStatus ?? "対応の変更はイベントに保存され、全配置案の評価へ反映されます。" };
-        form.Controls.AddRange([help, grid, link, unlink, add, close, status]);
+            var grid = new Forms.DataGridView
+            {
+                Left = left, Top = 67, Width = 495, Height = 338,
+                ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false, RowHeadersVisible = false,
+                MultiSelect = false, SelectionMode = Forms.DataGridViewSelectionMode.CellSelect,
+                AutoSizeColumnsMode = Forms.DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Drawing.Color.FromArgb(28, 35, 44),
+                BorderStyle = Forms.BorderStyle.FixedSingle, AllowDrop = true,
+            };
+            grid.RowTemplate.Height = 50;
+            grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "行", FillWeight = 9, SortMode = Forms.DataGridViewColumnSortMode.NotSortable });
+            grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "データの列名", FillWeight = 41, SortMode = Forms.DataGridViewColumnSortMode.NotSortable });
+            grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "対応", FillWeight = 8, SortMode = Forms.DataGridViewColumnSortMode.NotSortable });
+            grid.Columns.Add(new Forms.DataGridViewTextBoxColumn { HeaderText = "チャンネル名", FillWeight = 42, SortMode = Forms.DataGridViewColumnSortMode.NotSortable });
+            return grid;
+        }
+        var leftGrid = MakeGrid(20);
+        var rightGrid = MakeGrid(535);
+        var previous = new Forms.Button { Left = 20, Top = 418, Width = 100, Height = 34, Text = "前へ" };
+        var next = new Forms.Button { Left = 130, Top = 418, Width = 100, Height = 34, Text = "次へ" };
+        var pageLabel = new Forms.Label { Left = 244, Top = 424, Width = 270, Height = 24 };
+        var link = new Forms.Button { Left = 535, Top = 418, Width = 100, Height = 34, Text = "紐づける" };
+        var unlink = new Forms.Button { Left = 645, Top = 418, Width = 110, Height = 34, Text = "対応を外す" };
+        var add = new Forms.Button { Left = 765, Top = 418, Width = 150, Height = 34, Text = "チャンネルを追加" };
+        var close = new Forms.Button { Left = 925, Top = 418, Width = 105, Height = 34, Text = "閉じる", DialogResult = Forms.DialogResult.Cancel };
+        var status = new Forms.Label { Left = 20, Top = 470, Width = 1010, Height = 55,
+            Text = openingStatus ?? "列とチャンネルの対応はイベントに保存されます。" };
+        form.Controls.AddRange([help, leftGrid, rightGrid, previous, next, pageLabel, link, unlink, add, close, status]);
         form.CancelButton = close;
 
-        string? selectedColumn = null;
-        string? selectedChannel = null;
         var source = owner.Project.ParticipantTableSource;
         var columnKeys = source?.ColumnKeys.ToArray() ?? owner.Project.Participants
             .SelectMany(item => item.SourceValues.Keys).Distinct(StringComparer.Ordinal).ToArray();
-        var columnLabels = columnKeys.Select((key, index) =>
-            (Key: key, Label: $"{index + 1}. {(source?.Headers.ElementAtOrDefault(index) is { Length: > 0 } header ? header : key)}"))
-            .ToArray();
+        var columnNames = columnKeys.Select((key, index) =>
+            (Key: key, Name: $"{index + 1}. {(source?.Headers.ElementAtOrDefault(index) is { Length: > 0 } header ? header : key)}"))
+            .ToDictionary(item => item.Key, item => item.Name, StringComparer.Ordinal);
+        ParticipantFieldColumns? fields = source?.FieldColumns;
+        if (fields is null && source is { Headers.Count: > 0 })
+        {
+            // Older projects did not store these five column bindings. Start from the importer's header guesses.
+            var guess = ParticipantTableMapper.Guess(source.Headers);
+            fields = new ParticipantFieldColumns(columnKeys[guess.CircleIdColumn], columnKeys[guess.DisplayNameColumn],
+                guess.RequiredCellCountColumn is { } required ? columnKeys[required] : null,
+                guess.CombinedWithCircleIdColumn is { } combined ? columnKeys[combined] : null,
+                guess.GenreIdColumn is { } genre ? columnKeys[genre] : null);
+        }
+        var page = 0;
+        string? selectedColumn = null;
+        string? selectedChannel = null;
+        var rows = new List<ChannelMappingRow>();
 
-        void SetStatus(string text, bool error = false)
+        string? FieldColumn(string id) => id switch
+        {
+            "circleId" => fields?.CircleId, "displayName" => fields?.DisplayName,
+            "requiredCellCount" => fields?.RequiredCellCount,
+            "combinedWithCircleId" => fields?.CombinedWithCircleId,
+            "genreId" => fields?.GenreId, _ => null,
+        };
+        string ChannelName(string key) => key.StartsWith("field:", StringComparison.Ordinal)
+            ? ParticipantFieldNames.First(item => item.Id == key[6..]).Name
+            : owner.Project.Evaluation.Features.First(item => item.Id == key[8..]).Name;
+        void SetStatus(string message, bool error = false)
         {
             status.ForeColor = error ? Drawing.Color.DarkRed : Drawing.Color.FromArgb(35, 75, 85);
-            status.Text = text;
+            status.Text = message;
         }
 
         void RefreshSelection()
         {
-            foreach (Forms.DataGridViewRow row in grid.Rows)
+            foreach (var grid in new[] { leftGrid, rightGrid })
+            foreach (Forms.DataGridViewRow gridRow in grid.Rows)
             {
-                var item = (ChannelMappingRow)row.Tag!;
-                row.Cells[0].Style.BackColor = item.ColumnKey is not null && item.ColumnKey == selectedColumn
+                if (gridRow.Tag is not ChannelMappingRow item) continue;
+                gridRow.Cells[1].Style.BackColor = item.ColumnKey == selectedColumn && selectedColumn is not null
                     ? Drawing.Color.LightCyan : Drawing.Color.White;
-                row.Cells[2].Style.BackColor = item.ChannelId is not null && item.ChannelId == selectedChannel
+                gridRow.Cells[3].Style.BackColor = item.ChannelKey == selectedChannel && selectedChannel is not null
                     ? Drawing.Color.LightCyan : item.Fixed ? Drawing.Color.Gainsboro : Drawing.Color.White;
             }
             link.Enabled = selectedColumn is not null && selectedChannel is not null;
-            unlink.Enabled = selectedChannel is not null && owner.Project.Evaluation.Features
-                .Any(item => item.Id == selectedChannel && item.SourceColumn is not null);
+            unlink.Enabled = selectedChannel is { } key &&
+                (key.StartsWith("feature:", StringComparison.Ordinal)
+                    ? owner.Project.Evaluation.Features.Any(item => item.Id == key[8..] && item.SourceColumn is not null)
+                    : key is not "field:circleId" and not "field:displayName" && FieldColumn(key[6..]) is not null);
         }
 
-        void AddRow(string? columnKey, string left, string? channelId, string right, bool linked = false, bool fixedChannel = false)
+        void BuildRows()
         {
-            var index = grid.Rows.Add(left, "", right);
-            grid.Rows[index].Tag = new ChannelMappingRow(columnKey, channelId, linked, fixedChannel);
+            rows.Clear();
+            var displayed = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var column in columnKeys)
+            {
+                var any = false;
+                foreach (var field in ParticipantFieldNames.Where(item => FieldColumn(item.Id) == column))
+                {
+                    rows.Add(new ChannelMappingRow("field:" + field.Id, column, "field:" + field.Id, field.Name, false));
+                    displayed.Add("field:" + field.Id);
+                    any = true;
+                }
+                foreach (var feature in owner.Project.Evaluation.Features.Where(item => item.SourceColumn == column))
+                {
+                    rows.Add(new ChannelMappingRow("feature:" + feature.Id, column, "feature:" + feature.Id, feature.Name, false));
+                    displayed.Add("feature:" + feature.Id);
+                    any = true;
+                }
+                if (!any) rows.Add(new ChannelMappingRow("column:" + column, column, null, "", false));
+            }
+            foreach (var field in ParticipantFieldNames.Where(item => !displayed.Contains("field:" + item.Id)))
+                rows.Add(new ChannelMappingRow("field:" + field.Id, null, "field:" + field.Id, field.Name + "（未対応）", false));
+            foreach (var feature in owner.Project.Evaluation.Features.Where(item => !displayed.Contains("feature:" + item.Id)))
+                rows.Add(new ChannelMappingRow("feature:" + feature.Id, null, "feature:" + feature.Id, feature.Name + "（未対応）", false));
+            foreach (var name in NumberChannelNames)
+                rows.Add(new ChannelMappingRow("number:" + name, null, null, name + "（固定）", true));
+            var order = owner.Project.ParticipantTableSource?.MappingOrder;
+            if (order is not null)
+            {
+                var indexes = order.Select((id, index) => (id, index)).ToDictionary(item => item.id, item => item.index, StringComparer.Ordinal);
+                rows = rows.Select((item, index) => (item, index))
+                    .OrderBy(pair => indexes.TryGetValue(pair.item.Id, out var position) ? position : order.Count + pair.index)
+                    .Select(pair => pair.item).ToList();
+            }
+        }
+
+        void ShowPage()
+        {
+            page = Math.Clamp(page, 0, Math.Max(0, (rows.Count - 1) / 6));
+            foreach (var (grid, start) in new[] { (leftGrid, page * 6), (rightGrid, (page + 1) * 6) })
+            {
+                grid.Rows.Clear();
+                for (var i = 0; i < 6; i++)
+                {
+                    var position = start + i;
+                    var item = position < rows.Count ? rows[position] : null;
+                    var index = grid.Rows.Add(item is null ? "" : (position + 1).ToString(),
+                        item?.ColumnKey is { } key ? columnNames.GetValueOrDefault(key, key) : "", "", item?.ChannelName ?? "");
+                    grid.Rows[index].Tag = item;
+                }
+            }
+            previous.Enabled = page > 0;
+            next.Enabled = (page + 1) * 6 < rows.Count;
+            var rightStart = (page + 1) * 6;
+            pageLabel.Text = $"左 {page * 6 + 1}～{Math.Min(rightStart, rows.Count)} / 右 " +
+                (rightStart < rows.Count ? $"{rightStart + 1}～{Math.Min(rightStart + 6, rows.Count)}" : "なし");
+            RefreshSelection();
         }
 
         void RefreshRows()
         {
-            grid.Rows.Clear();
-            var features = owner.Project.Evaluation.Features;
-            var displayed = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var column in columnLabels)
-            {
-                var matches = features.Where(item => item.SourceColumn == column.Key).ToArray();
-                if (matches.Length == 0) AddRow(column.Key, column.Label, null, "");
-                foreach (var feature in matches)
-                {
-                    AddRow(column.Key, column.Label, feature.Id, feature.Name, linked: true);
-                    displayed.Add(feature.Id);
-                }
-            }
-            foreach (var feature in features.Where(item => !displayed.Contains(item.Id)))
-                AddRow(null, "", feature.Id, feature.SourceColumn is null
-                    ? $"{feature.Name}（未対応）" : $"{feature.Name}（元の列なし）");
-            foreach (var name in NumberChannelNames)
-                AddRow(null, "", null, $"{name}（固定）", fixedChannel: true);
-            if (columnLabels.Length == 0)
-                SetStatus("サークル一覧の列がありません。先に Excel / CSV を取り込んでください。", error: true);
-            RefreshSelection();
+            fields = owner.Project.ParticipantTableSource?.FieldColumns ?? fields;
+            BuildRows();
+            ShowPage();
+            if (columnKeys.Length == 0)
+                SetStatus("サークル一覧の列がありません。先に Excel / CSV を取り込んでください。", true);
         }
 
-        grid.CellPainting += (_, e) =>
+        void Bind(string column, string channel)
         {
-            if (e.RowIndex < 0 || e.ColumnIndex != 1) return;
-            e.PaintBackground(e.CellBounds, false);
-            if (((ChannelMappingRow)grid.Rows[e.RowIndex].Tag!).Linked)
+            if (workspace != owner) throw new InvalidOperationException("対象のイベントが変わりました。");
+            if (channel.StartsWith("feature:", StringComparison.Ordinal))
             {
-                using var pen = new Drawing.Pen(Drawing.Color.FromArgb(35, 126, 111), 3);
-                var y = e.CellBounds.Top + e.CellBounds.Height / 2;
-                e.Graphics?.DrawLine(pen, e.CellBounds.Left + 2, y, e.CellBounds.Right - 2, y);
+                var feature = owner.Project.Evaluation.Features.Single(item => item.Id == channel[8..]);
+                owner.Execute(new UpsertChannel(feature.Id, feature.Name, column), selectedPlanEdit: false);
             }
-            e.Handled = true;
-        };
-        grid.CellClick += (_, e) =>
+            else
+            {
+                var current = fields ?? throw new InvalidOperationException("先に Excel / CSV を取り込んでください。");
+                var updated = channel[6..] switch
+                {
+                    "circleId" => current with { CircleId = column },
+                    "displayName" => current with { DisplayName = column },
+                    "requiredCellCount" => current with { RequiredCellCount = column },
+                    "combinedWithCircleId" => current with { CombinedWithCircleId = column },
+                    "genreId" => current with { GenreId = column },
+                    _ => throw new ArgumentException("チャンネルを選んでください。"),
+                };
+                owner.Execute(new SetParticipantFieldColumns(updated), selectedPlanEdit: false);
+            }
+            selectedColumn = column;
+            selectedChannel = channel;
+            RefreshRows();
+            SetStatus($"「{columnNames.GetValueOrDefault(column, column)}」を「{ChannelName(channel)}」に対応付けました。");
+        }
+
+        foreach (var grid in new[] { leftGrid, rightGrid })
         {
-            if (e.RowIndex < 0) return;
-            var row = (ChannelMappingRow)grid.Rows[e.RowIndex].Tag!;
-            if (e.ColumnIndex == 0 && row.ColumnKey is not null) selectedColumn = row.ColumnKey;
-            if (e.ColumnIndex == 2 && row.ChannelId is not null) selectedChannel = row.ChannelId;
-            RefreshSelection();
-            var columnName = columnLabels.FirstOrDefault(item => item.Key == selectedColumn).Label ?? "列を選択";
-            var channelName = owner.Project.Evaluation.Features.FirstOrDefault(item => item.Id == selectedChannel)?.Name ?? "チャンネルを選択";
-            SetStatus($"選択中：{columnName} → {channelName}");
-        };
+            grid.CellPainting += (_, e) =>
+            {
+                if (e.RowIndex < 0 || e.ColumnIndex != 2) return;
+                e.PaintBackground(e.CellBounds, false);
+                if (grid.Rows[e.RowIndex].Tag is ChannelMappingRow { Linked: true })
+                {
+                    using var pen = new Drawing.Pen(Drawing.Color.FromArgb(35, 126, 111), 3);
+                    var y = e.CellBounds.Top + e.CellBounds.Height / 2;
+                    e.Graphics?.DrawLine(pen, e.CellBounds.Left + 2, y, e.CellBounds.Right - 2, y);
+                }
+                e.Handled = true;
+            };
+            grid.CellClick += (_, e) =>
+            {
+                if (e.RowIndex < 0 || grid.Rows[e.RowIndex].Tag is not ChannelMappingRow item) return;
+                if (e.ColumnIndex == 1 && item.ColumnKey is not null) selectedColumn = item.ColumnKey;
+                if (e.ColumnIndex == 3 && item.ChannelKey is not null) selectedChannel = item.ChannelKey;
+                RefreshSelection();
+                SetStatus($"選択中：{(selectedColumn is { } key ? columnNames.GetValueOrDefault(key, key) : "列を選択")} → " +
+                    (selectedChannel is { } channel ? ChannelName(channel) : "チャンネルを選択"));
+            };
+            Drawing.Point? dragStart = null;
+            int dragRow = -1, dragColumn = -1;
+            grid.MouseDown += (_, e) =>
+            {
+                var hit = grid.HitTest(e.X, e.Y);
+                dragStart = new Drawing.Point(e.X, e.Y);
+                dragRow = hit.RowIndex;
+                dragColumn = hit.ColumnIndex;
+            };
+            grid.MouseMove += (_, e) =>
+            {
+                if (e.Button != Forms.MouseButtons.Left || dragStart is not { } origin || dragRow < 0 ||
+                    Math.Abs(e.X - origin.X) + Math.Abs(e.Y - origin.Y) < 8) return;
+                dragStart = null;
+                if (grid.Rows[dragRow].Tag is not ChannelMappingRow item) return;
+                var payload = dragColumn switch
+                {
+                    0 => new ChannelMappingDrag("row", item.Id),
+                    1 when item.ColumnKey is { } column => new ChannelMappingDrag("column", column),
+                    3 when item.ChannelKey is { } channel => new ChannelMappingDrag("channel", channel),
+                    _ => null,
+                };
+                if (payload is not null) grid.DoDragDrop(payload, Forms.DragDropEffects.Move | Forms.DragDropEffects.Link);
+            };
+            grid.DragEnter += (_, e) =>
+            {
+                if (e.Data?.GetData(typeof(ChannelMappingDrag)) is ChannelMappingDrag payload)
+                    e.Effect = payload.Kind == "row" ? Forms.DragDropEffects.Move : Forms.DragDropEffects.Link;
+            };
+            grid.DragDrop += (_, e) =>
+            {
+                try
+                {
+                    if (e.Data?.GetData(typeof(ChannelMappingDrag)) is not ChannelMappingDrag payload) return;
+                    var point = grid.PointToClient(new Drawing.Point(e.X, e.Y));
+                    var hit = grid.HitTest(point.X, point.Y);
+                    if (hit.RowIndex < 0 || grid.Rows[hit.RowIndex].Tag is not ChannelMappingRow target) return;
+                    if (payload.Kind == "row")
+                    {
+                        if (payload.Value == target.Id || owner.Project.ParticipantTableSource is null) return;
+                        var moved = rows.Single(item => item.Id == payload.Value);
+                        rows.Remove(moved);
+                        rows.Insert(rows.FindIndex(item => item.Id == target.Id), moved);
+                        owner.Execute(new SetParticipantMappingOrder(rows.Select(item => item.Id).ToArray()), selectedPlanEdit: false);
+                        RefreshRows();
+                        SetStatus($"{rows.FindIndex(item => item.Id == moved.Id) + 1} 行目へ移動しました。");
+                    }
+                    else if (payload.Kind == "column" && target.ChannelKey is { } channel)
+                        Bind(payload.Value, channel);
+                    else if (payload.Kind == "channel" && target.ColumnKey is { } column)
+                        Bind(column, payload.Value);
+                }
+                catch (Exception ex) { SetStatus(ex.GetBaseException().Message, true); RefreshRows(); }
+            };
+        }
+
+        previous.Click += (_, _) => { page--; ShowPage(); };
+        next.Click += (_, _) => { page++; ShowPage(); };
         link.Click += (_, _) =>
         {
-            try
-            {
-                if (workspace != owner || selectedColumn is null || selectedChannel is null) return;
-                var feature = owner.Project.Evaluation.Features.Single(item => item.Id == selectedChannel);
-                owner.Execute(new UpsertChannel(feature.Id, feature.Name, selectedColumn), selectedPlanEdit: false);
-                SetStatus($"列「{selectedColumn}」を「{feature.Name}」に紐づけました。");
-                RefreshRows();
-            }
-            catch (Exception ex) { SetStatus(ex.GetBaseException().Message, error: true); }
+            try { if (selectedColumn is { } column && selectedChannel is { } channel) Bind(column, channel); }
+            catch (Exception ex) { SetStatus(ex.GetBaseException().Message, true); }
         };
         unlink.Click += (_, _) =>
         {
             try
             {
-                if (workspace != owner || selectedChannel is null) return;
-                var feature = owner.Project.Evaluation.Features.Single(item => item.Id == selectedChannel);
-                owner.Execute(new UpsertChannel(feature.Id, feature.Name, null), selectedPlanEdit: false);
-                SetStatus($"「{feature.Name}」の列対応を外しました。");
+                if (workspace != owner || selectedChannel is not { } channel) return;
+                if (channel.StartsWith("feature:", StringComparison.Ordinal))
+                {
+                    var feature = owner.Project.Evaluation.Features.Single(item => item.Id == channel[8..]);
+                    owner.Execute(new UpsertChannel(feature.Id, feature.Name, null), selectedPlanEdit: false);
+                }
+                else
+                {
+                    var current = fields ?? throw new InvalidOperationException("列情報がありません。");
+                    var updated = channel[6..] switch
+                    {
+                        "requiredCellCount" => current with { RequiredCellCount = null },
+                        "combinedWithCircleId" => current with { CombinedWithCircleId = null },
+                        "genreId" => current with { GenreId = null },
+                        _ => throw new ArgumentException("サークルIDとサークル名の対応は必須です。"),
+                    };
+                    owner.Execute(new SetParticipantFieldColumns(updated), selectedPlanEdit: false);
+                }
                 RefreshRows();
+                SetStatus("列の対応を外しました。");
             }
-            catch (Exception ex) { SetStatus(ex.GetBaseException().Message, error: true); }
+            catch (Exception ex) { SetStatus(ex.GetBaseException().Message, true); }
         };
         add.Click += (_, _) =>
         {
@@ -175,15 +353,16 @@ public sealed partial class VenueEditorGame
             {
                 if (workspace != owner) return;
                 var value = name.Text.Trim();
-                if (value.Length == 0 || NumberChannelNames.Contains(value, StringComparer.Ordinal))
-                    throw new ArgumentException("固定の番号チャンネルと異なる名前を入力してください。");
+                if (value.Length == 0 || NumberChannelNames.Contains(value, StringComparer.Ordinal) ||
+                    ParticipantFieldNames.Any(item => item.Name == value))
+                    throw new ArgumentException("既定のチャンネルと異なる名前を入力してください。");
                 var id = $"channel-{Guid.NewGuid():N}";
                 owner.Execute(new UpsertChannel(id, value, null), selectedPlanEdit: false);
-                selectedChannel = id;
-                SetStatus($"「{value}」を追加しました。左の列を選んで紐づけてください。");
+                selectedChannel = "feature:" + id;
                 RefreshRows();
+                SetStatus($"「{value}」を追加しました。列名をドラッグして対応付けてください。");
             }
-            catch (Exception ex) { SetStatus(ex.GetBaseException().Message, error: true); }
+            catch (Exception ex) { SetStatus(ex.GetBaseException().Message, true); }
         };
         RefreshRows();
         ShowEditorDialog(form);

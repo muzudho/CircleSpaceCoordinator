@@ -15,6 +15,18 @@ public sealed partial class VenueEditorGame
     private string? selectedChannelId;
     private int selectedNumberChannel;
     private static readonly string[] NumberChannelNames = ["ブロック番号", "フレーム番号", "セル番号"];
+    private static int ChannelFixedRowCount => NumberChannelNames.Length + ParticipantFieldNames.Length;
+    private string? ParticipantFieldColumn(string id)
+    {
+        var fields = workspace?.Project.ParticipantTableSource?.FieldColumns;
+        return id switch
+        {
+            "circleId" => fields?.CircleId, "displayName" => fields?.DisplayName,
+            "requiredCellCount" => fields?.RequiredCellCount,
+            "combinedWithCircleId" => fields?.CombinedWithCircleId,
+            "genreId" => fields?.GenreId, _ => null,
+        };
+    }
     private string NumberChannelName => NumberChannelNames[selectedNumberChannel];
     private int channelScroll;
     private int planScroll;
@@ -73,7 +85,7 @@ public sealed partial class VenueEditorGame
         if (!IsWeightChannelSelected) selectedChannelId = null;
         var panel = GetChannelPanelBounds();
         var features = workspace.Project.Evaluation.Features;
-        channelScroll = Math.Clamp(channelScroll, 0, Math.Max(0, features.Count + 3 - VisibleChannelRows));
+        channelScroll = Math.Clamp(channelScroll, 0, Math.Max(0, features.Count + ChannelFixedRowCount - VisibleChannelRows));
         DrawRectangle(panel, new Color(20, 25, 32, 245));
         DrawOutline(panel, 2, new Color(88, 103, 120));
         textRenderer?.Draw("チャンネル", new Rectangle((int)panel.X + 10, (int)panel.Y + 4, 240, 26), Color.White, 20, true);
@@ -86,21 +98,26 @@ public sealed partial class VenueEditorGame
         for (var rowIndex = 0; rowIndex < VisibleChannelRows; rowIndex++)
         {
             var index = channelScroll + rowIndex;
-            if (index >= features.Count + 3) break;
-            var feature = index < 3 ? null : features[index - 3];
-            var selected = feature is null ? selectedChannelId is null && selectedNumberChannel == index : feature.Id == selectedChannelId;
+            if (index >= features.Count + ChannelFixedRowCount) break;
+            var field = index >= NumberChannelNames.Length && index < ChannelFixedRowCount
+                ? ParticipantFieldNames[index - NumberChannelNames.Length] : ((string Id, string Name)?)null;
+            var feature = index < ChannelFixedRowCount ? null : features[index - ChannelFixedRowCount];
+            var selected = index < NumberChannelNames.Length
+                ? selectedChannelId is null && selectedNumberChannel == index : feature?.Id == selectedChannelId && feature is not null;
             var row = ChannelRow(rowIndex);
             DrawRectangle(row, selected ? new Color(35, 126, 111) : new Color(29, 36, 45));
-            var missing = feature is null && gaps[index] > 0;
+            var missing = index < NumberChannelNames.Length && gaps[index] > 0;
             if (missing)
             {
                 var mark = new ScreenRectangle(row.X + row.Width - 25, row.Y + 5, 20, 20);
                 DrawErrorMark(mark);
             }
             var score = evaluation.Features.FirstOrDefault(item => item.FeatureId == feature?.Id)?.WeightedScore ?? 0;
-            textRenderer?.Draw(feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点",
+            textRenderer?.Draw(field?.Name ?? (feature is null ? NumberChannelNames[index] : $"{feature.Name}  {score:0.###}点"),
                 new Rectangle((int)row.X + 6, (int)row.Y + 1, (int)row.Width - (missing ? 36 : 12), 27), Color.White, 15, selected);
-            textRenderer?.Draw(feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列" : $"列：{feature.SourceColumn ?? "（対応なし）"}　重み ×{feature.OverallWeight:G}",
+            textRenderer?.Draw(field is { } basic ? $"列：{ParticipantFieldColumn(basic.Id) ?? "（対応なし）"}"
+                : feature is null ? index == 1 ? "番地：フレーム単位の文字列" : "番地：配置可能セル単位の文字列"
+                : $"列：{feature.SourceColumn ?? "（対応なし）"}　重み ×{feature.OverallWeight:G}",
                 new Rectangle((int)row.X + 6, (int)row.Y + 26, (int)row.Width - 12, 20), new Color(184, 204, 214), 11);
         }
         DrawChannelScrollbar();
@@ -122,7 +139,7 @@ public sealed partial class VenueEditorGame
             return true;
         }
         channelScroll = Math.Clamp(channelScroll + (delta > 0 ? -1 : 1), 0,
-            Math.Max(0, workspace.Project.Evaluation.Features.Count + 3 - VisibleChannelRows));
+            Math.Max(0, workspace.Project.Evaluation.Features.Count + ChannelFixedRowCount - VisibleChannelRows));
         return true;
     }
 
@@ -166,10 +183,15 @@ public sealed partial class VenueEditorGame
                 for (var row = 0; row < VisibleChannelRows; row++)
                 {
                     var index = row + channelScroll;
-                    if (index >= workspace.Project.Evaluation.Features.Count + 3 || !Contains(ChannelRow(row), pointer)) continue;
-                    selectedChannelId = index < 3 ? null : workspace.Project.Evaluation.Features[index - 3].Id;
+                    if (index >= workspace.Project.Evaluation.Features.Count + ChannelFixedRowCount || !Contains(ChannelRow(row), pointer)) continue;
+                    if (index >= NumberChannelNames.Length && index < ChannelFixedRowCount)
+                    {
+                        OpenChannelColumnMapping();
+                        break;
+                    }
+                    selectedChannelId = index < NumberChannelNames.Length ? null : workspace.Project.Evaluation.Features[index - ChannelFixedRowCount].Id;
                     addressSwapEnabled = false;
-                    if (index < 3) selectedNumberChannel = index;
+                    if (index < NumberChannelNames.Length) selectedNumberChannel = index;
                     activeCanvasTool = ToolbarAction.EditSeatName;
                     selectedCellRange = null;
                     selectedFrameIds.Clear();
@@ -245,7 +267,7 @@ public sealed partial class VenueEditorGame
             OpenUnderlineInput("チャンネルを追加", "", value =>
             {
                 Apply(value, column, channelComment, overallWeight);
-                channelScroll = Math.Max(0, owner.Project.Evaluation.Features.Count + 3 - VisibleChannelRows);
+                channelScroll = Math.Max(0, owner.Project.Evaluation.Features.Count + ChannelFixedRowCount - VisibleChannelRows);
                 ShowDraft();
             }, "名前を確定するとチャンネルを追加し、自動保存します。", validate: EditorDialogValidation.ChannelName);
         else ShowDraft();

@@ -51,6 +51,8 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(LayoutCatalogServiceMoveDeskLayout), "LayoutCatalogService.MoveDeskLayout")]
 [JsonDerivedType(typeof(LayoutCatalogServiceRenameCircleLayout), "LayoutCatalogService.RenameCircleLayout")]
 [JsonDerivedType(typeof(ParticipantCatalogServiceReplaceParticipants), "ParticipantCatalogService.ReplaceParticipants")]
+[JsonDerivedType(typeof(SetParticipantFieldColumns), "SetParticipantFieldColumns")]
+[JsonDerivedType(typeof(SetParticipantMappingOrder), "SetParticipantMappingOrder")]
 [JsonDerivedType(typeof(PlanCatalogServiceCreatePlan), "PlanCatalogService.CreatePlan")]
 [JsonDerivedType(typeof(PlanCatalogServiceRenamePlan), "PlanCatalogService.RenamePlan")]
 [JsonDerivedType(typeof(PlanCatalogServiceRemovePlan), "PlanCatalogService.RemovePlan")]
@@ -131,6 +133,8 @@ public sealed record LayoutCatalogServiceMoveDeskLayout(string deskLayoutId, int
 public sealed record LayoutCatalogServiceRenameCircleLayout(string circleLayoutId, string name) : EditorOperation;
 public sealed record ParticipantCatalogServiceReplaceParticipants(IReadOnlyList<ParticipantImportRow> rows,
     ParticipantTableSource? source = null) : EditorOperation;
+public sealed record SetParticipantFieldColumns(ParticipantFieldColumns fields) : EditorOperation;
+public sealed record SetParticipantMappingOrder(IReadOnlyList<string> order) : EditorOperation;
 public sealed record PlanCatalogServiceCreatePlan(string newPlanId, string newPlanName, string? description = null) : EditorOperation;
 public sealed record PlanCatalogServiceRenamePlan(string planId, string newPlanName) : EditorOperation, IPlanOperation;
 public sealed record PlanCatalogServiceRemovePlan(string planId) : EditorOperation, IPlanOperation;

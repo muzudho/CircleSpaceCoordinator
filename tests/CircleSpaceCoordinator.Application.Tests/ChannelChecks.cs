@@ -92,7 +92,44 @@ internal static class ChannelChecks
             throw new Exception("Removed import columns kept their old channel mappings.");
         Execute(new UpsertChannel("other", "その他", "新しい列"));
         Equal(2, workspace.Project.Participants.Single(item => item.CircleId == "a").Features["other"]);
+        CheckParticipantFieldColumns(project);
         CheckPlaceableCells(project);
+    }
+
+    private static void CheckParticipantFieldColumns(CircleSpaceProject original)
+    {
+        var keys = new[] { "ID", "名称", "別名", "セル数" };
+        var source = new ParticipantTableSource("sample.csv", "CSV", keys, keys)
+        { FieldColumns = new ParticipantFieldColumns("ID", "名称", "セル数", null, null) };
+        var workspace = new ProjectWorkspace(original);
+        void Execute(EditorOperation operation) => workspace.Execute(WireJson.Read<EditorOperation>(WireJson.Write(operation)));
+        Execute(new ParticipantCatalogServiceReplaceParticipants(
+            [new ParticipantImportRow("a", "A", 1) { SourceValues = new Dictionary<string, string>
+                { ["ID"] = "a", ["名称"] = "A", ["別名"] = "Alias A", ["セル数"] = "1" } },
+             new ParticipantImportRow("b", "B", 1) { SourceValues = new Dictionary<string, string>
+                { ["ID"] = "b", ["名称"] = "B", ["別名"] = "Alias B", ["セル数"] = "1" } }], source));
+        Execute(new SetParticipantFieldColumns(source.FieldColumns! with { DisplayName = "別名" }));
+        if (workspace.Project.Participants.Single(item => item.CircleId == "a").DisplayName != "Alias A" ||
+            workspace.Project.ParticipantTableSource?.FieldColumns?.DisplayName != "別名")
+            throw new Exception("A default channel did not follow its remapped column.");
+        Execute(new SetParticipantMappingOrder(["field:displayName", "column:ID", "field:circleId"]));
+        if (workspace.Project.ParticipantTableSource?.MappingOrder?.FirstOrDefault() != "field:displayName")
+            throw new Exception("Mapping row order was not saved.");
+        var restored = WireJson.Read<CircleSpaceProject>(WireJson.Write(workspace.Project));
+        if (restored.ParticipantTableSource?.FieldColumns?.DisplayName != "別名" ||
+            restored.ParticipantTableSource.MappingOrder?.FirstOrDefault() != "field:displayName")
+            throw new Exception("Mapping metadata did not survive project serialization.");
+        workspace.Undo();
+        if (workspace.Project.ParticipantTableSource?.MappingOrder is not null)
+            throw new Exception("Undo did not restore the mapping order.");
+        try
+        {
+            Execute(new SetParticipantFieldColumns(source.FieldColumns! with { RequiredCellCount = "別名" }));
+            throw new Exception("Invalid default channel mapping was accepted.");
+        }
+        catch (ArgumentException) { }
+        if (workspace.Project.ParticipantTableSource?.FieldColumns?.DisplayName != "別名")
+            throw new Exception("Rejected mapping modified the event.");
     }
 
     private static void CheckPlaceableCells(CircleSpaceProject original)

@@ -5,6 +5,60 @@ using CircleSpaceCoordinator.Core.Validation;
 
 public static class ParticipantCatalogService
 {
+    public static CircleSpaceProject SetFieldColumns(CircleSpaceProject project, ParticipantFieldColumns fields)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(fields);
+        var source = project.ParticipantTableSource ?? throw new InvalidOperationException("先に Excel / CSV を取り込んでください。");
+        var keys = source.ColumnKeys.ToHashSet(StringComparer.Ordinal);
+        if (!keys.Contains(fields.CircleId) || !keys.Contains(fields.DisplayName) ||
+            new[] { fields.RequiredCellCount, fields.CombinedWithCircleId, fields.GenreId }
+                .Any(key => key is not null && !keys.Contains(key)))
+            throw new ArgumentException("取込み表にない列は対応付けできません。", nameof(fields));
+        string Value(Participant participant, string key) => participant.SourceValues.TryGetValue(key, out var value)
+            ? value.Trim() : throw new ArgumentException($"サークル「{participant.CircleId}」に列「{key}」がありません。");
+        var participants = project.Participants.Select(participant =>
+        {
+            var countText = fields.RequiredCellCount is { } countColumn ? Value(participant, countColumn) : "";
+            var count = 1;
+            if (countText.Length > 0 && (!int.TryParse(countText, out count) || count < 1))
+                throw new ArgumentException($"サークル「{participant.CircleId}」の必要セル数は正の整数で入力してください。");
+            return participant with
+            {
+                CircleId = Value(participant, fields.CircleId),
+                DisplayName = Value(participant, fields.DisplayName),
+                RequiredCellCount = count,
+                CombinedWithCircleId = fields.CombinedWithCircleId is { } combinedColumn
+                    ? NormalizeOptional(Value(participant, combinedColumn)) : null,
+                GenreId = fields.GenreId is { } genreColumn
+                    ? NormalizeOptional(Value(participant, genreColumn)) : null,
+            };
+        }).ToArray();
+        var counts = participants.ToDictionary(item => item.Id, item => item.RequiredCellCount, StringComparer.Ordinal);
+        var plans = project.Plans.Select(plan => plan with
+        {
+            TemporaryPlacements = plan.TemporaryPlacements.Where(item =>
+                item.OccupiedCells.Count == counts[item.ParticipantId]).ToArray(),
+            Assignments = plan.Assignments.Where(item =>
+                item.OccupiedCells.Count == counts[item.ParticipantId]).ToArray(),
+        }).ToArray();
+        var result = project with { Participants = participants, Plans = plans,
+            ParticipantTableSource = source with { FieldColumns = fields } };
+        var issues = ProjectValidator.Validate(result);
+        if (issues.Count > 0) throw new ProjectValidationException(issues);
+        return result;
+    }
+
+    public static CircleSpaceProject SetMappingOrder(CircleSpaceProject project, IReadOnlyList<string> order)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(order);
+        var source = project.ParticipantTableSource ?? throw new InvalidOperationException("先に Excel / CSV を取り込んでください。");
+        if (order.Any(string.IsNullOrWhiteSpace) || order.Distinct(StringComparer.Ordinal).Count() != order.Count)
+            throw new ArgumentException("対応表の並び順が正しくありません。", nameof(order));
+        return project with { ParticipantTableSource = source with { MappingOrder = order.ToArray() } };
+    }
+
     public static CircleSpaceProject ReplaceParticipants(
         CircleSpaceProject project,
         IReadOnlyList<ParticipantImportRow> rows,
