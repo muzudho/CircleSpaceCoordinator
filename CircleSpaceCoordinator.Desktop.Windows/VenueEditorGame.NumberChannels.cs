@@ -52,7 +52,7 @@ public sealed partial class VenueEditorGame
             if (!Contains(ChannelRow(row), pointer)) continue;
             var count = GetNumberChannelGaps()[index];
             if (count > 0)
-                return $"エラー：{NumberChannelNames[index]}が未設定の{(index == 1 ? "フレーム" : "スペース")}が{count}件あります。番号を設定してください。";
+                return NumberMarkResolutionHint(index, count);
         }
         return null;
     }

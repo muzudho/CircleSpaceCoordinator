@@ -3614,10 +3614,12 @@ public sealed partial class VenueEditorGame : Game
             bold: true);
         DrawAutoSaveStatus(width, top);
         var layoutDescription = HoveredDeskLayoutDescription();
-        var showHintTimer = toolDescription is null && layoutDescription is null && ShowsStatusHintTimer && statusHintContext is not null;
+        var redMarkHint = toolDescription is null
+            ? GetRedMarkResolutionHint(new ScreenPoint(previousMouse.X, previousMouse.Y)) : null;
+        var showHintTimer = toolDescription is null && redMarkHint is null && layoutDescription is null && ShowsStatusHintTimer && statusHintContext is not null;
         const int hintTimerWidth = 80;
         textRenderer?.Draw(
-            toolDescription ?? layoutDescription ?? secondaryStatusMessage,
+            toolDescription ?? redMarkHint ?? layoutDescription ?? secondaryStatusMessage,
             new Rectangle(14, top + 30, Math.Max(1, width - 28 - (showHintTimer ? hintTimerWidth + 12 : 0)), 20),
             new Color(184, 204, 214),
             pixelHeight: 15);
