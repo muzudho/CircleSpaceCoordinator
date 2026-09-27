@@ -11,5 +11,5 @@ dotnet pack src/StationeryUI.MonoGame/StationeryUI.MonoGame.csproj -c Release -p
 dotnet pack src/StationeryUI.Windows/StationeryUI.Windows.csproj -c Release -p:Version=0.1.2-csc.5130fff -p:RepositoryCommit=5130fff6a5cf18aa2559f33388bcc104b3aa1d05 -o <CircleSpaceCoordinator>/LocalPackages/StationeryUI
 ```
 
-See [event list style settings](../../Docs/event-list-style-settings.md) for the file format integration and reload policy.
+See [event list style settings](../../Docs/User/Version/1_13_0/StyleSettings/event-list-style-settings.md) for the file format integration and reload policy.
 After NuGet.org publication this feed can be removed once clean restoration from the public source is verified.

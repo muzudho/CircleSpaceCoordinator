@@ -5,7 +5,7 @@
 
 `Controls/ChangeTagEditor.cs` と `Controls/ChangeTagEditorView.cs` は、このプロジェクトに追加した再利用可能な入力状態・下線／バッジ表示部品です。`StationeryUI.Controls` 名前空間で公開し、OS・MonoGame・会場モデルには依存しません。既存パッケージの `UnderlineTextEditor` を使用し、検証・描画・文字幅計測・保存は利用側から接続します。
 
-ジャンル網掛け・ブロック色の編集が最初の利用先です。独立リポジトリーへの移設・NuGet 公開は未実施です。[変更タグエディターの設計と実装状況](../Docs/Dev/開発/文房具UI/変更タグエディター.md) を参照してください。
+ジャンル網掛け・ブロック色の編集が最初の利用先です。独立リポジトリーへの移設・NuGet 公開は未実施です。[変更タグエディターの設計と実装状況](../Docs/Dev/Version/1_13_0/%E9%96%8B%E7%99%BA/%E6%96%87%E6%88%BF%E5%85%B7UI/%E5%A4%89%E6%9B%B4%E3%82%BF%E3%82%B0%E3%82%A8%E3%83%87%E3%82%A3%E3%82%BF%E3%83%BC.md) を参照してください。
 
 ## リングメニューの共通ライブラリー利用
 
@@ -21,9 +21,9 @@ MonoGame上のテキスト入力、IME合成表示、ボタン、ダイアログ
 
 最初の境界として `Text/ITextCompositionService.cs` を追加済みです。
 
-`Controls/ModalDialogModel.cs` は画面内の通知・確認・時間指定・進捗の状態を扱います。ゲーム側の `VenueEditorGame.Dialogs.cs` が描画と入力、最適化処理を接続します。[移行進捗](../Docs/Dev/開発/文房具UI/移行進捗.md) に完了・残作業を記録しています。
+`Controls/ModalDialogModel.cs` は画面内の通知・確認・時間指定・進捗の状態を扱います。ゲーム側の `VenueEditorGame.Dialogs.cs` が描画と入力、最適化処理を接続します。[移行進捗](../Docs/Dev/Version/1_13_0/%E9%96%8B%E7%99%BA/%E6%96%87%E6%88%BF%E5%85%B7UI/%E7%A7%BB%E8%A1%8C%E9%80%B2%E6%8D%97.md) に完了・残作業を記録しています。
 
-`Controls/StationeryButtonRenderer.cs` は囲碁側の文房具ボタンの外観を移植した共通描画です。背景・枠・影を描画コールバックへ渡し、アイコンやラベルの描画を利用側に任せます。[調査・実装記録](../Docs/Dev/開発/文房具UI/README.md) を参照してください。移植元のライセンスは `ThirdParty/KifuwarabeGo2026-LICENSE.txt` にあります。
+`Controls/StationeryButtonRenderer.cs` は囲碁側の文房具ボタンの外観を移植した共通描画です。背景・枠・影を描画コールバックへ渡し、アイコンやラベルの描画を利用側に任せます。[調査・実装記録](../Docs/Dev/Version/1_13_0/%E9%96%8B%E7%99%BA/%E6%96%87%E6%88%BF%E5%85%B7UI/README.md) を参照してください。移植元のライセンスは `ThirdParty/KifuwarabeGo2026-LICENSE.txt` にあります。
 
 `Canvas/GridViewport.cs` は、グリッドと画面座標の変換、パン、アンカー位置を維持するズームを提供します。MonoGame型や計算DLLには依存しません。
 

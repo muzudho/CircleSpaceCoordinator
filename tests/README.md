@@ -12,7 +12,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Packaging/Test-P
 
 モデルの評価・配置編集・Undo/Redo・JSONとExcelの入出力・UIの座標変換・操作ログ・配布ファイルの検査を検証します。
 
-`CircleSpaceCoordinator.Engine.Tests` は GUI なしで編集・思考の gRPC ホストを動的なループバックポートで起動し、編集履歴・版競合・探索・通信失敗を実通信で検証します。[構成と手動確認手順](../Docs/Dev/設計/ヘッドレスエンジンとgRPC.md) を参照してください。
+`CircleSpaceCoordinator.Engine.Tests` は GUI なしで編集・思考の gRPC ホストを動的なループバックポートで起動し、編集履歴・版競合・探索・通信失敗を実通信で検証します。[構成と手動確認手順](../Docs/Dev/Version/1_13_0/%E8%A8%AD%E8%A8%88/%E3%83%98%E3%83%83%E3%83%89%E3%83%AC%E3%82%B9%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%B3%E3%81%A8gRPC.md) を参照してください。
 
 GUI が使う RemoteWorkspace / コントローラー経由の編集、停止時の最高案の取得、セッションと Undo 履歴の再起動後復元、v1 API の互換性も検証します。`-- --runtime <GUIのpublishフォルダー>` を渡すと、同梱エンジンを別プロセスで起動する検査を行います。Desktop.Tests のファイル入出力も実際のエディターサービスで検証します。
 

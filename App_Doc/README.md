@@ -6,4 +6,4 @@
 - Debug：原本を直接読み、画面の設定に従ってオートリロードします。
 - Release：ビルド時に原本を C# アセンブリーへ埋め込み、その内容を使用します。外部スタイルファイルは不要です。
 
-調整項目と設定保存の説明は [イベント一覧のスタイル設定](../Docs/event-list-style-settings.md) を参照してください。
+調整項目と設定保存の説明は [イベント一覧のスタイル設定](../Docs/User/Version/1_13_0/StyleSettings/event-list-style-settings.md) を参照してください。
