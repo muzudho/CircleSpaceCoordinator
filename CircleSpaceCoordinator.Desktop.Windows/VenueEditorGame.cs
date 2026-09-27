@@ -2589,7 +2589,6 @@ public sealed partial class VenueEditorGame : Game
         frameModeHeaderBounds = default;
         var modeActions = new[]
         {
-            ToolbarAction.ParticipantDataMode,
             ToolbarAction.DeskPlacementMode,
             ToolbarAction.IslandDefinitionMode,
             ToolbarAction.GenrePlacementMode,
@@ -2652,15 +2651,17 @@ public sealed partial class VenueEditorGame : Game
         var toolbarWidth = Window.ClientBounds.Width > 0 ? Window.ClientBounds.Width : graphics.PreferredBackBufferWidth;
         projectToolbarWidth = toolbarWidth;
         // The two frame modes share one top-level slot, with the header above them.
-        var frameModeWidth = Math.Clamp((toolbarWidth - 492d) / visibleModeCount * 1.35d, 112d, 180d);
+        var frameModeWidth = Math.Clamp((toolbarWidth - 622d) / visibleModeCount * 1.35d, 112d, 180d);
         var modeWidth = Math.Min(158d, Math.Max(44d,
-            (toolbarWidth - 492d - (frameModesCollapsed ? 0d : frameModeWidth)) /
+            (toolbarWidth - 622d - (frameModesCollapsed ? 0d : frameModeWidth)) /
             (visibleModeCount - (frameModesCollapsed ? 0 : 1))));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.ProjectMenu,
             new IconButtonModel(new ScreenRectangle(12, 7 + WorkerBarHeight, 142, 40), GetAccessibleName(ToolbarAction.ProjectMenu))));
+        toolbarButtons.Add(new ToolbarButton(ToolbarAction.ParticipantDataMode,
+            new IconButtonModel(new ScreenRectangle(164, 7 + WorkerBarHeight, 120, 40), GetAccessibleName(ToolbarAction.ParticipantDataMode))));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.GenreMenu,
-            new IconButtonModel(new ScreenRectangle(164, 7 + WorkerBarHeight, 120, 40), GetAccessibleName(ToolbarAction.GenreMenu))));
-        var modeX = 294d;
+            new IconButtonModel(new ScreenRectangle(294, 7 + WorkerBarHeight, 120, 40), GetAccessibleName(ToolbarAction.GenreMenu))));
+        var modeX = 424d;
         for (var index = 0; index < modeActions.Length; index++)
         {
             var action = modeActions[index];
@@ -2918,8 +2919,8 @@ public sealed partial class VenueEditorGame : Game
         }
         if (action == ToolbarAction.ImportParticipants)
         {
-            OpenParticipantImport();
-            return (true, "dialog_opened");
+            OpenProjectProfile(ProjectProfileTab.CircleData);
+            return (true, "project_profile_opened");
         }
         if (action == ToolbarAction.SelectExportPlan)
         {
@@ -3579,7 +3580,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.GenreDataMode => "ジャンルデータモードへ切り替える",
         ToolbarAction.PanViewport => "ハンドツール：会場全体を左ドラッグで移動する（Spaceキーを押しながらの左ドラッグでも一時的に使える）",
         ToolbarAction.FitVenueToWindow => "会場全体を画面内に収める",
-        ToolbarAction.ImportParticipants => "参加サークル一覧をExcelまたはCSVから読み込む",
+        ToolbarAction.ImportParticipants => "プロジェクト・プロフィールのサークルデータタブを開き、ExcelまたはCSVを選ぶ",
         ToolbarAction.SelectExportPlan => "書出しに使う配置決定案を選択する（未決定にも戻せます）",
         ToolbarAction.ExportSeatAssignments => "配置決定案のブロック番号・セル番を出力先の Excel / CSV へ書き出す",
         ToolbarAction.OptimizeCirclePlacement => "現在の配置案を初期状態にして、一般参加評価値、次にサークル参加評価値の順で自動最適化する",

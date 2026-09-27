@@ -118,6 +118,7 @@ internal static partial class Program
             ("Application settings preserve project order and remove only registrations", SettingsManageProjectCatalog),
             ("Application settings preserve per-project working state", SettingsPreserveWorkingState),
             ("Screenshot folders remain separate for each event project", ScreenshotFoldersRemainProjectSpecific),
+            ("Participant import folders stay per event and bundled examples never overwrite user files", ParticipantProfileDirectoriesAndExamples),
             ("Event catalog creates a valid empty project", EventCatalogCreatesProject),
             ("Event catalog can mark a project confidential without an unmark operation", EventCatalogMarksProjectConfidential),
             ("Event catalog duplicates with a new event identity", EventCatalogDuplicatesProject),

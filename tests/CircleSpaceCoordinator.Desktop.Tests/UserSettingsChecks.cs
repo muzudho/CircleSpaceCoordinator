@@ -37,6 +37,38 @@ internal static partial class Program
         finally { Directory.Delete(root, recursive: true); }
     }
 
+    private static void ParticipantProfileDirectoriesAndExamples()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"csc-participant-profile-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var first = Path.Combine(root, "first.event-project-csc.json");
+            var second = Path.Combine(root, "second.event-project-csc.json");
+            var chosen = Path.Combine(root, "private-circles");
+            var settingsPath = Path.Combine(root, "application-settings.json");
+            var settings = CreateIsolatedSettings(settingsPath);
+            settings.SaveParticipantImportDirectory(first, chosen);
+            AssertEqual(chosen, CreateIsolatedSettings(settingsPath).GetParticipantImportDirectory(first)!);
+            AssertEqual<string?>(null, settings.GetParticipantImportDirectory(second));
+
+            var source = Path.Combine(root, "bundled");
+            var destination = Path.Combine(root, "user-examples");
+            Directory.CreateDirectory(source);
+            File.WriteAllText(Path.Combine(source, ParticipantExampleFiles.CsvName), "source-csv");
+            File.WriteAllText(Path.Combine(source, ParticipantExampleFiles.ExcelName), "source-excel");
+            ParticipantExampleFiles.InstallMissing(source, destination);
+            File.WriteAllText(Path.Combine(destination, ParticipantExampleFiles.CsvName), "user-edited");
+            ParticipantExampleFiles.InstallMissing(source, destination);
+            AssertEqual("user-edited", File.ReadAllText(Path.Combine(destination, ParticipantExampleFiles.CsvName)));
+            AssertEqual("source-excel", File.ReadAllText(Path.Combine(destination, ParticipantExampleFiles.ExcelName)));
+
+            settings.RemoveProject(first);
+            AssertEqual<string?>(null, CreateIsolatedSettings(settingsPath).GetParticipantImportDirectory(first));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     private static ApplicationSettingsService CreateIsolatedSettings(string path) =>
         new(path, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "discovery"));
 

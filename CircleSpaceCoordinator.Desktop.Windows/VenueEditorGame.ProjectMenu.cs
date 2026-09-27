@@ -36,7 +36,7 @@ public sealed partial class VenueEditorGame
         "パッケージから選んだ内容を現在のイベントプロジェクトへ取り込みます。",
         "確定した編集を自動保存してプロジェクトを閉じ、イベント一覧へ移ります。",
         "セーブポイントの作成・復元・保護と、保存先・保持数を設定します。",
-        "このイベントのスクリーンショット保存先を確認・変更し、フォルダーを開きます。",
+        "このイベントのスクリーンショットとサークルデータのフォルダーを確認・変更します。",
         "メニューを閉じて作業に戻ります。",
     ];
 
@@ -55,7 +55,7 @@ public sealed partial class VenueEditorGame
     {
         var width = Math.Min(420d, Math.Max(1, GraphicsDevice.Viewport.Width - 24d));
         var height = Math.Min(416d, Math.Max(1, GraphicsDevice.Viewport.Height - StatusBarHeight - 64d));
-        var bounds = new ScreenRectangle(genreMenuOpen ? Math.Min(164, Math.Max(12, GraphicsDevice.Viewport.Width - width - 12)) : 12, 54 + WorkerBarHeight, width, height);
+        var bounds = new ScreenRectangle(genreMenuOpen ? Math.Min(294, Math.Max(12, GraphicsDevice.Viewport.Width - width - 12)) : 12, 54 + WorkerBarHeight, width, height);
         if (bounds == projectMenuBounds && projectMenuButtons.Count > 0) return;
         pressedProjectMenuButton?.CancelPress();
         pressedProjectMenuButton = null;

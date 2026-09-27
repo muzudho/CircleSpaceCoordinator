@@ -20,8 +20,8 @@ public sealed partial class VenueEditorGame
     {
         if (workspace is null) return;
         var owner = workspace;
-        var path = WindowsTableFileDialog.Select(false, settings?.Current.ParticipantImportDirectory);
-        if (path is null) return;
+        var path = WindowsTableFileDialog.Select(false, CurrentParticipantImportDirectory);
+        if (path is null) { OpenProjectProfile(ProjectProfileTab.CircleData); return; }
         settings?.RememberParticipantImportPath(path);
         var csv = Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase);
         IReadOnlyList<ParticipantTableSheet> sheets = [];

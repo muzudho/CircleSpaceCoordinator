@@ -44,6 +44,19 @@ catch { $wasRejected = $true }
 if (-not $wasRejected) { throw 'Release gate accepted a modified example.' }
 $passed++
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'examples/circle-space-project-v1.example.json') -Destination $example -Force
+foreach ($name in @('きふわらべオンリー即売会_参加サークル一覧.csv', 'きふわらべオンリー即売会_参加サークル一覧.xlsx')) {
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "examples/$name") -Destination (Join-Path $exampleDirectory $name)
+}
+& $gate -Path $fixture | Out-Null
+$passed++
+$sampleCsv = Join-Path $exampleDirectory 'きふわらべオンリー即売会_参加サークル一覧.csv'
+[System.IO.File]::WriteAllText($sampleCsv, 'modified-test-example')
+$wasRejected = $false
+try { & $gate -Path $fixture | Out-Null }
+catch { $wasRejected = $true }
+if (-not $wasRejected) { throw 'Release gate accepted a modified participant example.' }
+$passed++
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'examples/きふわらべオンリー即売会_参加サークル一覧.csv') -Destination $sampleCsv -Force
 $licenseDirectory = Join-Path $fixture 'ThirdParty'
 New-Item -ItemType Directory -Path $licenseDirectory | Out-Null
 $license = Join-Path $licenseDirectory 'StationeryUI-LICENSE.txt'

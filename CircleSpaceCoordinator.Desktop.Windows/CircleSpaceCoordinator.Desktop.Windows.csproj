@@ -19,6 +19,14 @@
     <Content Include="../examples/circle-space-project-v1.example.json" Link="examples/circle-space-project-v1.example.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="../examples/きふわらべオンリー即売会_参加サークル一覧.csv" Link="examples/きふわらべオンリー即売会_参加サークル一覧.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="../examples/きふわらべオンリー即売会_参加サークル一覧.xlsx" Link="examples/きふわらべオンリー即売会_参加サークル一覧.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Update="ThirdParty/StationeryUI-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

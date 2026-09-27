@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 public sealed record EventProjectReference(string Path, string DisplayName);
 public sealed record ProjectScreenshotDirectory(string ProjectPath, string Directory);
+public sealed record ProjectParticipantImportDirectory(string ProjectPath, string Directory);
 
 public sealed record ProjectWorkingState(
     string ProjectPath,
@@ -39,6 +40,7 @@ public sealed record ApplicationSettings(
     public string Handle { get; init; } = "";
     public bool StyleAutoReload { get; init; } = true;
     public IReadOnlyList<ProjectScreenshotDirectory>? ScreenshotDirectories { get; init; }
+    public IReadOnlyList<ProjectParticipantImportDirectory>? ParticipantImportDirectories { get; init; }
     // Read the previous settings key; subsequent saves use only "handle".
     [JsonPropertyName("workerName")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -146,6 +148,8 @@ public sealed class ApplicationSettingsService
                 .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToArray(),
             ScreenshotDirectories = (Current.ScreenshotDirectories ?? [])
                 .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToArray(),
+            ParticipantImportDirectories = (Current.ParticipantImportDirectories ?? [])
+                .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToArray(),
         };
         TrySave();
     }
@@ -192,6 +196,30 @@ public sealed class ApplicationSettingsService
             .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToList();
         entries.Add(new ProjectScreenshotDirectory(fullPath, fullDirectory));
         var next = Current with { ScreenshotDirectories = entries };
+        SavePointStore.AtomicWrite(settingsPath, JsonSerializer.Serialize(next, JsonOptions));
+        Current = next;
+    }
+
+    public string? GetParticipantImportDirectory(string projectPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
+        var fullPath = Path.GetFullPath(projectPath);
+        return (Current.ParticipantImportDirectories ?? [])
+            .LastOrDefault(item => PathsEqual(item.ProjectPath, fullPath))?.Directory;
+    }
+
+    public void SaveParticipantImportDirectory(string projectPath, string directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        if (!Path.IsPathFullyQualified(directory))
+            throw new ArgumentException("サークルデータのフォルダーには絶対パスを指定してください。", nameof(directory));
+        var fullPath = Path.GetFullPath(projectPath);
+        var fullDirectory = Path.GetFullPath(directory);
+        var entries = (Current.ParticipantImportDirectories ?? [])
+            .Where(item => !PathsEqual(item.ProjectPath, fullPath)).ToList();
+        entries.Add(new ProjectParticipantImportDirectory(fullPath, fullDirectory));
+        var next = Current with { ParticipantImportDirectories = entries };
         SavePointStore.AtomicWrite(settingsPath, JsonSerializer.Serialize(next, JsonOptions));
         Current = next;
     }
@@ -276,6 +304,20 @@ public sealed class ApplicationSettingsService
                 }
                 catch (Exception ex) when (ex is ArgumentException or NotSupportedException) { }
             }
+            var participantDirectories = new List<ProjectParticipantImportDirectory>();
+            foreach (var item in loaded.ParticipantImportDirectories ?? [])
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(item.ProjectPath) || string.IsNullOrWhiteSpace(item.Directory) ||
+                        !Path.IsPathFullyQualified(item.Directory)) continue;
+                    var projectPath = Path.GetFullPath(item.ProjectPath);
+                    var directoryPath = Path.GetFullPath(item.Directory);
+                    participantDirectories.RemoveAll(existing => PathsEqual(existing.ProjectPath, projectPath));
+                    participantDirectories.Add(new(projectPath, directoryPath));
+                }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException) { }
+            }
             return new ApplicationSettings(
                 directory,
                 lastPath,
@@ -291,6 +333,7 @@ public sealed class ApplicationSettingsService
                 BackupDirectory = string.IsNullOrWhiteSpace(loaded.BackupDirectory) ? null : Path.GetFullPath(loaded.BackupDirectory),
                 BackupGenerations = loaded.BackupGenerations is >= 1 and <= 1000 ? loaded.BackupGenerations : 10,
                 ScreenshotDirectories = screenshots,
+                ParticipantImportDirectories = participantDirectories,
             };
         }
         catch (Exception) when (File.Exists(settingsPath))

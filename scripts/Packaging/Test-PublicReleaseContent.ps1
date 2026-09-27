@@ -9,6 +9,10 @@ $releaseRoot = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\', '/')
 $repositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $rejected = @()
 $allowedJson = @('CircleSpaceCoordinator.Desktop.Windows.deps.json', 'CircleSpaceCoordinator.Desktop.Windows.runtimeconfig.json')
+$allowedParticipantExamples = @(
+    'きふわらべオンリー即売会_参加サークル一覧.csv',
+    'きふわらべオンリー即売会_参加サークル一覧.xlsx'
+)
 $requiredEngineFiles = @()
 foreach ($engine in @(@{ Folder = 'editor'; Name = 'EditorEngine' }, @{ Folder = 'thinking'; Name = 'ThinkingEngine' })) {
     $prefix = "engines/$($engine.Folder)/CircleSpaceCoordinator.$($engine.Name)"
@@ -37,6 +41,11 @@ foreach ($file in Get-ChildItem -LiteralPath $releaseRoot -Recurse -Force -File)
     }
     if ($relative -eq 'examples/circle-space-project-v1.example.json') {
         $expected = Join-Path $repositoryRoot 'examples/circle-space-project-v1.example.json'
+        if ((Get-FileHash -LiteralPath $file.FullName).Hash -eq (Get-FileHash -LiteralPath $expected).Hash) { continue }
+    }
+    if ($relative.StartsWith('examples/', [System.StringComparison]::Ordinal) -and
+        $allowedParticipantExamples -contains $relative.Substring('examples/'.Length)) {
+        $expected = Join-Path $repositoryRoot $relative
         if ((Get-FileHash -LiteralPath $file.FullName).Hash -eq (Get-FileHash -LiteralPath $expected).Hash) { continue }
     }
     $rejected += $relative

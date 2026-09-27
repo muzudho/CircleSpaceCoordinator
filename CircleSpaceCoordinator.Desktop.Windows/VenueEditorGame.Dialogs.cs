@@ -29,6 +29,7 @@ public sealed partial class VenueEditorGame
     private void OpenModal(ModalDialogModel dialog, Action<ModalDialogAction>? completed = null,
         (string Label, ModalDialogAction Action)[]? choices = null)
     {
+        projectProfileOpen = false;
         textInputService?.Stop();
         ResetUnderlineKeyRepeat();
         underlineEditor = null;
@@ -183,6 +184,19 @@ public sealed partial class VenueEditorGame
         }
         if (modalChoices is { } choices)
         {
+            if (projectProfileOpen)
+            {
+                var tabWidth = (bounds.Width - 52d) / 2d;
+                Add("スクリーンショット", ProfileScreenshotTabAction, bounds.X + 20d, bounds.Y + 58d, tabWidth);
+                Add("サークルデータ", ProfileCircleDataTabAction, bounds.X + 32d + tabWidth, bounds.Y + 58d, tabWidth);
+                var actionCount = choices.Length - 2;
+                var actionWidth = (bounds.Width - 40d - 12d * (actionCount - 1)) / actionCount;
+                for (var index = 0; index < actionCount; index++)
+                    Add(choices[index + 2].Label, choices[index + 2].Action,
+                        bounds.X + 20d + index * (actionWidth + 12d), bottom, actionWidth);
+                if (initializeFocus) modalFocus = choices.Length - 1;
+                return;
+            }
             if (packageReadDialog is not null)
             {
                 var columnWidth = (bounds.Width - 40 - 36) / 4;
@@ -243,10 +257,10 @@ public sealed partial class VenueEditorGame
         textRenderer?.Draw(modalDialog.Title, ToRectangle(new ScreenRectangle(bounds.X + 20, bounds.Y + 16, bounds.Width - 40, 32)), Color.White, 23, true);
         // Explicit newlines are preserved; long lines fit within the panel.
         var lines = modalDialog.Message.Replace("\r", "").Split('\n');
-        var availableHeight = Math.Max(1, bounds.Height - (modalDialog.Kind == ModalDialogKind.Minutes ? 180 : 130));
+        var availableHeight = Math.Max(1, bounds.Height - (modalDialog.Kind == ModalDialogKind.Minutes ? 180 : projectProfileOpen ? 180 : 130));
         var lineHeight = Math.Min(30, availableHeight / Math.Max(1, lines.Length));
         for (var index = 0; index < lines.Length; index++)
-            textRenderer?.Draw(lines[index], ToRectangle(new ScreenRectangle(bounds.X + 20, bounds.Y + 65 + index * lineHeight,
+            textRenderer?.Draw(lines[index], ToRectangle(new ScreenRectangle(bounds.X + 20, bounds.Y + (projectProfileOpen ? 115 : 65) + index * lineHeight,
                 bounds.Width - 40, lineHeight)), new Color(230, 236, 240), 18);
         if (modalDialog.Kind == ModalDialogKind.Minutes)
             textRenderer?.Draw($"{modalDialog.Minutes} 分（1～120）", ToRectangle(new ScreenRectangle(bounds.X + 78, bounds.Y + bounds.Height - 120,
@@ -262,7 +276,9 @@ public sealed partial class VenueEditorGame
         for (var index = 0; index < modalButtons.Count; index++)
         {
             var button = modalButtons[index].Button;
-            button.IsSelected = false;
+            button.IsSelected = projectProfileOpen &&
+                (projectProfileTab == ProjectProfileTab.Screenshot && modalButtons[index].Action == ProfileScreenshotTabAction ||
+                 projectProfileTab == ProjectProfileTab.CircleData && modalButtons[index].Action == ProfileCircleDataTabAction);
             button.IsEnabled = backgroundOperation is null && !modalDialog.StopRequested && !((selectionLabels is { Length: 0 } || exportColumnDraft is { IsComplete: false } || packageReadDialog is { CanRead: false }) && modalButtons[index].Action == ModalDialogAction.Accept);
             if (packageReadDialog is { SelectedPackage: null } && (modalButtons[index].Action == ModalDialogAction.Stop || modalButtons[index].Action == PackageRenameAction || modalButtons[index].Action == PackageCreateTableAction))
                 button.IsEnabled = false;
