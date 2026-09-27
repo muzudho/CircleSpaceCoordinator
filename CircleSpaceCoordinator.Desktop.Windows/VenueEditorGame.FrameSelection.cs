@@ -11,7 +11,7 @@ public sealed partial class VenueEditorGame
     private ScreenPoint frameSelectionPointer;
     private readonly HashSet<string> selectedFrameIds = [];
 
-    private bool IsFrameNumberChannelSelected => editorMode == EditorMode.DeskPlacement &&
+    private bool IsFrameNumberChannelSelected => editorMode == EditorMode.FrameChannels &&
         !IsWeightChannelSelected && selectedNumberChannel == 1;
 
     private ScreenRectangle FrameSelectionBounds(ScreenPoint start, ScreenPoint end) => new(

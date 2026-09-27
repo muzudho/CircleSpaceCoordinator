@@ -417,12 +417,12 @@ public sealed partial class VenueEditorGame : Game
         hoveredPlanId = editorMode == EditorMode.GenreData ? null : HitTestPlanList(pointer);
         hoveredPlanCopy = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanCopyBounds(), pointer);
         hoveredPlanRename = !UsesSeparatedLayouts && editorMode != EditorMode.GenreData && workspace is not null && Contains(GetPlanRenameBounds(), pointer);
-        hoveredLayoutAdd = UsesSeparatedLayouts && Contains(GetLayoutAddBounds(), pointer);
-        hoveredLayoutDuplicate = UsesSeparatedLayouts && (ShowsDeskLayouts || workspace!.HasSelectedCircleLayout) && Contains(GetLayoutDuplicateBounds(), pointer);
-        hoveredLayoutDelete = UsesSeparatedLayouts && Contains(GetLayoutDeleteBounds(), pointer);
+        hoveredLayoutAdd = UsesSeparatedLayouts && editorMode != EditorMode.FrameChannels && Contains(GetLayoutAddBounds(), pointer);
+        hoveredLayoutDuplicate = UsesSeparatedLayouts && editorMode != EditorMode.FrameChannels && (ShowsDeskLayouts || workspace!.HasSelectedCircleLayout) && Contains(GetLayoutDuplicateBounds(), pointer);
+        hoveredLayoutDelete = UsesSeparatedLayouts && editorMode != EditorMode.FrameChannels && Contains(GetLayoutDeleteBounds(), pointer);
         hoveredLayoutBind = UsesSeparatedLayouts && workspace!.HasSelectedCircleLayout && (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement) && Contains(GetLayoutBindBounds(), pointer);
         hoveredDeskLayoutParent = UsesSeparatedLayouts && (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement) && Contains(GetDeskLayoutParentBounds(), pointer);
-        hoveredLayoutRename = UsesSeparatedLayouts && (ShowsDeskLayouts || workspace!.HasSelectedCircleLayout) && Contains(GetLayoutRenameBounds(), pointer);
+        hoveredLayoutRename = UsesSeparatedLayouts && editorMode != EditorMode.FrameChannels && (ShowsDeskLayouts || workspace!.HasSelectedCircleLayout) && Contains(GetLayoutRenameBounds(), pointer);
         if (activeCanvasTool == ToolbarAction.AddDesk &&
             IsPointerInEditorCanvas(pointer) &&
             IsDeskGhostClearOfToolbar(pointer))
@@ -441,7 +441,7 @@ public sealed partial class VenueEditorGame : Game
                 Log("undo", success: commandController.Undo());
             if (IsControlDown(keyboard) && IsPressed(keyboard, Keys.Y))
                 Log("redo", success: commandController.Redo());
-            if (IsPressed(keyboard, Keys.E) || IsPressed(keyboard, Keys.Q))
+            if (editorMode == EditorMode.DeskPlacement && (IsPressed(keyboard, Keys.E) || IsPressed(keyboard, Keys.Q)))
             {
                 var clockwise = keyboard.IsKeyDown(Keys.E);
                 if (activeCanvasTool == ToolbarAction.AddDesk)
@@ -597,7 +597,7 @@ public sealed partial class VenueEditorGame : Game
             {
                 BeginAddressSwap(pointer);
             }
-            else if (editorMode == EditorMode.DeskPlacement && activeCanvasTool == ToolbarAction.EditSeatName &&
+            else if (editorMode == EditorMode.FrameChannels && activeCanvasTool == ToolbarAction.EditSeatName &&
                      IsControlDown(keyboard) && IsPointerInEditorCanvas(pointer))
             {
                 // Ctrl only swaps an existing address selection; it must not open input elsewhere.
@@ -1038,7 +1038,7 @@ public sealed partial class VenueEditorGame : Game
         var evaluated = workspace.RankPlans();
         if (UsesSeparatedLayouts)
         {
-            if (editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition)
+            if (ShowsDeskLayouts)
             {
                 return workspace.Project.DeskLayouts
                     .Select((desk, index) => new RankedPlan(index + 1, desk.Id, desk.Name,
@@ -1049,7 +1049,7 @@ public sealed partial class VenueEditorGame : Game
             evaluated = evaluated.Where(item => workspace.Project.CircleLayouts
                 .Any(circle => circle.Id == item.PlanId && circle.DeskLayoutId == workspace.SelectedDeskLayoutId)).ToArray();
         }
-        if (editorMode != EditorMode.DeskPlacement && editorMode != EditorMode.IslandDefinition)
+        if (!ShowsDeskLayouts)
             return evaluated;
         return evaluated.OrderBy(plan => plan.PlanName, StringComparer.CurrentCulture)
             .ThenBy(plan => plan.PlanId, StringComparer.Ordinal)
@@ -1069,7 +1069,7 @@ public sealed partial class VenueEditorGame : Game
         planScroll = Math.Clamp(nextIndex - GetVisiblePlanRowCount() + 1, 0, Math.Max(0, plans.Count - GetVisiblePlanRowCount()));
     }
 
-    private bool ShowsDeskLayouts => editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
+    private bool ShowsDeskLayouts => editorMode is EditorMode.DeskPlacement or EditorMode.FrameChannels or EditorMode.IslandDefinition;
 
     private string? SelectedDisplayedLayoutId => UsesSeparatedLayouts && ShowsDeskLayouts
         ? workspace!.SelectedDeskLayoutId : workspace?.SelectedPlanId;
@@ -1093,7 +1093,7 @@ public sealed partial class VenueEditorGame : Game
         var visibleCount = Math.Min(plans.Count, GetVisiblePlanRowCount());
         planScroll = Math.Clamp(planScroll, 0, Math.Max(0, plans.Count - visibleCount));
         var panel = GetPlanListBounds(visibleCount);
-        var showsDeskLayouts = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
+        var showsDeskLayouts = ShowsDeskLayouts;
         var hasDeskParent = UsesSeparatedLayouts && !showsDeskLayouts;
         var listPanel = hasDeskParent
             ? new ScreenRectangle(panel.X + 8d, panel.Y + 32d, panel.Width - 8d, panel.Height - 32d)
@@ -1111,13 +1111,13 @@ public sealed partial class VenueEditorGame : Game
                 hasDeskParent ? 18 : 22,
                 true);
 
-            DrawLayoutButton(GetLayoutAddBounds(), "+", hoveredLayoutAdd);
+            DrawLayoutButton(GetLayoutAddBounds(), "+", hoveredLayoutAdd, editorMode != EditorMode.FrameChannels);
             DrawLayoutOrderButtons();
-            DrawLayoutButton(GetLayoutDuplicateBounds(), "複製", hoveredLayoutDuplicate, showsDeskLayouts || workspace.HasSelectedCircleLayout);
-            DrawLayoutButton(GetLayoutDeleteBounds(), "Remove", hoveredLayoutDelete, CanRemoveLayout);
+            DrawLayoutButton(GetLayoutDuplicateBounds(), "複製", hoveredLayoutDuplicate, editorMode != EditorMode.FrameChannels && (showsDeskLayouts || workspace.HasSelectedCircleLayout));
+            DrawLayoutButton(GetLayoutDeleteBounds(), "Remove", hoveredLayoutDelete, editorMode != EditorMode.FrameChannels && CanRemoveLayout);
             if (editorMode is EditorMode.GenrePlacement or EditorMode.CirclePlacement)
                 DrawLayoutButton(GetLayoutBindBounds(), "Link", hoveredLayoutBind, workspace.HasSelectedCircleLayout);
-            DrawLayoutButton(GetLayoutRenameBounds(), "Rename", hoveredLayoutRename, showsDeskLayouts || workspace.HasSelectedCircleLayout);
+            DrawLayoutButton(GetLayoutRenameBounds(), "Rename", hoveredLayoutRename, editorMode != EditorMode.FrameChannels && (showsDeskLayouts || workspace.HasSelectedCircleLayout));
         }
         else
         {
@@ -1760,7 +1760,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void DrawMissingDeskNumbers()
     {
-        if (workspace is null || editorMode != EditorMode.DeskPlacement)
+        if (workspace is null || editorMode != EditorMode.FrameChannels)
             return;
 
         var plan = workspace.SelectedPlan;
@@ -1791,7 +1791,7 @@ public sealed partial class VenueEditorGame : Game
 
     private void DrawDeskEditTarget()
     {
-        if (workspace is null || editorMode != EditorMode.DeskPlacement || !CanShowEditorHover)
+        if (workspace is null || editorMode is not (EditorMode.DeskPlacement or EditorMode.FrameChannels) || !CanShowEditorHover)
             return;
 
         var desks = workspace.GetSelectedPlanSnapshot().Desks;
@@ -2528,7 +2528,7 @@ public sealed partial class VenueEditorGame : Game
             return false;
 
         const double margin = 24d;
-        if (editorMode == EditorMode.DeskPlacement)
+        if (editorMode is EditorMode.DeskPlacement or EditorMode.FrameChannels)
         {
             var area = FramePlacementCanvasBounds;
             var frameWidth = Math.Max(1d, area.Width - margin * 2d - FrameGridBorderPadding * 2d);
@@ -2586,6 +2586,7 @@ public sealed partial class VenueEditorGame : Game
     {
         toolbarButtons.Clear();
         toolbarSeparators.Clear();
+        frameModeHeaderBounds = default;
         var modeActions = new[]
         {
             ToolbarAction.ParticipantDataMode,
@@ -2607,13 +2608,16 @@ public sealed partial class VenueEditorGame : Game
             ToolbarAction.EditDeskLayoutDescription,
             ToolbarAction.MoveDesk,
             ToolbarAction.DeskMenu,
-            ToolbarAction.EditSeatName,
-            ToolbarAction.SwapAddresses,
             ToolbarAction.PillarMenu,
             ToolbarAction.FillDesks,
             ToolbarAction.RotateLeft,
             ToolbarAction.RotateRight,
             ToolbarAction.VenueSizeMenu,
+        };
+        var frameChannelActions = new[]
+        {
+            ToolbarAction.EditSeatName,
+            ToolbarAction.SwapAddresses,
         };
         var circleActions = new[]
         {
@@ -2647,7 +2651,11 @@ public sealed partial class VenueEditorGame : Game
         var visibleModeCount = modeActions.Length - (frameModesCollapsed ? 2 : 0) - (circleModesCollapsed ? 2 : 0);
         var toolbarWidth = Window.ClientBounds.Width > 0 ? Window.ClientBounds.Width : graphics.PreferredBackBufferWidth;
         projectToolbarWidth = toolbarWidth;
-        var modeWidth = Math.Min(158d, Math.Max(44d, (toolbarWidth - 492d) / visibleModeCount));
+        // The two frame modes share one top-level slot, with the header above them.
+        var frameModeWidth = Math.Clamp((toolbarWidth - 492d) / visibleModeCount * 1.35d, 112d, 180d);
+        var modeWidth = Math.Min(158d, Math.Max(44d,
+            (toolbarWidth - 492d - (frameModesCollapsed ? 0d : frameModeWidth)) /
+            (visibleModeCount - (frameModesCollapsed ? 0 : 1))));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.ProjectMenu,
             new IconButtonModel(new ScreenRectangle(12, 7 + WorkerBarHeight, 142, 40), GetAccessibleName(ToolbarAction.ProjectMenu))));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.GenreMenu,
@@ -2660,7 +2668,7 @@ public sealed partial class VenueEditorGame : Game
             {
                 var frameGroup = action == ToolbarAction.DeskPlacementMode;
                 var collapsed = frameGroup ? frameModesCollapsed : circleModesCollapsed;
-                var groupName = frameGroup ? "フレーム配置・島定義" : "ジャンル配置・サークル配置";
+                var groupName = frameGroup ? "フレーム・島定義" : "ジャンル配置・サークル配置";
                 toolbarButtons.Add(new ToolbarButton(
                     frameGroup ? ToolbarAction.ToggleFrameModes : ToolbarAction.ToggleCircleModes,
                     new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight, 24d, 24d),
@@ -2670,6 +2678,20 @@ public sealed partial class VenueEditorGame : Game
             if (frameModesCollapsed && action is (ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode) ||
                 circleModesCollapsed && action is (ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode))
                 continue;
+            if (action == ToolbarAction.DeskPlacementMode)
+            {
+                var width = frameModeWidth - 8d;
+                var childWidth = (width - 4d) / 2d;
+                var y = 7d + WorkerBarHeight;
+                frameModeHeaderBounds = new ScreenRectangle(modeX, y, width, 15d);
+                toolbarButtons.Add(new ToolbarButton(action,
+                    new IconButtonModel(new ScreenRectangle(modeX, y + 17d, childWidth, 23d), GetAccessibleName(action))));
+                toolbarButtons.Add(new ToolbarButton(ToolbarAction.FrameChannelsMode,
+                    new IconButtonModel(new ScreenRectangle(modeX + childWidth + 4d, y + 17d, childWidth, 23d),
+                        GetAccessibleName(ToolbarAction.FrameChannelsMode))));
+                modeX += frameModeWidth;
+                continue;
+            }
             toolbarButtons.Add(new ToolbarButton(
                 action,
                 new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight, modeWidth - 8d, 40d), GetAccessibleName(action))));
@@ -2680,6 +2702,7 @@ public sealed partial class VenueEditorGame : Game
             EditorMode.ParticipantData => [ToolbarAction.ImportParticipants, ToolbarAction.Undo, ToolbarAction.Redo],
             EditorMode.CirclePlacementDecision => [ToolbarAction.SelectExportTarget, ToolbarAction.SelectExportColumns, ToolbarAction.ExportSeatAssignments, ToolbarAction.Undo, ToolbarAction.Redo],
             EditorMode.DeskPlacement => deskActions,
+            EditorMode.FrameChannels => frameChannelActions,
             EditorMode.IslandDefinition => islandActions,
             EditorMode.GenrePlacement => genreActions,
             EditorMode.CirclePlacement => circleActions,
@@ -2742,7 +2765,7 @@ public sealed partial class VenueEditorGame : Game
                 ToolbarAction.Undo => workspace?.CanUndo == true,
                 ToolbarAction.Redo => workspace?.CanRedo == true,
                 ToolbarAction.DuplicatePlan => workspace?.HasSelectedCircleLayout == true,
-                ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode => workspace is not null,
+                ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.FrameChannelsMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode => workspace is not null,
                 ToolbarAction.PanViewport or ToolbarAction.FitVenueToWindow => workspace is not null,
                 ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ImportParticipants or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportFrameLayout => workspace is not null && optimizationTask is null,
                 ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget => workspace is not null,
@@ -2771,6 +2794,7 @@ public sealed partial class VenueEditorGame : Game
                 button.Action == ToolbarAction.ParticipantDataMode && editorMode == EditorMode.ParticipantData ||
                 button.Action == ToolbarAction.ToggleEvaluationAnalysis && showEvaluationAnalysis ||
                 button.Action == ToolbarAction.DeskPlacementMode && editorMode == EditorMode.DeskPlacement ||
+                button.Action == ToolbarAction.FrameChannelsMode && editorMode == EditorMode.FrameChannels ||
                 button.Action == ToolbarAction.IslandDefinitionMode && editorMode == EditorMode.IslandDefinition ||
                 button.Action == ToolbarAction.GenrePlacementMode && editorMode == EditorMode.GenrePlacement ||
                 button.Action == ToolbarAction.CirclePlacementMode && editorMode == EditorMode.CirclePlacement ||
@@ -2781,9 +2805,13 @@ public sealed partial class VenueEditorGame : Game
         var activeButton = toolbarButtons.SingleOrDefault(button => button.Action ==
             GetToolMenu(activeCanvasTool));
         if (activeButton?.Model.IsEnabled != true)
-            activeCanvasTool = editorMode == EditorMode.DeskPlacement
-                ? ToolbarAction.MoveDesk
-                : editorMode is EditorMode.GenrePlacement or EditorMode.IslandDefinition ? ToolbarAction.PanViewport : ToolbarAction.UnassignParticipant;
+            activeCanvasTool = editorMode switch
+            {
+                EditorMode.DeskPlacement => ToolbarAction.MoveDesk,
+                EditorMode.FrameChannels => ToolbarAction.EditSeatName,
+                EditorMode.GenrePlacement or EditorMode.IslandDefinition => ToolbarAction.PanViewport,
+                _ => ToolbarAction.UnassignParticipant,
+            };
     }
 
     private (bool Success, string Detail) ExecuteToolbarAction(ToolbarAction action, ScreenPoint pointer)
@@ -2875,6 +2903,8 @@ public sealed partial class VenueEditorGame : Game
             return ChangeEditorMode(EditorMode.ParticipantData);
         if (action == ToolbarAction.DeskPlacementMode)
             return ChangeEditorMode(EditorMode.DeskPlacement);
+        if (action == ToolbarAction.FrameChannelsMode)
+            return ChangeEditorMode(EditorMode.FrameChannels);
         if (action == ToolbarAction.IslandDefinitionMode)
             return ChangeEditorMode(EditorMode.IslandDefinition);
         if (action == ToolbarAction.GenrePlacementMode)
@@ -2986,9 +3016,13 @@ public sealed partial class VenueEditorGame : Game
             addressSwapProject = null;
             editorMode = mode;
             tableTextPage = null;
-            activeCanvasTool = mode == EditorMode.DeskPlacement
-                ? ToolbarAction.MoveDesk
-                : mode is EditorMode.GenrePlacement or EditorMode.IslandDefinition or EditorMode.GenreData ? ToolbarAction.PanViewport : ToolbarAction.UnassignParticipant;
+            activeCanvasTool = mode switch
+            {
+                EditorMode.DeskPlacement => ToolbarAction.MoveDesk,
+                EditorMode.FrameChannels => ToolbarAction.EditSeatName,
+                EditorMode.GenrePlacement or EditorMode.IslandDefinition or EditorMode.GenreData => ToolbarAction.PanViewport,
+                _ => ToolbarAction.UnassignParticipant,
+            };
             topologyFirstDeskId = null;
             topologyFirstCell = null;
             topologyFirstCorner = null;
@@ -3013,11 +3047,11 @@ public sealed partial class VenueEditorGame : Game
                 : (false, $"issues={FormatIssues(result.Issues)}");
 
     private bool IsSeatNameRangeEditing =>
-        editorMode == EditorMode.DeskPlacement && activeCanvasTool == ToolbarAction.EditSeatName &&
+        editorMode == EditorMode.FrameChannels && activeCanvasTool == ToolbarAction.EditSeatName &&
         (IsWeightChannelSelected || selectedNumberChannel != 1);
 
     private bool CanSelectCellRange =>
-        editorMode is EditorMode.DeskPlacement or EditorMode.GenrePlacement or EditorMode.CirclePlacement;
+        editorMode is EditorMode.FrameChannels or EditorMode.GenrePlacement or EditorMode.CirclePlacement;
 
     private (bool Success, string Detail) ExecuteCanvasTool(ScreenPoint pointer)
     {
@@ -3177,6 +3211,11 @@ public sealed partial class VenueEditorGame : Game
     private void DrawToolbar()
     {
         DrawRectangle(new ScreenRectangle(0d, 0d, GraphicsDevice.Viewport.Width, ToolbarHeight), new Color(18, 22, 28));
+        if (frameModeHeaderBounds.Width > 0d)
+        {
+            DrawRectangle(frameModeHeaderBounds, new Color(35, 47, 58));
+            textRenderer?.Draw("フレーム", ToRectangle(frameModeHeaderBounds, 0), Color.White, 12, true);
+        }
         foreach (var separatorX in toolbarSeparators)
             DrawRectangle(new ScreenRectangle(separatorX, 65d + WorkerBarHeight, 1d, 32d), new Color(80, 87, 98));
         foreach (var button in toolbarButtons)
@@ -3196,8 +3235,9 @@ public sealed partial class VenueEditorGame : Game
                         textRenderer?.Draw("プロジェクト ▼", ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action == ToolbarAction.GenreMenu)
                         textRenderer?.Draw("ジャンル", ToRectangle(bounds, 5), foreground, 17, true);
-                    else if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
-                        textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 5), foreground, 17, true);
+                    else if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.FrameChannelsMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
+                        textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 3), foreground,
+                            button.Action is ToolbarAction.DeskPlacementMode or ToolbarAction.FrameChannelsMode ? 13 : 17, true);
                     else if (button.Action is ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
                         {
@@ -3532,6 +3572,7 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.SelectExportColumns => "番号を書き込む列と照合ID列を設定し、書出しプレビューを表示する",
         ToolbarAction.ParticipantDataMode => "サークルデータを表で確認し、Excel / CSV を読み込む",
         ToolbarAction.DeskPlacementMode => "フレーム配置モードへ切り替える",
+        ToolbarAction.FrameChannelsMode => "フレームチャンネルモードへ切り替える（ブロック・フレーム・セル番号を編集）",
         ToolbarAction.IslandDefinitionMode => "島定義モードへ切り替える",
         ToolbarAction.GenrePlacementMode => "ジャンル配置モードへ切り替える",
         ToolbarAction.CirclePlacementMode => "サークル配置モードへ切り替える",
@@ -3585,7 +3626,8 @@ public sealed partial class VenueEditorGame : Game
         ToolbarAction.SpaceDefinitionsMode => "フレーム定義",
         ToolbarAction.CirclePlacementDecisionMode => "スペース番号書き出し",
         ToolbarAction.ParticipantDataMode => "サークルデータ",
-        ToolbarAction.DeskPlacementMode => "フレーム配置",
+        ToolbarAction.DeskPlacementMode => "配置",
+        ToolbarAction.FrameChannelsMode => "チャンネル",
         ToolbarAction.IslandDefinitionMode => "島定義",
         ToolbarAction.GenrePlacementMode => "ジャンル配置",
         ToolbarAction.CirclePlacementMode => "サークル配置",
@@ -3664,7 +3706,7 @@ public sealed partial class VenueEditorGame : Game
             ? null
             : GetDisplayedPlans().FirstOrDefault(plan => plan.PlanId == hoveredPlanId);
         var details = new List<string>();
-        if (editorMode != EditorMode.DeskPlacement && !workspace.GetSelectedPlanSnapshot().AudienceEvaluation.CombinedSpaceRequirementsSatisfied)
+        if (!ShowsDeskLayouts && !workspace.GetSelectedPlanSnapshot().AudienceEvaluation.CombinedSpaceRequirementsSatisfied)
             details.Add("⚠ 合体サークルが同じフレームにありません");
         if (ShowsLayoutOrder && CanShowEditorHover)
             foreach (var direction in new[] { -1, 1 })
@@ -3685,13 +3727,13 @@ public sealed partial class VenueEditorGame : Game
         if (hoveredButton is not null)
             details.Add(hoveredButton);
         if (hoveredLayoutAdd)
-            details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
+            details.Add(ShowsDeskLayouts
                 ? "フレーム配置を追加する"
                 : "選択中のフレーム配置にサークル配置を追加する");
         if (hoveredLayoutDuplicate)
             details.Add(ShowsDeskLayouts ? "選択中のフレーム配置を独立したフレーム配置として複製する" : "選択中のサークル配置案を複製する");
         if (hoveredLayoutDelete)
-            details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
+            details.Add(ShowsDeskLayouts
                 ? "未使用のフレーム配置を削除する"
                 : "選択中のサークル配置を削除する");
         if (hoveredDeskLayoutParent)
@@ -3699,11 +3741,11 @@ public sealed partial class VenueEditorGame : Game
         if (hoveredLayoutBind)
             details.Add("選択中のサークル配置のフレーム配置を変更する");
         if (hoveredLayoutRename)
-            details.Add(editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition
+            details.Add(ShowsDeskLayouts
                 ? "選択中のフレーム配置の名前を変更する"
                 : "選択中のサークル配置の名前を変更する");
         if (hoveredPlan is not null)
-            details.Add(editorMode == EditorMode.DeskPlacement
+            details.Add(ShowsDeskLayouts
                 ? $"一覧: {hoveredPlan.Rank}番 {hoveredPlan.PlanName}（{(UsesSeparatedLayouts ? "手動順" : "名前順")}）"
                 : $"一覧: {hoveredPlan.Rank}位 {hoveredPlan.PlanName}　一般 {hoveredPlan.GeneralAttendeeScore:0.##}／サークル {hoveredPlan.CircleParticipantScore:0.##}");
         if (screenshotStatus is not null)
@@ -3845,7 +3887,7 @@ public sealed partial class VenueEditorGame : Game
     private (bool Success, string Detail) PromptCreateLayout()
     {
         if (workspace is null) return (false, "workspace_unavailable");
-        var isDesk = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
+        var isDesk = ShowsDeskLayouts;
         var deskLayoutId = SelectedDeskLayoutId();
         OpenUnderlineInput(isDesk ? "フレーム配置を追加" : "サークル配置を追加",
             isDesk ? $"フレーム配置{workspace.Project.DeskLayouts.Count + 1}" : $"サークル配置{workspace.Project.CircleLayouts.Count + 1}", name =>
@@ -3869,7 +3911,7 @@ public sealed partial class VenueEditorGame : Game
     private (bool Success, string Detail) PromptDeleteLayout()
     {
         if (workspace is null) return (false, "workspace_unavailable");
-        var isDesk = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
+        var isDesk = ShowsDeskLayouts;
         var id = isDesk ? SelectedDeskLayoutId() : workspace.SelectedPlanId;
         if (isDesk && workspace.Project.CircleLayouts.Any(item => item.DeskLayoutId == id))
         {
@@ -3919,7 +3961,7 @@ public sealed partial class VenueEditorGame : Game
     private (bool Success, string Detail) PromptRenameLayout()
     {
         if (workspace is null) return (false, "workspace_unavailable");
-        var isDesk = editorMode is EditorMode.DeskPlacement or EditorMode.IslandDefinition;
+        var isDesk = ShowsDeskLayouts;
         var id = isDesk ? SelectedDeskLayoutId() : workspace.SelectedPlanId;
         var currentName = isDesk
             ? workspace.Project.DeskLayouts.Single(item => item.Id == id).Name
@@ -4052,11 +4094,13 @@ public sealed partial class VenueEditorGame : Game
             editorMode = EditorMode.DeskPlacement;
         }
         showEvaluationAnalysis = state.Switches?.GetValueOrDefault("evaluationAnalysis") == true;
-        activeCanvasTool = editorMode == EditorMode.DeskPlacement
-            ? ToolbarAction.MoveDesk
-            : editorMode is EditorMode.GenrePlacement or EditorMode.IslandDefinition or EditorMode.GenreData
-                ? ToolbarAction.PanViewport
-                : ToolbarAction.UnassignParticipant;
+        activeCanvasTool = editorMode switch
+        {
+            EditorMode.DeskPlacement => ToolbarAction.MoveDesk,
+            EditorMode.FrameChannels => ToolbarAction.EditSeatName,
+            EditorMode.GenrePlacement or EditorMode.IslandDefinition or EditorMode.GenreData => ToolbarAction.PanViewport,
+            _ => ToolbarAction.UnassignParticipant,
+        };
     }
 
     private void PersistWorkingState()
@@ -4160,6 +4204,7 @@ internal enum ToolbarAction
     SelectExportColumns,
     ParticipantDataMode,
     DeskPlacementMode,
+    FrameChannelsMode,
     IslandDefinitionMode,
     GenrePlacementMode,
     CirclePlacementMode,
@@ -4210,6 +4255,7 @@ internal enum EditorMode
 {
     SpaceDefinitions,
     DeskPlacement,
+    FrameChannels,
     IslandDefinition,
     GenrePlacement,
     CirclePlacement,

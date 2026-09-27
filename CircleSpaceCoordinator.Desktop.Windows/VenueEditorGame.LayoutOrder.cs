@@ -5,7 +5,7 @@ using StationeryUI.Canvas;
 
 public sealed partial class VenueEditorGame
 {
-    private bool ShowsLayoutOrder => UsesSeparatedLayouts && ShowsDeskLayouts;
+    private bool ShowsLayoutOrder => UsesSeparatedLayouts && ShowsDeskLayouts && editorMode != EditorMode.FrameChannels;
 
     private ScreenRectangle LayoutOrderButton(int direction) => new(
         GraphicsDevice.PresentationParameters.BackBufferWidth - (direction < 0 ? 116 : 92), ToolbarHeight + 68, 20, 26);

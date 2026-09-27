@@ -25,8 +25,8 @@ public sealed partial class VenueEditorGame
     ];
     private static readonly string[] FramePlacementHints =
     [
-        "［フレーム番号］を選び、Shift キーを押しながらマウスドラッグで複数フレーム選択",
-        "［フレーム番号］で複数選択後、Shift を離して選択中のフレームをクリック：一括入力",
+        "フレームの追加・移動・回転を行います。番号の入力は［フレーム］→［チャンネル］へ",
+        "配置可能数を申込数に合わせてください。赤い印のある配置案にマウスを合わせると詳細を表示します",
         "Ctrl＋Z：元に戻す　Ctrl＋Y：やり直し　Ctrl＋S：保存",
     ];
     private static readonly string[] CellNumberHints =
@@ -35,7 +35,8 @@ public sealed partial class VenueEditorGame
         "選択範囲をCtrl＋ドラッグ：番地スワップ　Shift＋ドラッグ：範囲を選び直す",
         "番地入力の隣の矢印ボタン：スワップモード　Ctrl＋Z：元に戻す",
     ];
-    private bool ShowsStatusHintTimer => workspace is not null && editorMode == EditorMode.DeskPlacement;
+    private bool ShowsStatusHintTimer => workspace is not null &&
+        editorMode is (EditorMode.DeskPlacement or EditorMode.FrameChannels);
     private double statusHintTime;
     private double statusHintStartedAt;
     private string? statusHintContext;
@@ -46,8 +47,8 @@ public sealed partial class VenueEditorGame
 
     private string GetRotatingFrameNumberHint(IReadOnlyList<string> details)
     {
-        var hints = IsAddressSwapMode ? AddressSwapHints : IsBlockNumberChannelSelected ? BlockNumberHints : IsFrameNumberChannelSelected ? FrameNumberHints : ShowsCellNumberWizardButton ? CellNumberHints : FramePlacementHints;
-        var context = IsAddressSwapMode ? "address-swap" : IsBlockNumberChannelSelected ? "block-number" : IsFrameNumberChannelSelected ? "frame-number" : ShowsCellNumberWizardButton ? "cell-number" : "frame-placement";
+        var hints = IsAddressSwapMode ? AddressSwapHints : IsBlockNumberChannelSelected ? BlockNumberHints : IsFrameNumberChannelSelected ? FrameNumberHints : editorMode == EditorMode.FrameChannels ? CellNumberHints : FramePlacementHints;
+        var context = IsAddressSwapMode ? "address-swap" : IsBlockNumberChannelSelected ? "block-number" : IsFrameNumberChannelSelected ? "frame-number" : editorMode == EditorMode.FrameChannels ? "cell-number" : "frame-placement";
         if (statusHintContext != context)
         {
             statusHintContext = context;

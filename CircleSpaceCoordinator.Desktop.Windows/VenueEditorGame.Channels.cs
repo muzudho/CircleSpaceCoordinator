@@ -18,8 +18,8 @@ public sealed partial class VenueEditorGame
     private string NumberChannelName => NumberChannelNames[selectedNumberChannel];
     private int channelScroll;
     private int planScroll;
-    private bool ShowsChannels => editorMode is EditorMode.DeskPlacement or EditorMode.CirclePlacement;
-    private bool IsWeightChannelSelected => editorMode == EditorMode.DeskPlacement && selectedChannelId is not null &&
+    private bool ShowsChannels => editorMode is EditorMode.FrameChannels or EditorMode.CirclePlacement;
+    private bool IsWeightChannelSelected => editorMode == EditorMode.FrameChannels && selectedChannelId is not null &&
         workspace?.Project.Evaluation.Features.Any(item => item.Id == selectedChannelId) == true;
 
     private ScreenRectangle GetChannelPanelBounds()
@@ -47,7 +47,7 @@ public sealed partial class VenueEditorGame
     private int VisibleChannelRows => Math.Max(1, (int)(GetChannelPanelBounds().Height - (ShowsChannelFooterButton ? 138 : 114)) /
         (editorMode == EditorMode.CirclePlacement ? 38 : 48));
 
-    private bool ShowsBlockStyleButton => editorMode == EditorMode.DeskPlacement &&
+    private bool ShowsBlockStyleButton => editorMode == EditorMode.FrameChannels &&
         selectedChannelId is null && selectedNumberChannel == 0;
 
     private ScreenRectangle BlockStyleButton()

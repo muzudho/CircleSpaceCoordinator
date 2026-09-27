@@ -20,7 +20,7 @@ public sealed partial class VenueEditorGame
 
     private string? HoveredChannelComment(ScreenPoint pointer)
     {
-        if (editorMode != EditorMode.DeskPlacement || workspace is null) return null;
+        if (editorMode != EditorMode.FrameChannels || workspace is null) return null;
         for (var row = 0; row < VisibleChannelRows; row++)
         {
             var index = row + channelScroll - 3;

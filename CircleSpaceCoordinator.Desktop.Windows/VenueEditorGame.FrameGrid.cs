@@ -22,7 +22,7 @@ public sealed partial class VenueEditorGame
 
     private void KeepFrameGridInCanvas()
     {
-        if (editorMode != EditorMode.DeskPlacement || workspace is null) return;
+        if (editorMode is not (EditorMode.DeskPlacement or EditorMode.FrameChannels) || workspace is null) return;
         var area = FramePlacementCanvasBounds;
         var cellSize = viewport.BaseCellSize * viewport.Zoom;
         var venue = workspace.Project.Venue;
@@ -40,7 +40,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawFrameGridOutline(int width, int height)
     {
-        if (editorMode != EditorMode.DeskPlacement) return;
+        if (editorMode is not (EditorMode.DeskPlacement or EditorMode.FrameChannels)) return;
         var first = viewport.GetCellBounds(new GridCellAddress(0, 0));
         var last = viewport.GetCellBounds(new GridCellAddress(width - 1, height - 1));
         DrawOutline(new ScreenRectangle(first.X - FrameGridBorderPadding, first.Y - FrameGridBorderPadding,

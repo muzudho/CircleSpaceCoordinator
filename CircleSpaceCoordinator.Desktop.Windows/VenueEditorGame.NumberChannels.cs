@@ -40,7 +40,7 @@ public sealed partial class VenueEditorGame
 
     private string? GetNumberChannelHoverError(ScreenPoint pointer)
     {
-        if (workspace is null || editorMode != EditorMode.DeskPlacement) return null;
+        if (workspace is null || editorMode != EditorMode.FrameChannels) return null;
         if (ShowsCellNumberWizardButton && Contains(BlockStyleButton(), pointer))
             return selectedNumberChannel == 1 ? "旗からフレーム番号を自動連番する（分岐のないシーケンス）" : "セル番号入力ウィザード：並び順と番号リストを指定して一括入力する";
         if (ShowsBlockStyleButton && Contains(BlockStyleButton(), pointer))
@@ -98,7 +98,7 @@ public sealed partial class VenueEditorGame
 
     private void DrawNumberLabels()
     {
-        if (workspace is null || editorMode != EditorMode.DeskPlacement) return;
+        if (workspace is null || editorMode != EditorMode.FrameChannels) return;
         if (IsBlockNumberChannelSelected) { DrawBlockNumberLabels(); return; }
         var plan = workspace.SelectedPlan;
         var types = workspace.Project.DeskTypes.ToDictionary(type => type.Id);

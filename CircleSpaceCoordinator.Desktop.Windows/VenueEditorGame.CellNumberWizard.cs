@@ -7,7 +7,7 @@ using StationeryUI.Controls;
 
 public sealed partial class VenueEditorGame
 {
-    private bool ShowsCellNumberWizardButton => editorMode == EditorMode.DeskPlacement &&
+    private bool ShowsCellNumberWizardButton => editorMode == EditorMode.FrameChannels &&
         selectedChannelId is null && selectedNumberChannel is 1 or 2;
     private bool ShowsChannelFooterButton => ShowsBlockStyleButton || ShowsCellNumberWizardButton;
 

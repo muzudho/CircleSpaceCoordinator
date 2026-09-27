@@ -8,7 +8,7 @@ using StationeryUI.Canvas;
 
 public sealed partial class VenueEditorGame
 {
-    private bool IsBlockNumberChannelSelected => editorMode == EditorMode.DeskPlacement &&
+    private bool IsBlockNumberChannelSelected => editorMode == EditorMode.FrameChannels &&
         !IsWeightChannelSelected && selectedNumberChannel == 0;
     private CircleSpaceProject? blockViewProject;
     private Plan? blockViewPlan;

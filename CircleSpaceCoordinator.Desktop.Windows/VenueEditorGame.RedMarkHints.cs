@@ -9,15 +9,17 @@ public sealed partial class VenueEditorGame
 {
     private string? GetRedMarkResolutionHint(ScreenPoint pointer)
     {
-        if (!CanShowEditorHover || workspace is null || editorMode != EditorMode.DeskPlacement) return null;
+        if (!CanShowEditorHover || workspace is null || editorMode is not (EditorMode.DeskPlacement or EditorMode.FrameChannels)) return null;
 
-        if (hoveredPlanId is { } planId)
+        if (editorMode == EditorMode.DeskPlacement && hoveredPlanId is { } planId)
         {
             var capacity = GetSpaceCapacity();
             var difference = capacity.Layouts[planId] - capacity.Requested;
             if (difference != 0)
                 return $"赤い印：配置可能数が申込数より{Math.Abs(difference):N0} sp{(difference < 0 ? "不足" : "超過")}。この配置案を選び、フレーム配置か申込数を調整して一致させてください。";
         }
+
+        if (editorMode != EditorMode.FrameChannels) return null;
 
         for (var row = 0; row < VisibleChannelRows; row++)
         {

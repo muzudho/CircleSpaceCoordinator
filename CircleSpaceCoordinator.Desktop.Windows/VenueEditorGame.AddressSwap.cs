@@ -12,7 +12,7 @@ public sealed partial class VenueEditorGame
     private string? addressSwapPlanId;
     private int addressSwapChannel = -1;
     private string[] addressSwapFrames = [];
-    private bool ShowsAddressSwapButton => editorMode == EditorMode.DeskPlacement && selectedChannelId is null;
+    private bool ShowsAddressSwapButton => editorMode == EditorMode.FrameChannels && selectedChannelId is null;
     private bool IsAddressSwapMode => ShowsAddressSwapButton && addressSwapEnabled && activeCanvasTool == ToolbarAction.EditSeatName;
     private void ToggleAddressSwapMode()
     {
