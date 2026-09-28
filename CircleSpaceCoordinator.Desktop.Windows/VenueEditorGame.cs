@@ -2586,8 +2586,7 @@ public sealed partial class VenueEditorGame : Game
     {
         toolbarButtons.Clear();
         toolbarSeparators.Clear();
-        frameModeHeaderBounds = default;
-        frameModeOverbarBounds = default;
+        frameModeStrip = null;
         var modeActions = new[]
         {
             ToolbarAction.DeskPlacementMode,
@@ -2671,9 +2670,13 @@ public sealed partial class VenueEditorGame : Game
                 var frameGroup = action == ToolbarAction.DeskPlacementMode;
                 var collapsed = frameGroup ? frameModesCollapsed : circleModesCollapsed;
                 var groupName = frameGroup ? "フレーム・島定義" : "ジャンル配置・サークル配置";
+                if (frameGroup && !collapsed)
+                    frameModeStrip = MenuRootStrip.Create(
+                        new ScreenRectangle(modeX, 7d + WorkerBarHeight, frameModeWidth, 40d), [44d, 88d, 62d]);
                 toolbarButtons.Add(new ToolbarButton(
                     frameGroup ? ToolbarAction.ToggleFrameModes : ToolbarAction.ToggleCircleModes,
-                    new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight + (frameGroup ? 8d : 0d), 24d, 24d),
+                    new IconButtonModel((frameGroup ? frameModeStrip?.ToggleBounds : null) ??
+                        new ScreenRectangle(modeX, 7d + WorkerBarHeight + (frameGroup ? 8d : 0d), 24d, 24d),
                         $"{groupName}を{(collapsed ? "展開する" : "収納する")}")));
                 modeX += 30d;
             }
@@ -2682,28 +2685,15 @@ public sealed partial class VenueEditorGame : Game
                 continue;
             if (action == ToolbarAction.DeskPlacementMode)
             {
-                var y = 7d + WorkerBarHeight;
-                var groupWidth = frameModeWidth - 30d;
-                const double headerWidth = 72d;
-                const double rootWidth = 14d;
-                const double gap = 3d;
-                var childrenWidth = groupWidth - headerWidth - rootWidth - gap * 2d;
-                var placementWidth = childrenWidth * 44d / 194d;
-                var channelWidth = childrenWidth * 88d / 194d;
-                var islandWidth = childrenWidth - placementWidth - channelWidth;
-                var childX = modeX + headerWidth + rootWidth;
-                frameModeHeaderBounds = new ScreenRectangle(modeX, y, headerWidth, 40d);
-                frameModeOverbarBounds = new ScreenRectangle(modeX + headerWidth, y + 2d,
-                    groupWidth - headerWidth, 0d);
                 toolbarButtons.Add(new ToolbarButton(action,
-                    new IconButtonModel(new ScreenRectangle(childX, y, placementWidth, 40d), GetAccessibleName(action))));
+                    new IconButtonModel(frameModeStrip!.ItemBounds[0], GetAccessibleName(action))));
                 toolbarButtons.Add(new ToolbarButton(ToolbarAction.FrameChannelsMode,
-                    new IconButtonModel(new ScreenRectangle(childX + placementWidth + gap, y, channelWidth, 40d),
+                    new IconButtonModel(frameModeStrip.ItemBounds[1],
                         GetAccessibleName(ToolbarAction.FrameChannelsMode))));
                 toolbarButtons.Add(new ToolbarButton(ToolbarAction.IslandDefinitionMode,
-                    new IconButtonModel(new ScreenRectangle(childX + placementWidth + channelWidth + gap * 2d, y, islandWidth, 40d),
+                    new IconButtonModel(frameModeStrip.ItemBounds[2],
                         GetAccessibleName(ToolbarAction.IslandDefinitionMode))));
-                modeX += groupWidth;
+                modeX += frameModeWidth - 30d;
                 continue;
             }
             if (action == ToolbarAction.IslandDefinitionMode)
@@ -3232,10 +3222,6 @@ public sealed partial class VenueEditorGame : Game
     private void DrawToolbar()
     {
         DrawRectangle(new ScreenRectangle(0d, 0d, GraphicsDevice.Viewport.Width, ToolbarHeight), new Color(18, 22, 28));
-        if (frameModeHeaderBounds.Width > 0d)
-        {
-            textRenderer?.Draw("フレーム", ToRectangle(frameModeHeaderBounds, 0), Color.White, 17, true);
-        }
         foreach (var separatorX in toolbarSeparators)
             DrawRectangle(new ScreenRectangle(separatorX, 65d + WorkerBarHeight, 1d, 32d), new Color(80, 87, 98));
         foreach (var button in toolbarButtons)
@@ -3280,16 +3266,9 @@ public sealed partial class VenueEditorGame : Game
                         DrawCircle(new ScreenPoint(bounds.X + bounds.Width - 6d, bounds.Y + bounds.Height - 6d), 3.5d, foreground);
                 });
         }
-        if (frameModeOverbarBounds.Width > 0d)
-        {
-            var rootX = frameModeOverbarBounds.X;
-            var topY = frameModeOverbarBounds.Y;
-            var lineColor = new Color(151, 184, 190);
-            DrawLine(new ScreenPoint(rootX, topY + 18d), new ScreenPoint(rootX + 4d, topY + 23d), 2d, lineColor);
-            DrawLine(new ScreenPoint(rootX + 4d, topY + 23d), new ScreenPoint(rootX + 13d, topY), 2d, lineColor);
-            DrawLine(new ScreenPoint(rootX + 13d, topY),
-                new ScreenPoint(rootX + frameModeOverbarBounds.Width, topY), 2d, lineColor);
-        }
+        frameModeStrip?.Draw("フレーム",
+            (heading, bounds) => textRenderer?.Draw(heading, ToRectangle(bounds, 0), Color.White, 17, true),
+            (start, end, thickness) => DrawLine(start, end, thickness, new Color(151, 184, 190)));
     }
 
     private static Color ToButtonColor(ButtonColor color) => new(color.R, color.G, color.B, color.A);

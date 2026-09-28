@@ -1,6 +1,10 @@
 2026-09-22: StationeryUI / StationeryUI.Windows / StationeryUI.MonoGame は NuGet.org 公開版 0.2.0 を使用します。NuGet.Config から旧ローカルフィードを外し、隣のリポジトリーや同梱パッケージなしで復元できます。このプロジェクトは共通パッケージへの参照窓口とアプリ側の追加部品を保持します。
 # StationeryUI library
 
+## MenuRootStrip
+
+`Controls/MenuRootStrip.cs` は、開閉ボタン・見出し・複数の横並びメニュー項目の位置と、項目をまとめる√形の線を提供します。項目数と幅の比率を指定でき、クリック処理と描画は利用側が担当します。会場編集画面では MonoGame の描画関数に接続して使用しています。
+
 ## 変更タグコンポーネント（2026-09-19）
 
 `Controls/ChangeTagEditor.cs` と `Controls/ChangeTagEditorView.cs` は、このプロジェクトに追加した再利用可能な入力状態・下線／バッジ表示部品です。`StationeryUI.Controls` 名前空間で公開し、OS・MonoGame・会場モデルには依存しません。既存パッケージの `UnderlineTextEditor` を使用し、検証・描画・文字幅計測・保存は利用側から接続します。

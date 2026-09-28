@@ -11,6 +11,7 @@ internal static class Program
         var tests = new (string Name, Action Run)[]
         {
             ("Ring buttons stay square and on the circle at window edges", RingLayoutStaysInsideWindow),
+            ("Menu root strip groups three full-height items", MenuRootStripGroupsItems),
             ("Screen positions map to grid cells", ScreenPositionsMapToCells),
             ("Panning moves cell bounds", PanningMovesCellBounds),
             ("Zooming preserves the anchored world position", ZoomPreservesAnchor),
@@ -72,6 +73,32 @@ internal static class Program
                     throw new Exception("Ring button is not on the band centerline.");
             }
         }
+    }
+
+    private static void MenuRootStripGroupsItems()
+    {
+        var bounds = new ScreenRectangle(424d, 39d, 322d, 40d);
+        var strip = MenuRootStrip.Create(bounds, [44d, 88d, 62d]);
+        AssertEqual(3, strip.ItemBounds.Count);
+        AssertEqual(bounds.Y, strip.HeadingBounds.Y);
+        AssertEqual(bounds.Y, strip.ItemBounds[0].Y);
+        AssertEqual(bounds.Height, strip.ItemBounds[0].Height);
+        AssertEqual(true, strip.ToggleBounds.X + strip.ToggleBounds.Width < strip.HeadingBounds.X);
+        AssertEqual(true, strip.HeadingBounds.X + strip.HeadingBounds.Width < strip.ItemBounds[0].X);
+        AssertEqual(true, strip.ItemBounds[0].X + strip.ItemBounds[0].Width < strip.ItemBounds[1].X);
+        AssertEqual(true, strip.ItemBounds[1].X + strip.ItemBounds[1].Width < strip.ItemBounds[2].X);
+        AssertEqual(bounds.X + bounds.Width, strip.ItemBounds[2].X + strip.ItemBounds[2].Width);
+
+        var lines = new List<(ScreenPoint Start, ScreenPoint End)>();
+        strip.Draw("フレーム",
+            (heading, headingBounds) =>
+            {
+                AssertEqual("フレーム", heading);
+                AssertEqual(strip.HeadingBounds, headingBounds);
+            },
+            (start, end, _) => lines.Add((start, end)));
+        AssertEqual(3, lines.Count);
+        AssertEqual(bounds.X + bounds.Width, lines[^1].End.X);
     }
 
     private static void ScreenPositionsMapToCells()
