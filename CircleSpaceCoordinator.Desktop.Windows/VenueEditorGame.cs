@@ -2587,6 +2587,7 @@ public sealed partial class VenueEditorGame : Game
         toolbarButtons.Clear();
         toolbarSeparators.Clear();
         frameModeHeaderBounds = default;
+        frameModeOverbarBounds = default;
         var modeActions = new[]
         {
             ToolbarAction.DeskPlacementMode,
@@ -2650,11 +2651,11 @@ public sealed partial class VenueEditorGame : Game
         var visibleModeCount = modeActions.Length - (frameModesCollapsed ? 2 : 0) - (circleModesCollapsed ? 2 : 0);
         var toolbarWidth = Window.ClientBounds.Width > 0 ? Window.ClientBounds.Width : graphics.PreferredBackBufferWidth;
         projectToolbarWidth = toolbarWidth;
-        // The two frame modes share one top-level slot, with the header above them.
-        var frameModeWidth = Math.Clamp((toolbarWidth - 622d) / visibleModeCount * 1.35d, 112d, 180d);
+        // Keep the frame heading and its three modes on one line.
+        var frameModeWidth = Math.Clamp((toolbarWidth - 622d) * 0.49d, 280d, 330d);
         var modeWidth = Math.Min(158d, Math.Max(44d,
             (toolbarWidth - 622d - (frameModesCollapsed ? 0d : frameModeWidth)) /
-            (visibleModeCount - (frameModesCollapsed ? 0 : 1))));
+            (visibleModeCount - (frameModesCollapsed ? 0 : 2))));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.ProjectMenu,
             new IconButtonModel(new ScreenRectangle(12, 7 + WorkerBarHeight, 142, 40), GetAccessibleName(ToolbarAction.ProjectMenu))));
         toolbarButtons.Add(new ToolbarButton(ToolbarAction.ParticipantDataMode,
@@ -2672,7 +2673,7 @@ public sealed partial class VenueEditorGame : Game
                 var groupName = frameGroup ? "フレーム・島定義" : "ジャンル配置・サークル配置";
                 toolbarButtons.Add(new ToolbarButton(
                     frameGroup ? ToolbarAction.ToggleFrameModes : ToolbarAction.ToggleCircleModes,
-                    new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight, 24d, 24d),
+                    new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight + (frameGroup ? 8d : 0d), 24d, 24d),
                         $"{groupName}を{(collapsed ? "展開する" : "収納する")}")));
                 modeX += 30d;
             }
@@ -2681,18 +2682,32 @@ public sealed partial class VenueEditorGame : Game
                 continue;
             if (action == ToolbarAction.DeskPlacementMode)
             {
-                var width = frameModeWidth - 8d;
-                var childWidth = (width - 4d) / 2d;
                 var y = 7d + WorkerBarHeight;
-                frameModeHeaderBounds = new ScreenRectangle(modeX, y, width, 15d);
+                var groupWidth = frameModeWidth - 30d;
+                const double headerWidth = 72d;
+                const double rootWidth = 14d;
+                const double gap = 3d;
+                var childrenWidth = groupWidth - headerWidth - rootWidth - gap * 2d;
+                var placementWidth = childrenWidth * 44d / 194d;
+                var channelWidth = childrenWidth * 88d / 194d;
+                var islandWidth = childrenWidth - placementWidth - channelWidth;
+                var childX = modeX + headerWidth + rootWidth;
+                frameModeHeaderBounds = new ScreenRectangle(modeX, y, headerWidth, 40d);
+                frameModeOverbarBounds = new ScreenRectangle(modeX + headerWidth, y + 2d,
+                    groupWidth - headerWidth, 0d);
                 toolbarButtons.Add(new ToolbarButton(action,
-                    new IconButtonModel(new ScreenRectangle(modeX, y + 17d, childWidth, 23d), GetAccessibleName(action))));
+                    new IconButtonModel(new ScreenRectangle(childX, y, placementWidth, 40d), GetAccessibleName(action))));
                 toolbarButtons.Add(new ToolbarButton(ToolbarAction.FrameChannelsMode,
-                    new IconButtonModel(new ScreenRectangle(modeX + childWidth + 4d, y + 17d, childWidth, 23d),
+                    new IconButtonModel(new ScreenRectangle(childX + placementWidth + gap, y, channelWidth, 40d),
                         GetAccessibleName(ToolbarAction.FrameChannelsMode))));
-                modeX += frameModeWidth;
+                toolbarButtons.Add(new ToolbarButton(ToolbarAction.IslandDefinitionMode,
+                    new IconButtonModel(new ScreenRectangle(childX + placementWidth + channelWidth + gap * 2d, y, islandWidth, 40d),
+                        GetAccessibleName(ToolbarAction.IslandDefinitionMode))));
+                modeX += groupWidth;
                 continue;
             }
+            if (action == ToolbarAction.IslandDefinitionMode)
+                continue;
             toolbarButtons.Add(new ToolbarButton(
                 action,
                 new IconButtonModel(new ScreenRectangle(modeX, 7d + WorkerBarHeight, modeWidth - 8d, 40d), GetAccessibleName(action))));
@@ -3219,8 +3234,7 @@ public sealed partial class VenueEditorGame : Game
         DrawRectangle(new ScreenRectangle(0d, 0d, GraphicsDevice.Viewport.Width, ToolbarHeight), new Color(18, 22, 28));
         if (frameModeHeaderBounds.Width > 0d)
         {
-            DrawRectangle(frameModeHeaderBounds, new Color(35, 47, 58));
-            textRenderer?.Draw("フレーム", ToRectangle(frameModeHeaderBounds, 0), Color.White, 12, true);
+            textRenderer?.Draw("フレーム", ToRectangle(frameModeHeaderBounds, 0), Color.White, 17, true);
         }
         foreach (var separatorX in toolbarSeparators)
             DrawRectangle(new ScreenRectangle(separatorX, 65d + WorkerBarHeight, 1d, 32d), new Color(80, 87, 98));
@@ -3242,8 +3256,7 @@ public sealed partial class VenueEditorGame : Game
                     else if (button.Action == ToolbarAction.GenreMenu)
                         textRenderer?.Draw("ジャンル", ToRectangle(bounds, 5), foreground, 17, true);
                     else if (button.Action is ToolbarAction.SpaceDefinitionsMode or ToolbarAction.ParticipantDataMode or ToolbarAction.DeskPlacementMode or ToolbarAction.FrameChannelsMode or ToolbarAction.IslandDefinitionMode or ToolbarAction.GenrePlacementMode or ToolbarAction.CirclePlacementMode or ToolbarAction.GenreDataMode or ToolbarAction.CirclePlacementDecisionMode)
-                        textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 3), foreground,
-                            button.Action is ToolbarAction.DeskPlacementMode or ToolbarAction.FrameChannelsMode ? 13 : 17, true);
+                        textRenderer?.Draw(GetModeLabel(button.Action), ToRectangle(bounds, 3), foreground, 17, true);
                     else if (button.Action is ToolbarAction.EditDeskLayoutDescription or ToolbarAction.ToggleCircleStoneTransparency or ToolbarAction.ImportFrameLayout or ToolbarAction.ExportFrameLayout or ToolbarAction.ImportParticipants or ToolbarAction.MapParticipantChannels or ToolbarAction.SelectExportPlan or ToolbarAction.SelectExportTarget or ToolbarAction.SelectExportColumns or ToolbarAction.ExportSeatAssignments)
                         textRenderer?.Draw(button.Action switch
                         {
@@ -3266,6 +3279,16 @@ public sealed partial class VenueEditorGame : Game
                     if (ToolRings.Any(ring => ring.Menu == button.Action))
                         DrawCircle(new ScreenPoint(bounds.X + bounds.Width - 6d, bounds.Y + bounds.Height - 6d), 3.5d, foreground);
                 });
+        }
+        if (frameModeOverbarBounds.Width > 0d)
+        {
+            var rootX = frameModeOverbarBounds.X;
+            var topY = frameModeOverbarBounds.Y;
+            var lineColor = new Color(151, 184, 190);
+            DrawLine(new ScreenPoint(rootX, topY + 18d), new ScreenPoint(rootX + 4d, topY + 23d), 2d, lineColor);
+            DrawLine(new ScreenPoint(rootX + 4d, topY + 23d), new ScreenPoint(rootX + 13d, topY), 2d, lineColor);
+            DrawLine(new ScreenPoint(rootX + 13d, topY),
+                new ScreenPoint(rootX + frameModeOverbarBounds.Width, topY), 2d, lineColor);
         }
     }
 

@@ -9,6 +9,7 @@ public sealed partial class VenueEditorGame
     private bool frameModesCollapsed;
     private bool circleModesCollapsed;
     private ScreenRectangle frameModeHeaderBounds;
+    private ScreenRectangle frameModeOverbarBounds;
 
     private void DrawModeGroupToggle(ToolbarButton button)
     {
